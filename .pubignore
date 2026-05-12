@@ -1,0 +1,6 @@
+.fvmrc
+analysis_options.yaml
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Runner/GeneratedPluginRegistrant.*
+test/

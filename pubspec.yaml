@@ -1,0 +1,19 @@
+name: ultimate_internet_connectivity_checker
+description: A starting point for Dart libraries or applications.
+version: 0.0.0
+repository: https://github.com/LahaLuhem/ultimate_internet_connectivity_checker
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+
+dev_dependencies:
+
+
+
+
+cider:
+  link_template:
+    tag: https://github.com/LahaLuhem/ultimate_internet_connectivity_checker/releases/tag/%tag%
+    diff: https://github.com/LahaLuhem/ultimate_internet_connectivity_checker/compare/%from%...v%to%
