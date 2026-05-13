@@ -8,7 +8,7 @@
 /// network changes.
 ///
 /// ```dart
-/// import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connectivity_checker.dart';
+/// import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 ///
 /// Future<void> main() async {
 ///   final checker = InternetConnection(

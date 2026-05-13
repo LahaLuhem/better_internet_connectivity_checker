@@ -1,10 +1,10 @@
-# CLAUDE.md — `ultimate_internet_connectivity_checker`
+# CLAUDE.md — `better_internet_connectivity_checker`
 
 Claude-Code-specific guidance. Project facts, stack, hard rules, and style live in
 [AGENTS.md](./AGENTS.md) — read it first.
 
 ## Role & context
-You're assisting with **ultimate_internet_connectivity_checker**: a pure Dart package that
+You're assisting with **better_internet_connectivity_checker**: a pure Dart package that
 distinguishes "a network interface is up" from "I can actually reach the public internet
 right now". Treat the user as technical and direct. The package is intended for pub.dev —
 changes are visible to every downstream user, so breakage is expensive and slow to walk
@@ -77,9 +77,10 @@ back (unpublished versions stay reserved for 7 days).
 
 For single-file, single-concern fixes inside `lib/src/`: just do it.
 
-The release flow — `CHANGELOG.md`, `version:` in `pubspec.yaml`, and the `cider:` block —
-is **not** in this list. It's pipeline-owned; see *Forbidden / confirm-first actions*
-below. Don't plan a CHANGELOG edit; don't make one.
+The release flow — `CHANGELOG.md` and `version:` in `pubspec.yaml` — is **not** in this
+list. It's pipeline-owned; see *Forbidden / confirm-first actions* below. Don't plan a
+CHANGELOG edit; don't make one. The `cider:` block itself is static configuration (URLs,
+link templates) and may be hand-edited like any other yaml.
 
 ## Commit / PR etiquette
 - **Never commit without being asked.** Not after a fix, not as a "checkpoint".
@@ -95,9 +96,11 @@ below. Don't plan a CHANGELOG edit; don't make one.
 - **Never** `dart pub publish` (or `fvm dart pub publish`). Publishing is effectively
   one-way — pub.dev reserves the version for 7 days after retraction. The user runs
   `publish` manually.
-- **Never** edit `CHANGELOG.md`, the `version:` field in `pubspec.yaml`, or the `cider:`
-  block. All three are owned by automated release pipelines (TBA). Manual edits will be
-  reordered or overwritten when the pipeline runs.
+- **Never** run `cider` commands (`cider bump`, `cider release`, …) and **never**
+  manually edit `CHANGELOG.md` or the `version:` field in `pubspec.yaml`. Version bumps
+  and CHANGELOG entries are owned by automated release pipelines (TBA); manual edits
+  there will be reordered or overwritten. The `cider:` block in `pubspec.yaml` is static
+  configuration (link templates, URLs) — hand-edit it freely.
 - **Never** edit `pubspec.lock` directly. It's `dart pub get`'s output.
 - **Never** delete files under `.fvm/`, `.dart_tool/`, or `pubspec.lock` without approval.
   These are tooling state; deleting them forces a re-resolve.

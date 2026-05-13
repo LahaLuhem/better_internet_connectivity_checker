@@ -1,4 +1,4 @@
-# ult_internet_conn_check_example
+# better_internet_conn_check_example
 
 A new Flutter project.
 

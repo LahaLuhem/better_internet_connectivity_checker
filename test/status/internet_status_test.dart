@@ -1,6 +1,6 @@
+import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:checks/checks.dart';
 import 'package:test/scaffolding.dart';
-import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connectivity_checker.dart';
 
 void main() {
   group('Reachable.fromResponseTime', () {

@@ -1,4 +1,4 @@
-# APPENDIX — `ultimate_internet_connectivity_checker`
+# APPENDIX — `better_internet_connectivity_checker`
 
 Consolidated source of truth for design decisions, rejected paths, and non-obvious
 technical trade-offs.
@@ -47,7 +47,7 @@ anchor stable or grep-and-update every caller.
 <a id="public-api-via-single-export-file"></a>
 ## Public API funnelled through `lib/<package>.dart`
 
-- **Chosen:** `lib/ultimate_internet_connectivity_checker.dart` is the only file callers
+- **Chosen:** `lib/better_internet_connectivity_checker.dart` is the only file callers
   import. Implementation lives in `lib/src/`; nothing in `src/` is intended to be
   imported directly. The entry file consists almost entirely of `export 'src/…' show …;`
   lines.
@@ -149,6 +149,6 @@ anchor stable or grep-and-update every caller.
   `Connectivity().onConnectivityChanged.map((_) {})`. Other consumers can wire battery
   events, foreground/background transitions, or anything else that should trigger an
   early recheck.
-- **Future:** a sibling `ultimate_internet_connectivity_checker_flutter` package can
+- **Future:** a sibling `better_internet_connectivity_checker_flutter` package can
   provide the `connectivity_plus` wiring as a default, depending on this package without
   the inverse coupling. Today, "wire it yourself" is a 1-line snippet in the README.

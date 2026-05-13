@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="ult_internet_conn_check_example"
+        android:label="better_internet_conn_check_example"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

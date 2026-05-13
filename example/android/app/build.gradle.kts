@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lahaluhem.ult_internet_conn_check_example"
+    namespace = "com.lahaluhem.better_internet_conn_check_example"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.lahaluhem.ult_internet_conn_check_example"
+        applicationId = "com.lahaluhem.better_internet_conn_check_example"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

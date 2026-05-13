@@ -1,4 +1,4 @@
-# AGENTS.md — `ultimate_internet_connectivity_checker`
+# AGENTS.md — `better_internet_connectivity_checker`
 
 Tool-agnostic brief for any coding agent (Copilot, Cursor, Codex, Claude Code, …) working in
 this package. Claude-Code-specific guidance lives in [CLAUDE.md](./CLAUDE.md).
@@ -23,9 +23,10 @@ README for usage; APPENDIX for design rationale.
   static analysis (matches what `flutter --no-version-check analyze .` runs on a Flutter
   app — pedantic mode is intentional, not negotiable). No Flutter dep, no platform
   channels.
-- **CHANGELOG + version are owned by automated release pipelines (TBA).** The `cider`
-  block in `pubspec.yaml` is the pipeline's configuration source; do not invoke `cider`
-  by hand and do not edit `CHANGELOG.md` or `version:` directly.
+- **CHANGELOG + version are owned by automated release pipelines (TBA).** Do not invoke
+  `cider` commands by hand and do not edit `CHANGELOG.md` or `version:` directly. The
+  `cider:` block in `pubspec.yaml` is the pipeline's static configuration (URLs, link
+  templates) — hand-edit it freely.
 - **Published to pub.dev.** `.pubignore` controls what ships in the tarball.
 - **`.editorconfig`** is the source of truth for text-file conventions — line width 100,
   LF endings, UTF-8, per-language indent rules. The Dart formatter's `page_width: 100` in
@@ -33,9 +34,9 @@ README for usage; APPENDIX for design rationale.
 
 ## Repo layout
 ```
-ultimate_internet_connectivity_checker/
+better_internet_connectivity_checker/
 ├── lib/
-│   ├── ultimate_internet_connectivity_checker.dart   Public entry; `export 'src/…'` only
+│   ├── better_internet_connectivity_checker.dart   Public entry; `export 'src/…'` only
 │   └── src/
 │       ├── internet_connection.dart                  Top-level scheduler / lifecycle
 │       ├── data/                                     Cross-cutting helpers + tuning knobs
@@ -101,10 +102,10 @@ ultimate_internet_connectivity_checker/
    necessary, a sibling Flutter-plugin package can depend on this one — don't add Flutter
    to this `pubspec.yaml`. See
    [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter).
-7. **No manual `CHANGELOG.md` or `version:` edits.** Both are owned by automated release
-   pipelines (TBA). Manual entries will be reordered or overwritten when the pipeline
-   runs. `pubspec.yaml`'s `version:` field and `cider:` block are pipeline configuration —
-   read, don't write.
+7. **No manual `CHANGELOG.md` or `version:` edits, no hand-run `cider` commands.** All
+   three are owned by automated release pipelines (TBA); manual entries / runs will be
+   reordered or overwritten. The `cider:` block in `pubspec.yaml` is static
+   configuration (link templates, URLs) and may be hand-edited.
 
 ## Style (Dart-as-strongly-typed)
 The lint posture is deliberately strict (see `analysis_options.yaml`). The house style

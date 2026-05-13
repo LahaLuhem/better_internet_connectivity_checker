@@ -9,7 +9,7 @@
 
 <!-- TOC end -->
 
-`ultimate_internet_connectivity_checker` is a pure-Dart package for **robust
+`better_internet_connectivity_checker` is a pure-Dart package for **robust
 internet-connectivity checking**. The goal is to answer "can I actually reach the public
 internet right now?" — distinct from "is a network interface up?", which is what most
 OS-level checks report.
@@ -39,7 +39,7 @@ Add the package to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  ultimate_internet_connectivity_checker: ^0.0.0
+  better_internet_connectivity_checker: ^0.0.0
 ```
 
 Then run:
@@ -57,7 +57,7 @@ project — CLI, server-side, web, and Flutter alike.
 ### One-shot check
 
 ```dart
-import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connectivity_checker.dart';
+import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
 Future<void> main() async {
   final checker = InternetConnection();
@@ -186,6 +186,6 @@ Released tags will follow `v<MAJOR>.<MINOR>.<PATCH>` and link to GitHub releases
 ## Contributing
 
 Issues and PRs welcome at
-<https://github.com/LahaLuhem/ultimate_internet_connectivity_checker>. Read
+<https://github.com/LahaLuhem/better_internet_connectivity_checker>. Read
 [`.ai/AGENTS.md`](./.ai/AGENTS.md) for the house style and [`APPENDIX.md`](./APPENDIX.md)
 for the design rationale before sending a non-trivial change.

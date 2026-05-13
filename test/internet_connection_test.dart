@@ -1,9 +1,9 @@
 import 'dart:async';
 
+import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
-import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connectivity_checker.dart';
 
 import '_helpers/stub_probe.dart';
 

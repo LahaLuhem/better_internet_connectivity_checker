@@ -1,9 +1,9 @@
-name: ultimate_internet_connectivity_checker
+name: better_internet_connectivity_checker
 description: >-
   Pure-Dart internet connectivity checker. Distinguishes "interface up" from
   "can reach the public internet". Pluggable probes, policies, and triggers.
 version: 0.0.0
-repository: https://github.com/LahaLuhem/ultimate_internet_connectivity_checker
+repository: https://github.com/LahaLuhem/better_internet_connectivity_checker
 topics:
   - connectivity
   - http
@@ -24,5 +24,5 @@ dev_dependencies:
 
 cider:
   link_template:
-    tag: https://github.com/LahaLuhem/ultimate_internet_connectivity_checker/releases/tag/%tag%
-    diff: https://github.com/LahaLuhem/ultimate_internet_connectivity_checker/compare/%from%...v%to%
+    tag: https://github.com/LahaLuhem/better_internet_connectivity_checker/releases/tag/%tag%
+    diff: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/%from%...v%to%
