@@ -38,8 +38,8 @@ void main() {
   });
 
   group('InternetConnection constructor', () {
-    test('throws ArgumentError when targets is empty', () {
-      expect(() => InternetConnection(targets: const []), throwsArgumentError);
+    test('asserts when targets is empty (dev-time check)', () {
+      expect(() => InternetConnection(targets: const []), throwsA(isA<AssertionError>()));
     });
   });
 

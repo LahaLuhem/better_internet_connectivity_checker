@@ -22,23 +22,20 @@ final class AllReachablePolicy implements ReachabilityPolicy {
 
   @override
   Future<InternetStatus> evaluate({
-    required Iterable<ProbeTarget> targets,
+    required List<ProbeTarget> targets,
     required ConnectivityProbe probe,
     required Duration? slowThreshold,
   }) async {
-    final targetList = targets.toList(growable: false);
-    if (targetList.isEmpty) {
-      return const Unreachable(failedProbes: []);
-    }
+    if (targets.isEmpty) return const Unreachable(failedProbes: []);
 
-    final results = await Future.wait(targetList.map(probe.probe));
-    final failures = results.where((r) => !r.isSuccess).toList(growable: false);
-    if (failures.isNotEmpty) {
-      return Unreachable(failedProbes: failures);
-    }
+    final probeResults = await targets.map(probe.probe).wait;
+    final failedProbes = probeResults.where((result) => !result.isSuccess).toList(growable: false);
+    if (failedProbes.isNotEmpty) return Unreachable(failedProbes: failedProbes);
 
-    final worst = results.map((r) => r.responseTime).reduce((a, b) => a > b ? a : b);
+    final worstDuration = probeResults
+        .map((result) => result.responseTime)
+        .reduce((a, b) => a > b ? a : b);
 
-    return Reachable.fromResponseTime(worst, slowThreshold: slowThreshold);
+    return Reachable.fromResponseTime(worstDuration, slowThreshold: slowThreshold);
   }
 }

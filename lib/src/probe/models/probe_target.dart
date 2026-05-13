@@ -10,6 +10,28 @@ import '../../data/values.dart';
 /// (URI, request timeout, headers, and the response-acceptance predicate).
 /// Reuse them across instances; there is no per-call state.
 final class ProbeTarget {
+  /// The URI to probe.
+  ///
+  /// Make sure your endpoint disables HTTP caching (e.g. responds with
+  /// `Cache-Control: no-cache`). A cached response will mask connectivity
+  /// problems by short-circuiting the request locally.
+  ///
+  /// On the web platform the endpoint must allow CORS for the request to
+  /// reach the probe.
+  final Uri uri;
+
+  /// Maximum time a single probe is allowed to take.
+  final Duration timeout;
+
+  /// Headers attached to the outbound probe request.
+  final Map<String, String> headers;
+
+  /// Predicate that maps an HTTP response to a success/failure decision.
+  ///
+  /// Adapt the probe to non-[Values.httpStatusOk] healthy endpoints by passing
+  /// your own [ResponseAcceptor] (e.g. an API that pings with HTTP 204).
+  final ResponseAcceptor isSuccess;
+
   /// Creates a [ProbeTarget].
   ///
   /// [uri] is the URL that will be probed. The probe implementation chooses
@@ -32,28 +54,6 @@ final class ProbeTarget {
     this.headers = Values.defaultProbeHeaders,
     this.isSuccess = _statusIs200,
   });
-
-  /// The URI to probe.
-  ///
-  /// Make sure your endpoint disables HTTP caching (e.g. responds with
-  /// `Cache-Control: no-cache`). A cached response will mask connectivity
-  /// problems by short-circuiting the request locally.
-  ///
-  /// On the web platform the endpoint must allow CORS for the request to
-  /// reach the probe.
-  final Uri uri;
-
-  /// Maximum time a single probe is allowed to take.
-  final Duration timeout;
-
-  /// Headers attached to the outbound probe request.
-  final Map<String, String> headers;
-
-  /// Predicate that maps an HTTP response to a success/failure decision.
-  ///
-  /// Adapt the probe to non-[Values.httpStatusOk] healthy endpoints by passing
-  /// your own [ResponseAcceptor] (e.g. an API that pings with HTTP 204).
-  final ResponseAcceptor isSuccess;
 
   static bool _statusIs200(http.Response response) => response.statusCode == Values.httpStatusOk;
 }

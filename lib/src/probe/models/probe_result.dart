@@ -7,6 +7,18 @@ import 'probe_target.dart';
 /// elapsed time too — useful for distinguishing "timed out after 3 s" from
 /// "DNS failed in 30 ms" — plus any exception caught during the probe.
 final class ProbeResult {
+  /// The target that was probed.
+  final ProbeTarget target;
+
+  /// Whether the probe succeeded according to its target's predicate.
+  final bool isSuccess;
+
+  /// Wall-clock time the probe took.
+  final Duration responseTime;
+
+  /// The error caught during the probe, if any. Always null on success.
+  final Object? error;
+
   /// Creates a successful [ProbeResult].
   ///
   /// [responseTime] is the wall-clock duration the probe took, measured from
@@ -26,16 +38,4 @@ final class ProbeResult {
   /// false.
   const ProbeResult.failure({required this.target, required this.responseTime, this.error})
     : isSuccess = false;
-
-  /// The target that was probed.
-  final ProbeTarget target;
-
-  /// Whether the probe succeeded according to its target's predicate.
-  final bool isSuccess;
-
-  /// Wall-clock time the probe took.
-  final Duration responseTime;
-
-  /// The error caught during the probe, if any. Always null on success.
-  final Object? error;
 }

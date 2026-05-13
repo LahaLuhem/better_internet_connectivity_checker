@@ -28,8 +28,7 @@ abstract final class Values {
   /// custom target list is supplied. Chosen for operator diversity and low
   /// cache surface.
   ///
-  /// Not const because [Uri.parse] is not a const constructor; safe to share
-  /// because [List.unmodifiable] prevents mutation.
+  /// Safe to share because [List.unmodifiable] prevents mutation.
   static final defaultProbeTargets = List<ProbeTarget>.unmodifiable([
     ProbeTarget(uri: Uri.parse('https://one.one.one.one')),
     ProbeTarget(uri: Uri.parse('https://icanhazip.com/')),

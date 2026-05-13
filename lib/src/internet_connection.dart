@@ -29,12 +29,29 @@ import 'status/models/connection_quality.dart';
 /// call [dispose] when finished to release the underlying stream, timer, and
 /// external-trigger subscription.
 final class InternetConnection {
+  final List<ProbeTarget> _targets;
+  Duration _checkInterval;
+  final Duration? _slowThreshold;
+  final ReachabilityPolicy _policy;
+  final ConnectivityProbe _probe;
+  final Stream<void>? _externalTrigger;
+
+  late final _statusController = StreamController<InternetStatus>.broadcast(
+    onListen: _handleFirstListener,
+    onCancel: _handleLastCancel,
+  );
+  Timer? _timer;
+  StreamSubscription<void>? _triggerSubscription;
+  InternetStatus? _lastStatus;
+  var _disposed = false;
+
   /// Creates an [InternetConnection].
   ///
   /// `targets` are the URIs probed on each check. Defaults to a curated list
   /// of public reliability endpoints chosen for operator diversity and low
   /// cache surface. The list must be non-empty; passing an empty iterable
-  /// throws [ArgumentError].
+  /// trips a debug-mode `assert` (release builds silently fall through to
+  /// `Unreachable` on every check).
   ///
   /// `checkInterval` is the gap between periodic status checks once
   /// [onStatusChange] has at least one listener. Defaults to
@@ -55,38 +72,19 @@ final class InternetConnection {
   /// immediate recheck regardless of the timer. Typical Flutter wiring:
   /// `Connectivity().onConnectivityChanged.map(noopWithVal)`.
   InternetConnection({
-    Iterable<ProbeTarget>? targets,
+    List<ProbeTarget>? targets,
     Duration checkInterval = Values.defaultCheckInterval,
     Duration? slowThreshold,
     ReachabilityPolicy policy = const AnyReachablePolicy(),
     ConnectivityProbe? probe,
     Stream<void>? externalRecheckTrigger,
-  }) : _targets = List.unmodifiable(targets ?? Values.defaultProbeTargets),
+  }) : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty'),
+       _targets = List.unmodifiable(targets ?? Values.defaultProbeTargets),
        _checkInterval = checkInterval,
        _slowThreshold = slowThreshold,
        _policy = policy,
        _probe = probe ?? HttpHeadProbe(),
-       _externalTrigger = externalRecheckTrigger {
-    if (_targets.isEmpty) {
-      throw ArgumentError.value(targets, 'targets', 'must be non-empty');
-    }
-  }
-
-  final List<ProbeTarget> _targets;
-  Duration _checkInterval;
-  final Duration? _slowThreshold;
-  final ReachabilityPolicy _policy;
-  final ConnectivityProbe _probe;
-  final Stream<void>? _externalTrigger;
-
-  late final _statusController = StreamController<InternetStatus>.broadcast(
-    onListen: _handleFirstListener,
-    onCancel: _handleLastCancel,
-  );
-  Timer? _timer;
-  StreamSubscription<void>? _triggerSubscription;
-  InternetStatus? _lastStatus;
-  var _disposed = false;
+       _externalTrigger = externalRecheckTrigger;
 
   /// The current periodic check interval.
   Duration get checkInterval => _checkInterval;
@@ -115,10 +113,9 @@ final class InternetConnection {
   void setCheckInterval(Duration interval) {
     _checkInterval = interval;
 
-    if (_timer != null) {
-      _timer!.cancel();
-      _timer = Timer(_checkInterval, () => unawaited(_runScheduledCheck()));
-    }
+    if (_timer == null) return;
+    _timer!.cancel();
+    _timer = Timer(_checkInterval, () => unawaited(_runScheduledCheck()));
   }
 
   /// Releases the status stream, periodic timer, and external-trigger
@@ -137,7 +134,7 @@ final class InternetConnection {
     await _triggerSubscription?.cancel();
     _triggerSubscription = null;
 
-    await _statusController.close();
+    return _statusController.close();
   }
 
   void _handleFirstListener() {
@@ -173,9 +170,7 @@ final class InternetConnection {
     final status = await checkOnce();
     if (_disposed || !_statusController.hasListener) return;
 
-    if (_isDistinctKind(_lastStatus, status)) {
-      _statusController.add(status);
-    }
+    if (_isDistinctKind(_lastStatus, status)) _statusController.add(status);
     _lastStatus = status;
 
     _timer = Timer(_checkInterval, () => unawaited(_runScheduledCheck()));

@@ -14,11 +14,11 @@ import '../models/probe_target.dart';
 /// a `MockClient` in tests. The default client is owned by this probe; close
 /// it via [http.Client.close] only if you constructed it yourself.
 final class HttpHeadProbe implements ConnectivityProbe {
+  final http.Client _client;
+
   /// Creates an [HttpHeadProbe], optionally wrapping a caller-supplied
   /// [http.Client].
   HttpHeadProbe({http.Client? client}) : _client = client ?? http.Client();
-
-  final http.Client _client;
 
   @override
   Future<ProbeResult> probe(ProbeTarget target) async {
@@ -31,12 +31,12 @@ final class HttpHeadProbe implements ConnectivityProbe {
       stopwatch.stop();
 
       return target.isSuccess(response)
-          ? ProbeResult.success(target: target, responseTime: stopwatch.elapsed)
-          : ProbeResult.failure(target: target, responseTime: stopwatch.elapsed);
+          ? .success(target: target, responseTime: stopwatch.elapsed)
+          : .failure(target: target, responseTime: stopwatch.elapsed);
     } on Exception catch (error) {
       stopwatch.stop();
 
-      return ProbeResult.failure(target: target, responseTime: stopwatch.elapsed, error: error);
+      return .failure(target: target, responseTime: stopwatch.elapsed, error: error);
     }
   }
 }

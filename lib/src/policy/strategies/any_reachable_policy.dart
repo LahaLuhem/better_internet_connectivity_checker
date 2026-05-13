@@ -22,38 +22,31 @@ final class AnyReachablePolicy implements ReachabilityPolicy {
 
   @override
   Future<InternetStatus> evaluate({
-    required Iterable<ProbeTarget> targets,
+    required List<ProbeTarget> targets,
     required ConnectivityProbe probe,
     required Duration? slowThreshold,
   }) {
-    final targetList = targets.toList(growable: false);
-    if (targetList.isEmpty) {
-      return Future.value(const Unreachable(failedProbes: []));
-    }
+    if (targets.isEmpty) return Future.value(const Unreachable(failedProbes: []));
 
     final completer = Completer<InternetStatus>();
     final failures = <ProbeResult>[];
-    var remaining = targetList.length;
+    var remaining = targets.length;
 
-    for (final target in targetList) {
+    for (final target in targets) {
       unawaited(
         probe.probe(target).then((result) {
           if (completer.isCompleted) return;
 
           if (result.isSuccess) {
-            completer.complete(
+            return completer.complete(
               Reachable.fromResponseTime(result.responseTime, slowThreshold: slowThreshold),
             );
-
-            return;
           }
 
           failures.add(result);
           remaining -= 1;
 
-          if (remaining == 0) {
-            completer.complete(Unreachable(failedProbes: failures));
-          }
+          if (remaining == 0) completer.complete(Unreachable(failedProbes: failures));
         }),
       );
     }

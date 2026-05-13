@@ -14,7 +14,9 @@ outcomes, backed by pluggable `ConnectivityProbe` and `ReachabilityPolicy` layer
 README for usage; APPENDIX for design rationale.
 
 ## Stack
-- **Dart ≥ 3.11** (constraint pinned in `pubspec.yaml`).
+- **Dart ≥ 3.10** (constraint pinned in `pubspec.yaml`). 3.10 is the floor because of
+  the static dot-shorthand feature; bump only when a new language feature is actually
+  consumed.
 - **[FVM](https://fvm.app/)** for SDK version pinning (`.fvmrc`). Use `fvm dart …` rather
   than the host `dart` unless you've confirmed they match.
 - **`fvm dart test`** for tests, **`fvm dart --no-version-check analyze .`** for pedantic
@@ -133,6 +135,26 @@ values explicit types, no ambient mutability, and small focused classes.
 - **Blank lines separate logical chunks within a method.** Group guard checks, setup,
   the main action, and finalisation with one blank line between groups. Lets readers
   scan past chunks they don't need without re-parsing them line-by-line.
+- **`assert` for dev-time errors, `throw` for runtime ones.** Constraints a caller can
+  see violated during development (negative number where non-negative is required, empty
+  list where non-empty is expected, etc.) belong in `assert` — stripped in release mode,
+  zero runtime cost. Reserve `throw` and `Exception` for genuine runtime conditions the
+  caller cannot guarantee at compile/dev time (network failure, parsing untrusted input,
+  missing file, third-party API contract violations). Prefer init-list asserts —
+  `prefer_asserts_in_initializer_lists` and `prefer_asserts_with_message` are both on.
+- **Any class with fields and constructors: fields → constructors → other members.**
+  Lets a reader scan the state shape first, then how to construct it, then how to use
+  it. Within constructors, unnamed first, then factories (matches
+  `sort_unnamed_constructors_first`). Static helpers go after the methods. Applies to
+  value types (`ProbeTarget`, `Reachable`, …), service classes (`InternetConnection`,
+  `HttpHeadProbe`), test helpers (`StubProbe`) — wherever a class has both state and a
+  constructor. Pure-static namespace classes (`Values`) and field-less interface
+  classes (`ConnectivityProbe`, `ReachabilityPolicy`) have nothing to order; the rule
+  applies vacuously.
+- **Use static dot shorthands (Dart 3.10+) where the context type is known.** E.g.
+  inside `Reachable(quality: cond ? .slow : .good)`, the `.slow` / `.good` resolve from
+  the `ConnectionQuality` context type of the `quality:` parameter. Skip when it hurts
+  readability — `.new(…)` for unnamed constructors typically does.
 - **`part` / `part of` only when structurally needed.** Not a smell on its own.
   Legitimate uses: sealed-class cases across files (Dart 3 requires same library for
   sealed subtypes — see `status/outcomes/`), code-generation outputs (`*.g.dart` from

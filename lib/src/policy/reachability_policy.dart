@@ -26,7 +26,7 @@ abstract interface class ReachabilityPolicy {
   ///
   /// [slowThreshold] may be null to disable slow detection.
   Future<InternetStatus> evaluate({
-    required Iterable<ProbeTarget> targets,
+    required List<ProbeTarget> targets,
     required ConnectivityProbe probe,
     required Duration? slowThreshold,
   });

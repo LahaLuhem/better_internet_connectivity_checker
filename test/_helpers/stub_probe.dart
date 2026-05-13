@@ -6,9 +6,9 @@ import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connect
 /// scaffolding. Use it in policy and connection tests to short-circuit the
 /// network layer.
 final class StubProbe implements ConnectivityProbe {
-  StubProbe(this._respond);
-
   final Future<ProbeResult> Function(ProbeTarget target) _respond;
+
+  StubProbe(this._respond);
 
   @override
   Future<ProbeResult> probe(ProbeTarget target) => _respond(target);
