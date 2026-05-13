@@ -9,17 +9,21 @@ interface is up" (cheap, often wrong) from "I can actually reach the public inte
 now" (the question users typically care about). Pure Dart so it works equally well in CLI,
 server, web, and Flutter contexts.
 
-The package is in early scaffolding — no public API yet. The intent shapes the file layout
-and the lint posture; the surface itself is still to be designed.
+Public API in v0.1 is stable: `InternetConnection` scheduler + sealed `InternetStatus`
+outcomes, backed by pluggable `ConnectivityProbe` and `ReachabilityPolicy` layers. See
+README for usage; APPENDIX for design rationale.
 
 ## Stack
 - **Dart ≥ 3.11** (constraint pinned in `pubspec.yaml`).
 - **[FVM](https://fvm.app/)** for SDK version pinning (`.fvmrc`). Use `fvm dart …` rather
   than the host `dart` unless you've confirmed they match.
-- **`dart test`** + **`dart analyze`** for verification. No Flutter dep, no platform
+- **`fvm dart test`** for tests, **`fvm dart --no-version-check analyze .`** for pedantic
+  static analysis (matches what `flutter --no-version-check analyze .` runs on a Flutter
+  app — pedantic mode is intentional, not negotiable). No Flutter dep, no platform
   channels.
-- **[`cider`](https://pub.dev/packages/cider)** for CHANGELOG + version management
-  (configured at the bottom of `pubspec.yaml`).
+- **CHANGELOG + version are owned by automated release pipelines (TBA).** The `cider`
+  block in `pubspec.yaml` is the pipeline's configuration source; do not invoke `cider`
+  by hand and do not edit `CHANGELOG.md` or `version:` directly.
 - **Published to pub.dev.** `.pubignore` controls what ships in the tarball.
 - **`.editorconfig`** is the source of truth for text-file conventions — line width 100,
   LF endings, UTF-8, per-language indent rules. The Dart formatter's `page_width: 100` in
@@ -29,25 +33,55 @@ and the lint posture; the surface itself is still to be designed.
 ```
 ultimate_internet_connectivity_checker/
 ├── lib/
-│   ├── ultimate_internet_connectivity_checker.dart   Public entry; `export 'src/…'`s only
-│   └── src/                                           Implementation; not re-exported
-├── test/                                              `dart test`-discoverable units (TBA)
-├── example/                                           Runnable usage samples (TBA)
-├── analysis_options.yaml                              Strict-mode + opinionated lints
-├── pubspec.yaml                                       Deps + cider config + topics
-├── .pubignore                                         Files excluded from `pub publish`
-├── .fvmrc                                             FVM-pinned SDK version
-├── .editorconfig                                      Text-file formatting (width, indents)
-├── CHANGELOG.md                                       cider-managed; appears on pub.dev
-├── README.md                                          pub.dev landing page
-├── APPENDIX.md                                        Design rationale (anchor-keyed)
-└── .ai/                                               This file + CLAUDE.md (symlinked)
+│   ├── ultimate_internet_connectivity_checker.dart   Public entry; `export 'src/…'` only
+│   └── src/
+│       ├── internet_connection.dart                  Top-level scheduler / lifecycle
+│       ├── data/                                     Cross-cutting helpers + tuning knobs
+│       │   ├── typedefs.dart                         Shared typedefs (`ResponseAcceptor`)
+│       │   └── values.dart                           `Values` static defaults + `noopWithVal`
+│       ├── policy/
+│       │   ├── reachability_policy.dart              Abstract interface
+│       │   └── strategies/                           Concrete impls (`Any`/`All`Reachable)
+│       ├── probe/
+│       │   ├── connectivity_probe.dart               Abstract interface
+│       │   ├── models/                               Value types (target / result)
+│       │   └── transports/                           Concrete impls (HTTP HEAD)
+│       └── status/
+│           ├── internet_status.dart                  Sealed parent (declares `part`s)
+│           ├── models/                               Auxiliary types (quality enum)
+│           └── outcomes/                             Sealed cases via `part of`
+├── test/                                             `dart test` units (mirrors lib/src/)
+├── example/                                          Runnable usage samples (TBA)
+├── analysis_options.yaml                             Strict-mode + opinionated lints
+├── pubspec.yaml                                      Deps + cider config + topics
+├── .pubignore                                        Files excluded from `pub publish`
+├── .fvmrc                                            FVM-pinned SDK version
+├── .editorconfig                                     Text-file formatting (width, indents)
+├── CHANGELOG.md                                      Pipeline-owned; appears on pub.dev
+├── README.md                                         pub.dev landing page
+├── APPENDIX.md                                       Design rationale (anchor-keyed)
+└── .ai/                                              This file + CLAUDE.md (symlinked)
 ```
+
+**Feature-directory conventions** (apply within `lib/src/<feature>/`):
+- `<feature>.dart` at the root holds the abstract interface or the sealed parent.
+- `strategies/` or `transports/` — concrete implementations of the interface. Named for
+  what they *are* (Strategy-pattern impls, transport impls), not a generic `impl/`.
+- `models/` — value types serving the feature (request/result/options).
+- `outcomes/` — sealed-class cases. Uses `part of` to share library scope with the
+  parent (required by Dart's sealed-class rules; see Style section).
 
 ## Hard rules
 1. **The public API lives only in `lib/<package>.dart`.** That file re-exports from
    `lib/src/`. Don't make users import from `package:…/src/…` — the `src/` subtree is
    private by convention. Anything callers need goes through an explicit `export`.
+   Cross-cutting helpers and tuning knobs live in `lib/src/data/`:
+   - `data/typedefs.dart` — typedefs shared across the project.
+   - `data/values.dart` — internal defaults (timeouts, intervals, header maps, the
+     curated probe-target list) grouped under `abstract final class Values` so call
+     sites read `Values.defaultX` and the origin is obvious. Loose helpers like
+     `noopWithVal` stay top-level alongside the class. Before introducing a new magic
+     number or default in a class, check whether it belongs in `Values`.
 2. **No `print()` in library code.** Diagnostic output is the caller's responsibility
    (loggers, callbacks, etc.). `avoid_print` is already a warning in
    `analysis_options.yaml`.
@@ -60,14 +94,15 @@ ultimate_internet_connectivity_checker/
 5. **Semver, strictly.** Breaking changes only on a major bump. Any change to a public
    signature, deletion, or behavioural change of a documented contract is breaking.
    `cider` enforces the version-bump discipline.
-6. **CHANGELOG before publish.** `cider log add <kind> "…"` (or hand-edit) before any
-   `dart pub publish`. The CHANGELOG appears on pub.dev's *Changelog* tab — empty /
-   missing entries make releases look unreviewed.
-7. **Pure Dart, no Flutter dep in `pubspec.yaml`.** This package targets every Dart
+6. **Pure Dart, no Flutter dep in `pubspec.yaml`.** This package targets every Dart
    platform — server, CLI, web, Flutter. If platform-channel features ever become
    necessary, a sibling Flutter-plugin package can depend on this one — don't add Flutter
    to this `pubspec.yaml`. See
    [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter).
+7. **No manual `CHANGELOG.md` or `version:` edits.** Both are owned by automated release
+   pipelines (TBA). Manual entries will be reordered or overwritten when the pipeline
+   runs. `pubspec.yaml`'s `version:` field and `cider:` block are pipeline configuration —
+   read, don't write.
 
 ## Style (Dart-as-strongly-typed)
 The lint posture is deliberately strict (see `analysis_options.yaml`). The house style
@@ -95,6 +130,30 @@ values explicit types, no ambient mutability, and small focused classes.
   DNS, TCP, TLS, …) stay as-is; novel project terms get spelt out.
 - **Wrap text-file content at 100 columns.** `.editorconfig` is authoritative;
   Markdown / Dart / YAML all share the same cap.
+- **Blank lines separate logical chunks within a method.** Group guard checks, setup,
+  the main action, and finalisation with one blank line between groups. Lets readers
+  scan past chunks they don't need without re-parsing them line-by-line.
+- **`part` / `part of` only when structurally needed.** Not a smell on its own.
+  Legitimate uses: sealed-class cases across files (Dart 3 requires same library for
+  sealed subtypes — see `status/outcomes/`), code-generation outputs (`*.g.dart` from
+  freezed, json_serializable, drift, etc.). Avoid for general code organisation —
+  imports/exports are explicit, parts hide dependencies and leak `_private` symbols
+  across files within the library.
+- **DCM (free tier) rules apply by hand.** `dart analyze` does not run them, but the
+  project treats them as non-negotiable:
+  - **`no-empty-block`** — every block (function literal, `if`, `for`, `try`…) must
+    contain code or a flutter-style `// TODO(handle): …` comment explaining the gap.
+    Empty catch clauses are excused. `onError: (_, _) {}` and `(_) {}` listeners are
+    violations; either give them work to do (e.g. a tear-off like `events.add`) or add
+    a TODO comment.
+  - **`newline-before-return`** — separate a block-final `return` from preceding
+    statements with one blank line. Inline guards like `if (cond) return;` do not need
+    the blank line — the rule is about returns whose preceding sibling is a non-return
+    statement in the same block.
+  - **`prefer-commenting-analyzer-ignores`** — every `// ignore:` line needs a `//`
+    explanation adjacent to it (immediately above, immediately below, or appended after
+    the directive). Dartdoc (`///`) above the line does not count — the rule looks for a
+    regular `//` comment.
 
 ## Documentation convention
 - **APPENDIX.md is the source of truth for rationale.** Hard rules, pitfalls, and workflow

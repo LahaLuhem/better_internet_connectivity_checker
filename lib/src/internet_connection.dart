@@ -1,0 +1,193 @@
+import 'dart:async';
+
+import 'data/values.dart';
+import 'policy/reachability_policy.dart';
+import 'policy/strategies/any_reachable_policy.dart';
+import 'probe/connectivity_probe.dart';
+import 'probe/models/probe_target.dart';
+import 'probe/transports/http_head_probe.dart';
+import 'status/internet_status.dart';
+import 'status/models/connection_quality.dart';
+
+/// Coordinates internet-connectivity checks.
+///
+/// Owns three responsibilities:
+///
+/// 1. **One-shot checks** via [checkOnce] — runs every target through the
+///    configured [ConnectivityProbe] and aggregates via the configured
+///    [ReachabilityPolicy].
+/// 2. **Status streaming** via [onStatusChange] — periodically checks (at
+///    [checkInterval]) and emits the resulting [InternetStatus] only when its
+///    kind differs from the previously emitted one.
+/// 3. **External recheck triggers** — if an [Stream] is provided as the
+///    constructor's `externalRecheckTrigger`, an emission on that stream
+///    forces an immediate recheck. Useful for wiring `connectivity_plus` or
+///    any other signal that suggests the network state changed.
+///
+/// Construct once per use case. There is no shared singleton — two
+/// independently-configured instances coexist without interfering. Always
+/// call [dispose] when finished to release the underlying stream, timer, and
+/// external-trigger subscription.
+final class InternetConnection {
+  /// Creates an [InternetConnection].
+  ///
+  /// `targets` are the URIs probed on each check. Defaults to a curated list
+  /// of public reliability endpoints chosen for operator diversity and low
+  /// cache surface. The list must be non-empty; passing an empty iterable
+  /// throws [ArgumentError].
+  ///
+  /// `checkInterval` is the gap between periodic status checks once
+  /// [onStatusChange] has at least one listener. Defaults to
+  /// [Values.defaultCheckInterval]. Adjust at runtime via [setCheckInterval].
+  ///
+  /// `slowThreshold` is the response-time cutoff above which a successful
+  /// probe is classified as slow. Defaults to null (no slow classification —
+  /// every reachable status reports [ConnectionQuality.good]).
+  ///
+  /// `policy` selects the aggregation strategy. Defaults to
+  /// [AnyReachablePolicy] (any-of-N suffices).
+  ///
+  /// `probe` runs a single check; defaults to [HttpHeadProbe]. Pass a custom
+  /// probe to swap the transport (e.g. a retry-wrapping decorator) or to
+  /// inject a mock in tests.
+  ///
+  /// `externalRecheckTrigger` is an optional stream whose events force an
+  /// immediate recheck regardless of the timer. Typical Flutter wiring:
+  /// `Connectivity().onConnectivityChanged.map(noopWithVal)`.
+  InternetConnection({
+    Iterable<ProbeTarget>? targets,
+    Duration checkInterval = Values.defaultCheckInterval,
+    Duration? slowThreshold,
+    ReachabilityPolicy policy = const AnyReachablePolicy(),
+    ConnectivityProbe? probe,
+    Stream<void>? externalRecheckTrigger,
+  }) : _targets = List.unmodifiable(targets ?? Values.defaultProbeTargets),
+       _checkInterval = checkInterval,
+       _slowThreshold = slowThreshold,
+       _policy = policy,
+       _probe = probe ?? HttpHeadProbe(),
+       _externalTrigger = externalRecheckTrigger {
+    if (_targets.isEmpty) {
+      throw ArgumentError.value(targets, 'targets', 'must be non-empty');
+    }
+  }
+
+  final List<ProbeTarget> _targets;
+  Duration _checkInterval;
+  final Duration? _slowThreshold;
+  final ReachabilityPolicy _policy;
+  final ConnectivityProbe _probe;
+  final Stream<void>? _externalTrigger;
+
+  late final _statusController = StreamController<InternetStatus>.broadcast(
+    onListen: _handleFirstListener,
+    onCancel: _handleLastCancel,
+  );
+  Timer? _timer;
+  StreamSubscription<void>? _triggerSubscription;
+  InternetStatus? _lastStatus;
+  var _disposed = false;
+
+  /// The current periodic check interval.
+  Duration get checkInterval => _checkInterval;
+
+  /// The most recently observed status, or null before the first check (or
+  /// after the last [onStatusChange] subscriber cancels, which suspends the
+  /// periodic timer).
+  InternetStatus? get lastStatus => _lastStatus;
+
+  /// Stream of status transitions.
+  ///
+  /// Periodic checks start when the first listener subscribes; the timer is
+  /// suspended when the last listener cancels. Emissions are deduped on
+  /// status *kind* — two consecutive [Reachable] events with the same
+  /// [ConnectionQuality] won't double-fire, but a flip from
+  /// [ConnectionQuality.good] to [ConnectionQuality.slow] will.
+  Stream<InternetStatus> get onStatusChange => _statusController.stream;
+
+  /// Runs one check and returns the resulting status.
+  ///
+  /// Does not affect the periodic timer, the status stream, or [lastStatus].
+  Future<InternetStatus> checkOnce() =>
+      _policy.evaluate(targets: _targets, probe: _probe, slowThreshold: _slowThreshold);
+
+  /// Updates the periodic check interval and resets any running timer.
+  void setCheckInterval(Duration interval) {
+    _checkInterval = interval;
+
+    if (_timer != null) {
+      _timer!.cancel();
+      _timer = Timer(_checkInterval, () => unawaited(_runScheduledCheck()));
+    }
+  }
+
+  /// Releases the status stream, periodic timer, and external-trigger
+  /// subscription.
+  ///
+  /// After [dispose] returns, the instance must not be used. Calling
+  /// [checkOnce] or subscribing to [onStatusChange] yields undefined
+  /// behaviour.
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+
+    _timer?.cancel();
+    _timer = null;
+
+    await _triggerSubscription?.cancel();
+    _triggerSubscription = null;
+
+    await _statusController.close();
+  }
+
+  void _handleFirstListener() {
+    _triggerSubscription ??= _externalTrigger?.listen(
+      (_) => unawaited(_runScheduledCheck()),
+      onError: (_, _) {
+        // TODO(LahaLuhem): forward trigger-stream errors once a diagnostics
+        // callback or logger seam is added. Swallowed today because the
+        // trigger is best-effort — its errors must not propagate to the
+        // status stream's listeners.
+      },
+    );
+
+    unawaited(_runScheduledCheck());
+  }
+
+  void _handleLastCancel() {
+    if (_statusController.hasListener) return;
+
+    _timer?.cancel();
+    _timer = null;
+
+    unawaited(_triggerSubscription?.cancel());
+    _triggerSubscription = null;
+
+    _lastStatus = null;
+  }
+
+  Future<void> _runScheduledCheck() async {
+    if (_disposed || !_statusController.hasListener) return;
+    _timer?.cancel();
+
+    final status = await checkOnce();
+    if (_disposed || !_statusController.hasListener) return;
+
+    if (_isDistinctKind(_lastStatus, status)) {
+      _statusController.add(status);
+    }
+    _lastStatus = status;
+
+    _timer = Timer(_checkInterval, () => unawaited(_runScheduledCheck()));
+  }
+
+  static bool _isDistinctKind(InternetStatus? previous, InternetStatus current) {
+    if (previous == null) return true;
+
+    return switch ((previous, current)) {
+      (Reachable(quality: final a), Reachable(quality: final b)) => a != b,
+      (Unreachable(), Unreachable()) => false,
+      _ => true,
+    };
+  }
+}

@@ -33,9 +33,12 @@ back (unpublished versions stay reserved for 7 days).
 
 ## Tool preferences
 - **Read / Edit / Grep / Glob** over `cat` / `sed` / `grep` / `find`. Always.
-- **Bash** only for things without a dedicated tool: `dart`, `fvm`, `cider`, `git`.
+- **Bash** only for things without a dedicated tool: `dart`, `fvm`, `git`.
 - **Use the FVM-pinned Dart** when running `dart …` — `.fvmrc` is the source of truth.
   Prefer `fvm dart …` unless the host shell is already wrapped.
+- **Lint with `fvm dart --no-version-check analyze .`** — the project runs pedantic mode
+  by intent (mirrors `flutter --no-version-check analyze .` in Flutter-app projects).
+  Don't substitute `fvm dart analyze` and ignore lints it surfaces; they're the contract.
 - **Agent tool** for wide / open-ended searches or to keep large outputs out of main
   context. Not for trivial lookups.
 
@@ -71,9 +74,12 @@ back (unpublished versions stay reserved for 7 days).
   user-facing surface area and constrains downstream resolution.
 - You're changing `analysis_options.yaml`. Lint posture is project-wide; any toggle
   deserves a written reason in APPENDIX.
-- You're touching the `cider` block or the release flow.
 
 For single-file, single-concern fixes inside `lib/src/`: just do it.
+
+The release flow — `CHANGELOG.md`, `version:` in `pubspec.yaml`, and the `cider:` block —
+is **not** in this list. It's pipeline-owned; see *Forbidden / confirm-first actions*
+below. Don't plan a CHANGELOG edit; don't make one.
 
 ## Commit / PR etiquette
 - **Never commit without being asked.** Not after a fix, not as a "checkpoint".
@@ -89,8 +95,9 @@ For single-file, single-concern fixes inside `lib/src/`: just do it.
 - **Never** `dart pub publish` (or `fvm dart pub publish`). Publishing is effectively
   one-way — pub.dev reserves the version for 7 days after retraction. The user runs
   `publish` manually.
-- **Never** overwrite or reorder existing `CHANGELOG.md` entries — append only, under the
-  right kind (Added / Changed / Fixed / Removed / Deprecated / Security).
+- **Never** edit `CHANGELOG.md`, the `version:` field in `pubspec.yaml`, or the `cider:`
+  block. All three are owned by automated release pipelines (TBA). Manual edits will be
+  reordered or overwritten when the pipeline runs.
 - **Never** edit `pubspec.lock` directly. It's `dart pub get`'s output.
 - **Never** delete files under `.fvm/`, `.dart_tool/`, or `pubspec.lock` without approval.
   These are tooling state; deleting them forces a re-resolve.
@@ -98,12 +105,15 @@ For single-file, single-concern fixes inside `lib/src/`: just do it.
   first.
 
 ## Definition of done
-- `fvm dart analyze` clean (with the strict `analysis_options.yaml` in effect).
+- `fvm dart --no-version-check analyze .` clean (pedantic mode — non-negotiable).
 - `fvm dart format --output=none --set-exit-if-changed .` clean.
 - `fvm dart test` green (where tests exist).
-- `fvm dart pub publish --dry-run` clean if the change is publish-relevant.
+- DCM rules in `analysis_options.yaml` applied by hand (`dart analyze` does not run
+  them): `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`,
+  plus the project-wide rule that blank lines segment logical chunks inside methods.
+- `fvm dart pub publish --dry-run` clean if the change is publish-relevant. Do **not**
+  bump the version or add a CHANGELOG entry to make the dry-run happy — the pipeline
+  owns those.
 - Public API additions documented with `///` dartdoc and reflected in README.
-- CHANGELOG entry under the right section (Added / Changed / Fixed / Removed /
-  Deprecated / Security) when the change is user-visible.
 - Explicitly call out what you did NOT verify (e.g. "didn't exercise on a real network —
   only mocked HTTP responses").
