@@ -1,4 +1,5 @@
-import 'package:test/test.dart';
+import 'package:checks/checks.dart';
+import 'package:test/scaffolding.dart';
 import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connectivity_checker.dart';
 
 void main() {
@@ -10,10 +11,11 @@ void main() {
         target: target,
         responseTime: const Duration(milliseconds: 42),
       );
-      expect(result.isSuccess, isTrue);
-      expect(result.error, isNull);
-      expect(result.responseTime, const Duration(milliseconds: 42));
-      expect(result.target, target);
+
+      check(result.isSuccess).isTrue();
+      check(result.error).isNull();
+      check(result.responseTime).equals(const Duration(milliseconds: 42));
+      check(result.target).equals(target);
     });
   });
 
@@ -25,9 +27,10 @@ void main() {
         responseTime: const Duration(milliseconds: 100),
         error: error,
       );
-      expect(result.isSuccess, isFalse);
-      expect(result.error, error);
-      expect(result.responseTime, const Duration(milliseconds: 100));
+
+      check(result.isSuccess).isFalse();
+      check(result.error).equals(error);
+      check(result.responseTime).equals(const Duration(milliseconds: 100));
     });
 
     test('allows omitting the error when the failure is a predicate mismatch', () {
@@ -35,8 +38,9 @@ void main() {
         target: target,
         responseTime: const Duration(milliseconds: 100),
       );
-      expect(result.isSuccess, isFalse);
-      expect(result.error, isNull);
+
+      check(result.isSuccess).isFalse();
+      check(result.error).isNull();
     });
   });
 }

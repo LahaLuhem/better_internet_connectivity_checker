@@ -1,12 +1,14 @@
-import 'package:test/test.dart';
+import 'package:checks/checks.dart';
+import 'package:test/scaffolding.dart';
 import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connectivity_checker.dart';
 
 void main() {
   group('Reachable.fromResponseTime', () {
     test('reports good quality when no threshold configured', () {
       final status = Reachable.fromResponseTime(const Duration(seconds: 5), slowThreshold: null);
-      expect(status.quality, ConnectionQuality.good);
-      expect(status.responseTime, const Duration(seconds: 5));
+
+      check(status.quality).equals(ConnectionQuality.good);
+      check(status.responseTime).equals(const Duration(seconds: 5));
     });
 
     test('reports good quality when response time is under threshold', () {
@@ -14,7 +16,8 @@ void main() {
         const Duration(milliseconds: 100),
         slowThreshold: const Duration(milliseconds: 500),
       );
-      expect(status.quality, ConnectionQuality.good);
+
+      check(status.quality).equals(ConnectionQuality.good);
     });
 
     test('reports slow quality when response time exceeds threshold', () {
@@ -22,7 +25,8 @@ void main() {
         const Duration(milliseconds: 600),
         slowThreshold: const Duration(milliseconds: 500),
       );
-      expect(status.quality, ConnectionQuality.slow);
+
+      check(status.quality).equals(ConnectionQuality.slow);
     });
 
     test('boundary value (equal to threshold) is classified as good', () {
@@ -30,7 +34,8 @@ void main() {
         const Duration(milliseconds: 500),
         slowThreshold: const Duration(milliseconds: 500),
       );
-      expect(status.quality, ConnectionQuality.good);
+
+      check(status.quality).equals(ConnectionQuality.good);
     });
   });
 
@@ -44,7 +49,8 @@ void main() {
         Reachable() => 'reachable',
         Unreachable() => 'unreachable',
       };
-      expect(label, 'reachable');
+
+      check(label).equals('reachable');
     });
 
     test('exhaustive switch resolves Unreachable', () {
@@ -53,7 +59,8 @@ void main() {
         Reachable() => 'reachable',
         Unreachable() => 'unreachable',
       };
-      expect(label, 'unreachable');
+
+      check(label).equals('unreachable');
     });
   });
 }

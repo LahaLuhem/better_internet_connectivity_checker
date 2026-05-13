@@ -1,6 +1,7 @@
+import 'package:checks/checks.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:test/test.dart';
+import 'package:test/scaffolding.dart';
 import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connectivity_checker.dart';
 
 void main() {
@@ -12,9 +13,9 @@ void main() {
 
       final result = await probe.probe(target);
 
-      expect(result.isSuccess, isTrue);
-      expect(result.error, isNull);
-      expect(result.target, target);
+      check(result.isSuccess).isTrue();
+      check(result.error).isNull();
+      check(result.target).equals(target);
     });
 
     test('returns a failed result when the predicate rejects the response', () async {
@@ -24,8 +25,8 @@ void main() {
 
       final result = await probe.probe(target);
 
-      expect(result.isSuccess, isFalse);
-      expect(result.error, isNull);
+      check(result.isSuccess).isFalse();
+      check(result.error).isNull();
     });
 
     test('captures exceptions raised by the underlying transport', () async {
@@ -36,8 +37,8 @@ void main() {
 
       final result = await probe.probe(target);
 
-      expect(result.isSuccess, isFalse);
-      expect(result.error, boom);
+      check(result.isSuccess).isFalse();
+      check(result.error).equals(boom);
     });
 
     test('issues an HTTP HEAD request with the target URI and headers', () async {
@@ -55,9 +56,9 @@ void main() {
 
       await probe.probe(target);
 
-      expect(captured.method, 'HEAD');
-      expect(captured.url, target.uri);
-      expect(captured.headers['x-custom'], 'yes');
+      check(captured.method).equals('HEAD');
+      check(captured.url).equals(target.uri);
+      check(captured.headers['x-custom']).equals('yes');
     });
   });
 }

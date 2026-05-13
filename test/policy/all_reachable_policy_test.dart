@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:test/test.dart';
 import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connectivity_checker.dart';
 
@@ -20,7 +21,7 @@ void main() {
         slowThreshold: null,
       );
 
-      expect(status, isA<Reachable>());
+      check(status).isA<Reachable>();
     });
 
     test('returns Unreachable when any probe fails', () async {
@@ -41,10 +42,10 @@ void main() {
         slowThreshold: null,
       );
 
-      expect(status, isA<Unreachable>());
+      check(status).isA<Unreachable>();
       final unreachable = status as Unreachable;
-      expect(unreachable.failedProbes, hasLength(1));
-      expect(unreachable.failedProbes.first.target, t2);
+      check(unreachable.failedProbes).length.equals(1);
+      check(unreachable.failedProbes.first.target).equals(t2);
     });
 
     test('reports the slowest successful probe time on Reachable', () async {
@@ -62,7 +63,7 @@ void main() {
         slowThreshold: null,
       );
 
-      expect((status as Reachable).responseTime, const Duration(milliseconds: 500));
+      check((status as Reachable).responseTime).equals(const Duration(milliseconds: 500));
     });
 
     test('classifies as slow when the slowest probe exceeds threshold', () async {
@@ -80,7 +81,7 @@ void main() {
         slowThreshold: const Duration(milliseconds: 500),
       );
 
-      expect((status as Reachable).quality, ConnectionQuality.slow);
+      check((status as Reachable).quality).equals(ConnectionQuality.slow);
     });
 
     test('returns Unreachable with no failures for an empty target list', () async {
@@ -92,8 +93,8 @@ void main() {
         slowThreshold: null,
       );
 
-      expect(status, isA<Unreachable>());
-      expect((status as Unreachable).failedProbes, isEmpty);
+      check(status).isA<Unreachable>();
+      check((status as Unreachable).failedProbes).isEmpty();
     });
   });
 }

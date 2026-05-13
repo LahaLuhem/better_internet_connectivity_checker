@@ -1,7 +1,8 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
-import 'package:test/test.dart';
+import 'package:test/scaffolding.dart';
 import 'package:ultimate_internet_connectivity_checker/ultimate_internet_connectivity_checker.dart';
 
 import '_helpers/stub_probe.dart';
@@ -20,7 +21,7 @@ void main() {
 
       final status = await connection.checkOnce();
 
-      expect(status, isA<Reachable>());
+      check(status).isA<Reachable>();
     });
 
     test('does not populate lastStatus', () async {
@@ -33,13 +34,13 @@ void main() {
 
       await connection.checkOnce();
 
-      expect(connection.lastStatus, isNull);
+      check(connection.lastStatus).isNull();
     });
   });
 
   group('InternetConnection constructor', () {
     test('asserts when targets is empty (dev-time check)', () {
-      expect(() => InternetConnection(targets: const []), throwsA(isA<AssertionError>()));
+      check(() => InternetConnection(targets: const [])).throws<AssertionError>();
     });
   });
 
@@ -67,13 +68,13 @@ void main() {
         connection.onStatusChange.listen(events.add);
 
         async.flushMicrotasks();
-        expect(events, hasLength(1));
-        expect(events.single, isA<Unreachable>());
+        check(events).length.equals(1);
+        check(events.single).isA<Unreachable>();
 
         reachable = true;
         async.elapse(const Duration(seconds: 5));
-        expect(events, hasLength(2));
-        expect(events.last, isA<Reachable>());
+        check(events).length.equals(2);
+        check(events.last).isA<Reachable>();
 
         unawaited(connection.dispose());
       });
@@ -95,14 +96,14 @@ void main() {
         connection.onStatusChange.listen(events.add);
 
         async.flushMicrotasks();
-        expect(events, [isA<Unreachable>()]);
+        check(events.first).isA<Unreachable>();
 
         async
           ..elapse(const Duration(seconds: 5))
           ..elapse(const Duration(seconds: 5))
           ..elapse(const Duration(seconds: 5));
 
-        expect(events, hasLength(1));
+        check(events).length.equals(1);
 
         unawaited(connection.dispose());
       });
@@ -125,13 +126,13 @@ void main() {
         connection.onStatusChange.listen(events.add);
 
         async.flushMicrotasks();
-        expect(events, hasLength(1));
-        expect((events.last as Reachable).quality, ConnectionQuality.good);
+        check(events).length.equals(1);
+        check((events.last as Reachable).quality).equals(ConnectionQuality.good);
 
         responseTime = const Duration(milliseconds: 800);
         async.elapse(const Duration(seconds: 5));
-        expect(events, hasLength(2));
-        expect((events.last as Reachable).quality, ConnectionQuality.slow);
+        check(events).length.equals(2);
+        check((events.last as Reachable).quality).equals(ConnectionQuality.slow);
 
         unawaited(connection.dispose());
       });
@@ -160,15 +161,15 @@ void main() {
         connection.onStatusChange.listen(events.add);
 
         async.flushMicrotasks();
-        expect(probeCalls, 1);
+        check(probeCalls).equals(1);
 
         trigger.add(null);
         async.flushMicrotasks();
-        expect(probeCalls, 2);
+        check(probeCalls).equals(2);
 
         trigger.add(null);
         async.flushMicrotasks();
-        expect(probeCalls, 3);
+        check(probeCalls).equals(3);
 
         unawaited(connection.dispose());
       });
@@ -194,14 +195,14 @@ void main() {
         connection.onStatusChange.listen(events.add);
 
         async.flushMicrotasks();
-        expect(probeCalls, 1);
+        check(probeCalls).equals(1);
 
         connection.setCheckInterval(const Duration(seconds: 2));
         async.elapse(const Duration(seconds: 2));
-        expect(probeCalls, 2);
+        check(probeCalls).equals(2);
 
         async.elapse(const Duration(seconds: 2));
-        expect(probeCalls, 3);
+        check(probeCalls).equals(3);
 
         unawaited(connection.dispose());
       });
