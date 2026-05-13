@@ -54,7 +54,7 @@ better_internet_connectivity_checker/
 │           ├── models/                               Auxiliary types (quality enum)
 │           └── outcomes/                             Sealed cases via `part of`
 ├── test/                                             `dart test` units (mirrors lib/src/)
-├── example/                                          Runnable usage samples (TBA)
+├── example/                                          Runnable usage samples (see example/AGENTS.md)
 ├── analysis_options.yaml                             Strict-mode + opinionated lints
 ├── pubspec.yaml                                      Deps + cider config + topics
 ├── .pubignore                                        Files excluded from `pub publish`
@@ -131,6 +131,34 @@ values explicit types, no ambient mutability, and small focused classes.
 - **Prefer abbreviations over initialisms for domain terms.** In code, comments,
   docstrings, and log messages alike, expand. Widely-known protocol initialisms (HTTP,
   DNS, TCP, TLS, …) stay as-is; novel project terms get spelt out.
+- **Local-variable names carry a concise type-suffix.** Dart is strongly typed, but a
+  reader without IDE inlay-hints can't see the inferred type — the *name* has to do
+  that work. Suffix a local with what it *is* so the next reader doesn't have to
+  scroll back to the assignment (or install a plugin) to recover the type.
+  **Callback parameters** are exempt and stay single-word (`result`, `probe`,
+  `target`) — the enclosing call site already pins the type. Single-letter callback
+  params are out, *except* symmetric pair-wise params in comparators / reducers where
+  `(a, b)` is the genre convention. Regular method parameters follow the
+  local-variable rule, not the callback exemption. **When a domain type exists, the
+  suffix is the type name** — `suggestedProbeMethod` (not `suggestedMethod`),
+  `probeMethodNames` (not `methodNames`), `probeResults` (not `results`). Generic
+  suffixes (`Names`, `Method`, `Results`) lose the disambiguation the rule is meant
+  to provide.
+
+  ```dart
+  // Prefer:
+  final probeResults = await targets.map(probe.probe).wait;
+  final worstDuration = probeResults
+      .map((result) => result.responseTime)
+      .reduce((a, b) => a > b ? a : b);
+
+  // Over:
+  final results = await targets.map(probe.probe).wait;
+  final worst = results.map((r) => r.responseTime).reduce((a, b) => a > b ? a : b);
+  ```
+
+  Strong format-string conventions (`hh`/`mm`/`ss` in a timestamp formatter, etc.)
+  override this — the rule targets *type ambiguity*, not all short names.
 - **Wrap text-file content at 100 columns.** `.editorconfig` is authoritative;
   Markdown / Dart / YAML all share the same cap.
 - **Blank lines separate logical chunks within a method.** Group guard checks, setup,
@@ -152,10 +180,86 @@ values explicit types, no ambient mutability, and small focused classes.
   constructor. Pure-static namespace classes (`Values`) and field-less interface
   classes (`ConnectivityProbe`, `ReachabilityPolicy`) have nothing to order; the rule
   applies vacuously.
-- **Use static dot shorthands (Dart 3.10+) where the context type is known.** E.g.
-  inside `Reachable(quality: cond ? .slow : .good)`, the `.slow` / `.good` resolve from
-  the `ConnectionQuality` context type of the `quality:` parameter. Skip when it hurts
-  readability — `.new(…)` for unnamed constructors typically does.
+- **Use static dot shorthands (Dart 3.10+) wherever the context type is known.** They
+  resolve from the parameter / return / variable type, not from inference of arbitrary
+  expressions. Drop the leading type name in *all* of these positions, not just the
+  obvious enum case:
+  - Enum values in patterns and arg slots:
+    `Reachable(quality: cond ? .slow : .good)`, `case .head =>`.
+  - Named constructors when the return / context type pins it:
+    inside `Future<ProbeResult> probe(…)`, write `return .success(target: …, …)` rather
+    than `return ProbeResult.success(…)`.
+  - Const factories on widget parameter types — `padding: const .all(12)`, `margin: .zero`,
+    `padding: const .symmetric(horizontal: 12, vertical: 4)`. Works on
+    `EdgeInsetsGeometry`-typed params because the static factory delegates through.
+  - Flex alignment / sizing slots — `crossAxisAlignment: .start`, `mainAxisSize: .min`,
+    `mainAxisAlignment: .center`.
+
+  Skip when it hurts readability — `.new(…)` for unnamed constructors typically does;
+  cases where the surrounding context type isn't obvious without re-reading.
+
+  After dropping a fully-qualified prefix, the type name often disappears from the file
+  entirely — remove it from any `show` clauses too. Re-running analyze surfaces
+  `unused_shown_name` warnings for orphaned ones.
+- **Prefer collection-for / collection-if over `Iterable.map(…).toList()` in widget
+  trees.** A literal list with embedded control flow reads as data; a `.map(…).toList()`
+  reads as a pipeline that incidentally produces data. The literal form also doesn't
+  bloat the file with `<T>` annotations the list-literal context already infers:
+
+  ```dart
+  // Prefer:
+  DropdownButton(
+    value: viewModel.probeMethod,
+    items: [
+      for (final method in ProbeMethod.values)
+        DropdownMenuItem(value: method, child: Text(method.label)),
+    ],
+    onChanged: …,
+  )
+
+  // Over:
+  DropdownButton<ProbeMethod>(
+    value: viewModel.probeMethod,
+    items: ProbeMethod.values
+        .map((m) => DropdownMenuItem<ProbeMethod>(value: m, child: Text(m.label)))
+        .toList(),
+    onChanged: …,
+  )
+  ```
+
+  Drop explicit generic type arguments when the surrounding context (other args, the
+  assignment target, the return slot) already pins them. Keep them when inference would
+  otherwise fall back to `dynamic` — e.g. `MaterialPageRoute<void>(builder: …)` stays,
+  because nothing else constrains the route's `T`.
+- **Prefer the `dart:async` `wait` extensions over the static `Future.wait(...)`.** The
+  extensions (`Iterable<Future<T>>.wait` and the record forms `FutureRecord2`…
+  `FutureRecord9`) live in `dart:async`'s `future_extensions.dart` and supersede the
+  static call for everyday use.
+  - **Fixed number of differently-typed futures → record form.** `(f1, f2).wait`
+    returns `Future<(T1, T2)>` and destructures directly. Never await a list literal
+    and index into the result by `.first` / `[1]` / etc. — that collapses element
+    types to the common supertype and isn't type-checked against slot order, so a
+    swap reads as valid until runtime.
+  - **Dynamic number of same-typed futures → iterable form.** `iterable.wait` returns
+    `Future<List<T>>` just like `Future.wait(iterable)`, but errors surface as
+    `ParallelWaitError` carrying both per-slot values and per-slot errors — which
+    lets callers dispose successful results when a sibling future fails.
+
+  ```dart
+  // Prefer (fixed-size, mixed types):
+  final (anyStatus, allStatus) = await (any.checkOnce(), all.checkOnce()).wait;
+
+  // Over:
+  final results = await Future.wait([any.checkOnce(), all.checkOnce()]);
+  final anyStatus = results.first;
+  final allStatus = results[1];
+
+  // Prefer (dynamic-size):
+  final results = await targets.map(probe.probe).wait;
+
+  // Over:
+  final results = await Future.wait(targets.map(probe.probe));
+  ```
 - **`part` / `part of` only when structurally needed.** Not a smell on its own.
   Legitimate uses: sealed-class cases across files (Dart 3 requires same library for
   sealed subtypes — see `status/outcomes/`), code-generation outputs (`*.g.dart` from

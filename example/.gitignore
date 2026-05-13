@@ -1,5 +1,9 @@
 # Custom
 .fvm/
+# The example app is an application, not a library — commit its lockfile so CI
+# resolves to the same versions. Overrides the root .gitignore's `pubspec.lock`
+# (which is correct for the library itself but cascades into this subdir).
+!pubspec.lock
 
 # Created by https://www.toptal.com/developers/gitignore/api/linux,macos,windows,androidstudio,visualstudiocode,flutter
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,macos,windows,androidstudio,visualstudiocode,flutter

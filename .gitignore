@@ -1,8 +1,9 @@
 # Custom
 .fvm/
-# Root-level AI symlinks point into .ai/; the targets are committed, the symlinks are not.
+# AI symlinks point into adjacent .ai/ folders; targets are committed, symlinks are not.
 /AGENTS.md
 /CLAUDE.md
+/example/AGENTS.md
 
 # Created by https://www.toptal.com/developers/gitignore/api/dart,linux,macos,windows,androidstudio,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=dart,linux,macos,windows,androidstudio,visualstudiocode

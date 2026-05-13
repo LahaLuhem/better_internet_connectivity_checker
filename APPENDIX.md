@@ -132,6 +132,41 @@ anchor stable or grep-and-update every caller.
 
 ---
 
+<a id="no-response-data-on-result"></a>
+## `ProbeResult` deliberately omits protocol-specific response data
+
+- **Chosen:** `ProbeResult` carries only `target`, `isSuccess`, `responseTime`, and
+  `error`. No `statusCode`, no `headers`, no protocol-specific response payload. Probes
+  that need to surface protocol-specific data (HTTP response codes, DNS authoritative
+  server, TCP reset reason, …) do so on the probe's own surface — constructor callbacks,
+  captured state, custom getters on the probe instance — not on the shared result.
+- **Why:** `ConnectivityProbe` is the abstraction layer; HTTP HEAD is one implementation
+  of it. The result type is the contract every probe fulfils. Putting HTTP fields on it
+  leaks HTTP semantics into a transport-agnostic surface: a DNS probe has no
+  `statusCode`, a TCP probe has no `headers`, every non-HTTP implementation would carry
+  permanently-null fields it can't populate. Each new "I need X on the result" request
+  for a future probe (DNS records, gRPC trailers, TLS handshake details, …) compounds the
+  bloat. Drawing the line at "no response data on the result" stops that growth before
+  it starts.
+- **What we considered and rejected:** an early iteration of the auto-method-switch demo
+  (HEAD → GET on 405 + `Allow`) pushed `statusCode: int?` and `headers: Map<String, String>?`
+  onto `ProbeResult.failure`, motivated by a single demo's needs. Reverted because the
+  generalisation was driven by n=1 and would have set a precedent every future custom
+  probe could lean on. The demo's `MethodAwareProbe` instead exposes an `onAllowHeader`
+  constructor callback — that callback is exactly what the pluggable probe seam is for:
+  if your probe needs to expose something the shared `ProbeResult` doesn't carry, expose
+  it on the probe.
+- **Test:** when reviewing a contribution that proposes adding a field to `ProbeResult`,
+  ask whether a non-HTTP probe (DNS, TCP, mock) could populate it meaningfully. If the
+  field would be `null` for most probe implementations, it belongs on a specific probe,
+  not on the shared result.
+- **Future-proof escape hatch:** if a real cross-cutting need ever materialises (multiple
+  protocols all needing to surface their own structured metadata), the right shape is a
+  single `Map<String, Object?> metadata` field — one bounded surface point, not N
+  protocol-specific fields. Defer that until the use case is real.
+
+---
+
 <a id="connectivity-hook-not-baked-in"></a>
 ## Connectivity-change trigger as an injectable hook, not a baked-in dependency
 

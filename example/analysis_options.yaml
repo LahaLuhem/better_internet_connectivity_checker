@@ -240,7 +240,7 @@ linter:
     prefer_typing_uninitialized_variables: true
     prefer_void_to_null: true
     provide_deprecation_message: true
-    public_member_api_docs: true
+    public_member_api_docs: false  # Example app, not a library — no API surface to document.
     recursive_getters: true
     remove_deprecations_in_breaking_versions: true
     require_trailing_commas: false  # Made obsolete due to the new Dart formatter in 3.7
@@ -309,7 +309,7 @@ linter:
     use_null_aware_elements: true
     use_raw_strings: true
     use_rethrow_when_possible: true
-    use_setters_to_change_properties: true
+    use_setters_to_change_properties: false  # App-level leaf — conflicts with the on<Event>(value) view-callback idiom. See example/AGENTS.md.
     use_string_buffers: true
     use_string_in_part_of_directives: true
     use_super_parameters: true

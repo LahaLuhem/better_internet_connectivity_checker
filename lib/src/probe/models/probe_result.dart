@@ -6,6 +6,11 @@ import 'probe_target.dart';
 /// classify a slow-but-reachable connection. Failed results carry the
 /// elapsed time too — useful for distinguishing "timed out after 3 s" from
 /// "DNS failed in 30 ms" — plus any exception caught during the probe.
+///
+/// Intentionally protocol-agnostic. Probe-specific response data (HTTP
+/// headers, DNS records, TCP RST codes, …) lives on the probe's own
+/// surface, not here — see
+/// [`APPENDIX.md#no-response-data-on-result`](../../APPENDIX.md#no-response-data-on-result).
 final class ProbeResult {
   /// The target that was probed.
   final ProbeTarget target;
