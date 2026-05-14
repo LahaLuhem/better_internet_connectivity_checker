@@ -5,8 +5,8 @@ import 'package:test/test.dart';
 import '../_helpers/stub_probe.dart';
 
 void main() {
-  final t1 = ProbeTarget(uri: Uri.parse('https://a.example.com'));
-  final t2 = ProbeTarget(uri: Uri.parse('https://b.example.com'));
+  final t1 = ProbeTarget(uri: Uri.https('a.example.com'));
+  final t2 = ProbeTarget(uri: Uri.https('b.example.com'));
 
   group('AnyReachablePolicy.evaluate', () {
     test('returns Reachable when at least one probe succeeds', () async {

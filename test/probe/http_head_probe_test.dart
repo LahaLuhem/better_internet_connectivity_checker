@@ -9,7 +9,7 @@ void main() {
     test('returns a successful result when the predicate accepts the response', () async {
       final client = MockClient((_) async => http.Response('', 200));
       final probe = HttpHeadProbe(client: client);
-      final target = ProbeTarget(uri: Uri.parse('https://example.com'));
+      final target = ProbeTarget(uri: Uri.https('example.com'));
 
       final result = await probe.probe(target);
 
@@ -21,7 +21,7 @@ void main() {
     test('returns a failed result when the predicate rejects the response', () async {
       final client = MockClient((_) async => http.Response('', 500));
       final probe = HttpHeadProbe(client: client);
-      final target = ProbeTarget(uri: Uri.parse('https://example.com'));
+      final target = ProbeTarget(uri: Uri.https('example.com'));
 
       final result = await probe.probe(target);
 
@@ -33,7 +33,7 @@ void main() {
       final boom = Exception('network down');
       final client = MockClient((_) async => throw boom);
       final probe = HttpHeadProbe(client: client);
-      final target = ProbeTarget(uri: Uri.parse('https://example.com'));
+      final target = ProbeTarget(uri: Uri.https('example.com'));
 
       final result = await probe.probe(target);
 
@@ -50,7 +50,7 @@ void main() {
       });
       final probe = HttpHeadProbe(client: client);
       final target = ProbeTarget(
-        uri: Uri.parse('https://example.com/ping'),
+        uri: Uri.https('example.com', '/ping'),
         headers: const {'X-Custom': 'yes'},
       );
 

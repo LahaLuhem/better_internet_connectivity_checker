@@ -1,4 +1,5 @@
 import '../probe/models/probe_target.dart';
+import 'models/const_uri.dart';
 
 /// Internal default values for the package's own classes.
 ///
@@ -28,13 +29,15 @@ abstract final class Values {
   /// custom target list is supplied. Chosen for operator diversity and low
   /// cache surface.
   ///
-  /// Safe to share because [List.unmodifiable] prevents mutation.
-  static final defaultProbeTargets = List<ProbeTarget>.unmodifiable([
-    ProbeTarget(uri: Uri.parse('https://one.one.one.one')),
-    ProbeTarget(uri: Uri.parse('https://icanhazip.com/')),
-    ProbeTarget(uri: Uri.parse('https://jsonplaceholder.typicode.com/todos/1')),
-    ProbeTarget(uri: Uri.parse('https://pokeapi.co/api/v2/ability/?limit=1')),
-  ]);
+  /// Safe to share because every layer is `const`: the list literal, each
+  /// [ProbeTarget], and each [ConstUri] are compile-time canonical and reject
+  /// mutation at runtime.
+  static const defaultProbeTargets = <ProbeTarget>[
+    ProbeTarget(uri: ConstUri('https://one.one.one.one')),
+    ProbeTarget(uri: ConstUri('https://icanhazip.com')),
+    ProbeTarget(uri: ConstUri('https://jsonplaceholder.typicode.com/todos/1')),
+    ProbeTarget(uri: ConstUri('https://pokeapi.co/api/v2/ability/?limit=1')),
+  ];
 }
 
 /// Consumer that accepts any single argument and returns void.

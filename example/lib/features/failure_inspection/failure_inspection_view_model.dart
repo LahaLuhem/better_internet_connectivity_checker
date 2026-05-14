@@ -6,12 +6,12 @@ import '../core/data/constants/core_constants.dart';
 
 final class FailureInspectionViewModel extends ViewModel {
   static final _unreachableTargets = [
-    ProbeTarget(uri: Uri.parse('https://nope-1.invalid/')),
+    ProbeTarget(uri: Uri.https('nope-1.invalid')),
     ProbeTarget(
-      uri: Uri.parse('https://nope-2.invalid/'),
+      uri: Uri.https('nope-2.invalid'),
       timeout: ConstDurations.failureInspectionShortProbeTimeout,
     ),
-    ProbeTarget(uri: Uri.parse('https://nope-3.invalid/')),
+    ProbeTarget(uri: Uri.https('nope-3.invalid')),
   ];
 
   final _lastResultNotifier = ValueNotifier<InternetStatus?>(null);

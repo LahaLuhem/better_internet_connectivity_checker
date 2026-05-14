@@ -6,12 +6,12 @@ typedef PolicyResults = ({InternetStatus any, InternetStatus all});
 
 final class PolicyComparisonViewModel extends ViewModel {
   static final _baseTargets = [
-    ProbeTarget(uri: Uri.parse('https://one.one.one.one')),
-    ProbeTarget(uri: Uri.parse('https://icanhazip.com/')),
+    ProbeTarget(uri: Uri.https('one.one.one.one')),
+    ProbeTarget(uri: Uri.https('icanhazip.com')),
   ];
 
   static final _bogusTarget = ProbeTarget(
-    uri: Uri.parse('https://this-domain-definitely-does-not-resolve.invalid/'),
+    uri: Uri.https('this-domain-definitely-does-not-resolve.invalid'),
   );
 
   final _shouldIncludeBogusTargetNotifier = ValueNotifier(true);

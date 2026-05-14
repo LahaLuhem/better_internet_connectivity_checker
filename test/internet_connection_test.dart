@@ -8,7 +8,7 @@ import 'package:test/scaffolding.dart';
 import '_helpers/stub_probe.dart';
 
 void main() {
-  final target = ProbeTarget(uri: Uri.parse('https://example.com'));
+  final target = ProbeTarget(uri: Uri.https('example.com'));
 
   group('InternetConnection.checkOnce', () {
     test('runs the configured probe through the configured policy', () async {

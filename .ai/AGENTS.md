@@ -260,6 +260,62 @@ values explicit types, no ambient mutability, and small focused classes.
   // Over:
   final results = await Future.wait(targets.map(probe.probe));
   ```
+- **Prefer `Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)` for compile-time-known
+  URLs, and pass path / query parameters as separate arguments — not mashed into the
+  authority.** The named constructor's shape is `(authority, [unencodedPath,
+  queryParameters])`. Component-wise construction makes the host, path, and query
+  visible at a glance and short-circuits the kinds of typo `Uri.parse` silently
+  accepts (missing `://`, stray slashes, unencoded query chars). `Uri.parse` is still
+  the right tool for runtime input (user-supplied URLs, response payloads).
+
+  ```dart
+  // Prefer:
+  Uri.https('jsonplaceholder.typicode.com', '/todos/1')
+  Uri.https('pokeapi.co', '/api/v2/ability/', {'limit': '1'})
+
+  // Over (path / query smuggled into the authority — parsed at runtime anyway):
+  Uri.https('pokeapi.co/api/v2/ability/?limit=1')
+
+  // Over (full string parse — same drawback, plus scheme is now stringly-typed):
+  Uri.parse('https://pokeapi.co/api/v2/ability/?limit=1')
+  ```
+
+  **Exception (`lib/src/` only):** the internal `ConstUri('https://...')` wrapper
+  ([`lib/src/data/models/const_uri.dart`](../lib/src/data/models/const_uri.dart))
+  is permitted when it unlocks `const` for an enclosing value type — e.g. the
+  `static const Values.defaultProbeTargets` list, where `const` canonicalisation
+  drops the `List.unmodifiable` wrapper and shares one parsed `Uri` across
+  identical literals. `ConstUri` still pays parse cost (lazily, on first access)
+  and is fundamentally a deferred `Uri.parse` — the trade-off only pays off when
+  the enclosing type is *already* `const`-constructible. Stay structural in
+  `test/` / `example/` (no `const` payoff to justify the indirection) and never
+  in public-API code (anything re-exported from `lib/<package>.dart`).
+- **Prefer `List.unmodifiable(…)` over `UnmodifiableListView(…)` as the default for
+  exposing immutable collections** (same for `Set.unmodifiable` / `Map.unmodifiable`
+  vs their `…View` counterparts in `dart:collection`). The constructor *copies*:
+  snapshot semantics, decoupled from whatever the caller passed in. The `…View`
+  only *wraps*: anyone who still holds the underlying collection can mutate it, and
+  the view silently follows. That footgun outweighs the saved copy in almost every
+  case.
+
+  Reach for `UnmodifiableListView` only when you specifically want **read-through
+  visibility** into private mutable internal state — e.g. a future logging /
+  event-buffer class whose consumers should see new entries appended live.
+
+  ```dart
+  // Prefer — defensive snapshot, caller-supplied list cannot mutate our state:
+  class Foo {
+    Foo(List<X> input) : _xs = List.unmodifiable(input);
+    final List<X> _xs;
+  }
+
+  // Reserve — read-through view of private mutable internal state:
+  class EventLog {
+    final List<Event> _events = [];
+    List<Event> get events => UnmodifiableListView(_events);
+    void add(Event e) => _events.add(e);
+  }
+  ```
 - **`part` / `part of` only when structurally needed.** Not a smell on its own.
   Legitimate uses: sealed-class cases across files (Dart 3 requires same library for
   sealed subtypes — see `status/outcomes/`), code-generation outputs (`*.g.dart` from

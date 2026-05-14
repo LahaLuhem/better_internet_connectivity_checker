@@ -79,7 +79,7 @@ final class InternetConnection {
     ConnectivityProbe? probe,
     Stream<void>? externalRecheckTrigger,
   }) : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty'),
-       _targets = List.unmodifiable(targets ?? Values.defaultProbeTargets),
+       _targets = targets != null ? List.unmodifiable(targets) : Values.defaultProbeTargets,
        _checkInterval = checkInterval,
        _slowThreshold = slowThreshold,
        _policy = policy,

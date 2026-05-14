@@ -3,7 +3,7 @@ import 'package:checks/checks.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {
-  final target = ProbeTarget(uri: Uri.parse('https://example.com'));
+  final target = ProbeTarget(uri: Uri.https('example.com'));
 
   group('ProbeResult.success', () {
     test('marks the result as successful with no error', () {
