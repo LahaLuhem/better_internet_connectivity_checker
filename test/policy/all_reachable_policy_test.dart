@@ -96,5 +96,21 @@ void main() {
       check(status).isA<Unreachable>();
       check((status as Unreachable).failedProbes).isEmpty();
     });
+
+    test('does not pass a cancelSignal to its probes', () async {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 100)),
+      );
+
+      await const AllReachablePolicy().evaluate(
+        targets: [t1, t2],
+        probe: probe,
+        slowThreshold: null,
+      );
+
+      check(probe.cancelSignalFor(t1)).isNull();
+      check(probe.cancelSignalFor(t2)).isNull();
+    });
   });
 }

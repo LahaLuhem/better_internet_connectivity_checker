@@ -167,6 +167,50 @@ anchor stable or grep-and-update every caller.
 
 ---
 
+<a id="probe-cancellation-via-http-abortable"></a>
+## Probe cancellation via `http.Abortable`, not per-call clients
+
+- **Chosen:** `ConnectivityProbe.probe(target, {cancelSignal})` accepts an optional
+  `Future<void>?`. When it completes, the probe should abandon I/O and return a failed
+  `ProbeResult`. The built-in `HttpHeadProbe` wires this — and its own per-target timeout
+  — into a single [`http.AbortableRequest`](https://pub.dev/documentation/http/latest/http/AbortableRequest-class.html)
+  via the `abortTrigger` named parameter. `IOClient` calls `HttpClientRequest.abort()` on
+  the underlying socket; `BrowserClient` calls `AbortController.abort()`. Either way the
+  TCP/TLS connection is released immediately, not after the Future-level timeout drains.
+- **Why an optional `Future<void>`** rather than a new `CancellationToken` type: standard
+  Dart types compose cleanly. The fan-out in `AnyReachablePolicy` is one `Completer<void>`
+  shared across all probes; custom probes that want to honour the signal can race against
+  it with `Future.any` or `whenComplete` without depending on a package-specific primitive.
+  Probes that cannot abort (DNS lookups already in flight, mocked transports, retry
+  decorators) simply ignore the parameter — the contract is best-effort, the policy still
+  resolves correctly.
+- **Why `http.Abortable` rather than per-call `http.Client` + `Client.close()`:** the
+  closure approach was the original plan and would have worked, but it forced a breaking
+  change to `HttpHeadProbe`'s constructor — replacing `{http.Client? client}` with a
+  factory function so each probe call could mint and close its own client. That sacrifices
+  connection pooling on the injected-client path for no gain over the canonical primitive
+  `package:http` 1.6.0 already provides. `Abortable` keeps the constructor untouched, the
+  injected client live across calls, and matches what every modern HTTP client (including
+  the platform `fetch`) does at the wire level.
+- **`AnyReachablePolicy` owns the cancellation fan-out, not `InternetConnection`.** A
+  single `Completer<void>` lives for the duration of one `evaluate(...)` call: pass its
+  future to every probe, complete it on first success or last failure. `AllReachablePolicy`
+  passes nothing — every probe must complete by definition, so there is nothing to cancel.
+  `InternetConnection` does not need to know about this: it asks the policy for an answer,
+  and the policy decides whether and when to release siblings.
+- **Implication for the failure path:** `RequestAbortedException` is an `Exception`
+  subtype (via `ClientException`), so the existing `on Exception catch (error)` clause in
+  `HttpHeadProbe` captures it and the result lands as `ProbeResult.failure(error: …)`.
+  Aborted-by-deadline failures now surface as `RequestAbortedException` rather than
+  `TimeoutException` — a small but visible behaviour shift for any caller that
+  type-discriminates on `ProbeResult.error`.
+- **Not in scope today:** wiring `InternetConnection.dispose()` into the same cancellation
+  channel. A mid-flight policy run continues to completion when the connection is disposed
+  — bounded by the probe timeout, which now aborts cleanly. Worth revisiting if the
+  default check interval ever shrinks below the timeout, but additive when it does.
+
+---
+
 <a id="connectivity-hook-not-baked-in"></a>
 ## Connectivity-change trigger as an injectable hook, not a baked-in dependency
 

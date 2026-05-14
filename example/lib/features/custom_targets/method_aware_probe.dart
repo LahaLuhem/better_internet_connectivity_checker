@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:http/http.dart' as http;
 
@@ -9,6 +11,11 @@ import 'data/enums/probe_method.dart';
 /// the package's built-in [HttpHeadProbe] only does HEAD, and
 /// [ProbeResult] is intentionally protocol-agnostic, so HTTP-specific data
 /// is surfaced on the probe itself rather than on the result.
+///
+/// Also demonstrates honouring [ConnectivityProbe.probe]'s `cancelSignal`
+/// via [http.AbortableRequest]: a single abort completer is fed by both the
+/// per-target timeout and the policy-supplied signal, so the in-flight
+/// request is released at the transport layer the moment either fires.
 final class MethodAwareProbe implements ConnectivityProbe {
   final ProbeMethod probeMethod;
   final void Function(String allow)? onAllowHeader;
@@ -18,14 +25,29 @@ final class MethodAwareProbe implements ConnectivityProbe {
     : _client = client ?? http.Client();
 
   @override
-  Future<ProbeResult> probe(ProbeTarget target) async {
+  Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) async {
     final stopwatch = Stopwatch()..start();
+    final abortCompleter = Completer<void>();
+    void triggerAbort() {
+      if (!abortCompleter.isCompleted) abortCompleter.complete();
+    }
+
+    final timeoutTimer = Timer(target.timeout, triggerAbort);
+    unawaited(cancelSignal?.whenComplete(triggerAbort));
+
+    final httpMethod = switch (probeMethod) {
+      .head => 'HEAD',
+      .get => 'GET',
+    };
 
     try {
-      final response = await switch (probeMethod) {
-        .head => _client.head(target.uri, headers: target.headers).timeout(target.timeout),
-        .get => _client.get(target.uri, headers: target.headers).timeout(target.timeout),
-      };
+      final request = http.AbortableRequest(
+        httpMethod,
+        target.uri,
+        abortTrigger: abortCompleter.future,
+      )..headers.addAll(target.headers);
+      final streamedResponse = await _client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
       stopwatch.stop();
 
       if (target.isSuccess(response)) {
@@ -40,6 +62,8 @@ final class MethodAwareProbe implements ConnectivityProbe {
       stopwatch.stop();
 
       return .failure(target: target, responseTime: stopwatch.elapsed, error: error);
+    } finally {
+      timeoutTimer.cancel();
     }
   }
 }

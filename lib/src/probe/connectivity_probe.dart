@@ -21,5 +21,15 @@ import 'models/probe_target.dart';
 // ignore: one_member_abstracts
 abstract interface class ConnectivityProbe {
   /// Probes [target] and returns the outcome.
-  Future<ProbeResult> probe(ProbeTarget target);
+  ///
+  /// When [cancelSignal] completes, the probe should abandon any in-flight
+  /// I/O and return a [ProbeResult.failure] promptly. The signal is fire-once
+  /// and best-effort: probes that cannot honour it (e.g. transports without a
+  /// native abort hook) may still run to completion — the contract only asks
+  /// that probes that *can* short-circuit *do* so, so the policy layer can
+  /// release siblings on first-success / last-failure resolution.
+  ///
+  /// Probes must tolerate [cancelSignal] completing after the probe has
+  /// already finished — that case is a no-op.
+  Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal});
 }

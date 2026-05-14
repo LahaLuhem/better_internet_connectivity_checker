@@ -3,6 +3,15 @@
 - [What it does](#what-it-does)
 - [Getting started](#getting-started)
 - [Usage](#usage)
+    * [One-shot check](#one-shot-check)
+    * [Pattern-matching the sealed status](#pattern-matching-the-sealed-status)
+    * [Listening to status changes](#listening-to-status-changes)
+    * [Slow-connection detection](#slow-connection-detection)
+    * [Custom probe targets](#custom-probe-targets)
+    * [Strict aggregation (every probe must succeed)](#strict-aggregation-every-probe-must-succeed)
+    * [Injecting a custom `http.Client`](#injecting-a-custom-httpclient)
+    * [Writing a custom `ConnectivityProbe`](#writing-a-custom-connectivityprobe)
+    * [Wiring `connectivity_plus` (Flutter)](#wiring-connectivity_plus-flutter)
 - [Testing](#testing)
 - [Releasing](#releasing)
 - [Contributing](#contributing)
@@ -14,7 +23,6 @@ internet-connectivity checking**. The goal is to answer "can I actually reach th
 internet right now?" — distinct from "is a network interface up?", which is what most
 OS-level checks report.
 
-<!-- TOC --><a name="what-it-does"></a>
 ## What it does
 
 - Probes one or more URIs to determine *actual* internet reachability — not just "an
@@ -32,7 +40,6 @@ OS-level checks report.
   itself taking a Flutter dependency.
 - Pure Dart — works on CLI, server, web, and Flutter with no platform channels.
 
-<!-- TOC --><a name="getting-started"></a>
 ## Getting started
 
 Add the package to `pubspec.yaml`:
@@ -51,7 +58,6 @@ dart pub get
 This package is **pure Dart** and does not depend on Flutter. It works in any Dart 3.11+
 project — CLI, server-side, web, and Flutter alike.
 
-<!-- TOC --><a name="usage"></a>
 ## Usage
 
 ### One-shot check
@@ -143,6 +149,22 @@ final checker = InternetConnection(
 );
 ```
 
+### Writing a custom `ConnectivityProbe`
+
+For probes that go beyond HTTP HEAD — DNS, TCP, a private API, or a decorator wrapping
+another probe — implement `ConnectivityProbe.probe(target, {cancelSignal})`. Honour the
+optional `cancelSignal` whenever your transport supports cancellation: under
+`AnyReachablePolicy` it fires the moment a sibling probe succeeds, so the in-flight
+request can release its socket at the transport layer instead of waiting out the
+per-target timeout. The built-in `HttpHeadProbe` honours it via `http.AbortableRequest`;
+probes that cannot abort simply ignore the parameter and the policy still resolves
+correctly.
+
+See [`example/lib/features/custom_targets/method_aware_probe.dart`](example/lib/features/custom_targets/method_aware_probe.dart)
+for the canonical pattern — dispatching HEAD or GET per-target, surfacing protocol-specific
+response data on the probe itself, and honouring `cancelSignal` alongside the per-target
+deadline through a single abort trigger.
+
 ### Wiring `connectivity_plus` (Flutter)
 
 The package does not depend on `connectivity_plus` — it accepts any `Stream<void>` as an
@@ -152,14 +174,13 @@ external trigger. Flutter apps can wire it up themselves:
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 final checker = InternetConnection(
-  externalRecheckTrigger:
-      Connectivity().onConnectivityChanged.map(noopWithVal),
+    externalRecheckTrigger:
+    Connectivity().onConnectivityChanged.map(noopWithVal),
 );
 ```
 
 A runnable example will live in `example/` once the example app is added.
 
-<!-- TOC --><a name="testing"></a>
 ## Testing
 
 ```bash
@@ -171,7 +192,6 @@ fvm dart format --output=none --set-exit-if-changed .    # formatter check
 The Dart/Flutter SDK version is pinned via [FVM](https://fvm.app/); see `.fvmrc`. Run
 `fvm install` once before the first build.
 
-<!-- TOC --><a name="releasing"></a>
 ## Releasing
 
 Version bumps and CHANGELOG entries are owned by an automated release pipeline (TBA).
@@ -182,7 +202,6 @@ the `link_template` it carries are pipeline configuration.
 Released tags will follow `v<MAJOR>.<MINOR>.<PATCH>` and link to GitHub releases via the
 `link_template` block.
 
-<!-- TOC --><a name="contributing"></a>
 ## Contributing
 
 Issues and PRs welcome at

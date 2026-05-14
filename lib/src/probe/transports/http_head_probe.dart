@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:http/http.dart' as http;
 
 import '../connectivity_probe.dart';
@@ -13,6 +15,14 @@ import '../models/probe_target.dart';
 /// Pass a custom [http.Client] to inject middleware, set proxies, or use
 /// a `MockClient` in tests. The default client is owned by this probe; close
 /// it via [http.Client.close] only if you constructed it yourself.
+///
+/// The probe issues an [http.AbortableRequest] so that the underlying socket
+/// is closed when the per-target deadline expires or when the policy's
+/// `cancelSignal` fires (e.g. a sibling probe wins under
+/// `AnyReachablePolicy`). Clients that honour [http.Abortable] — the native
+/// `IOClient` and the web `BrowserClient` — abort at the transport layer;
+/// clients that do not (notably `MockClient`) silently fall through to a
+/// normal completion.
 final class HttpHeadProbe implements ConnectivityProbe {
   final http.Client _client;
 
@@ -21,13 +31,21 @@ final class HttpHeadProbe implements ConnectivityProbe {
   HttpHeadProbe({http.Client? client}) : _client = client ?? http.Client();
 
   @override
-  Future<ProbeResult> probe(ProbeTarget target) async {
+  Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) async {
     final stopwatch = Stopwatch()..start();
+    final abortCompleter = Completer<void>();
+    void triggerAbort() {
+      if (!abortCompleter.isCompleted) abortCompleter.complete();
+    }
+
+    final timeoutTimer = Timer(target.timeout, triggerAbort);
+    unawaited(cancelSignal?.whenComplete(triggerAbort));
 
     try {
-      final response = await _client
-          .head(target.uri, headers: target.headers)
-          .timeout(target.timeout);
+      final request = http.AbortableRequest('HEAD', target.uri, abortTrigger: abortCompleter.future)
+        ..headers.addAll(target.headers);
+      final streamedResponse = await _client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
       stopwatch.stop();
 
       return target.isSuccess(response)
@@ -37,6 +55,8 @@ final class HttpHeadProbe implements ConnectivityProbe {
       stopwatch.stop();
 
       return .failure(target: target, responseTime: stopwatch.elapsed, error: error);
+    } finally {
+      timeoutTimer.cancel();
     }
   }
 }
