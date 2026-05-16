@@ -231,3 +231,63 @@ anchor stable or grep-and-update every caller.
 - **Future:** a sibling `better_internet_connectivity_checker_flutter` package can
   provide the `connectivity_plus` wiring as a default, depending on this package without
   the inverse coupling. Today, "wire it yourself" is a 1-line snippet in the README.
+
+---
+
+<a id="why-http-head-default-probe"></a>
+## Why HTTP HEAD, not DNS / TCP, is the default probe
+
+- **Chosen:** the default `ConnectivityProbe` (`HttpHeadProbe`) issues an HTTP HEAD
+  request and accepts HTTP 200 as success.
+- **Rejected:** DNS-only or TCP-connect probes, both of which would be cheaper per check.
+- **Why:** the package answers "can I actually reach the public internet right now", not
+  "is *some* socket-level path alive". DNS resolution succeeds inside captive portals
+  (the portal serves its own DNS), inside transparent proxies, and on LAN-only networks —
+  none of which let HTTP traffic out. Raw TCP connects catch some of those cases but still
+  miss TLS-handshake failures and HTTP-layer interception (captive portals returning a 302
+  to a sign-in page on port 443). HTTP HEAD costs one extra round-trip but exercises the
+  entire path the user cares about: DNS, TCP, TLS, and an HTTP response.
+- **Faster probes remain available as custom impls.** Users who explicitly accept the
+  trade-off can implement DNS or TCP probes against the `ConnectivityProbe` interface and
+  pass them via `InternetConnection(probe: …)`. The seam exists; the default is
+  conservative by design.
+
+---
+
+<a id="why-no-perf-preset"></a>
+## Why no performance-preset enum or "perf vs. memory" slider
+
+- **Considered:** a `PerformanceProfile.{battery, balanced, aggressive}` enum on the
+  constructor, or a numeric "perf vs. memory" slider.
+- **Rejected:** both.
+- **Why:**
+  1. The real trade-offs are *orthogonal*, not linear. Network bandwidth vs. responsiveness
+     (`checkInterval`), reliability vs. fan-out cost (`targets`), strictness vs. speed
+     (`policy`), transport overhead vs. portability (`probe`), classification-only
+     `slowThreshold`. Collapsing four independent axes onto one slider loses information.
+  2. The package's dominant cost is the *network* — bandwidth, latency, battery. Memory is
+     already near-zero (well under 1 KB per `InternetConnection`, no buffers, no caches).
+     There is no real memory-vs-perf axis to slide along.
+  3. Presets bake in opinions and age badly in a published API. If users want a
+     "battery mode", the right answer is a documented recipe composing existing knobs
+     (long interval, single target, any-of-1) — not a new opaque enum whose semantics
+     drift across versions.
+- **Future-proof escape hatch:** if a real memory-vs-observability axis ever materialises
+  (status-history buffer, diagnostic ring buffer), expose it as a *direct* knob
+  (`historySize: 50`) — not as part of a coalesced preset.
+
+---
+
+<a id="why-no-checkonce-coalescing"></a>
+## Why `checkOnce()` is not single-flighted today
+
+- **Chosen:** each `checkOnce()` call independently runs the full probe fan-out. Two
+  simultaneous callers issue two parallel sets of probes.
+- **Why:** most apps call `checkOnce()` from a single place — a status provider, a
+  service singleton, the periodic timer inside `InternetConnection` itself. The
+  duplicate-call case is rare; pre-shipping a single-flight wrapper adds code paths and
+  surface area for a non-problem. Callers that *do* hit the case can wrap one
+  `Future<InternetStatus>` themselves with a `Completer`.
+- **If real-world demand materialises:** the shape is straightforward and non-breaking —
+  keep one in-flight `Future` on `InternetConnection`, return it to concurrent callers,
+  clear on completion. The API stays identical; the change is transparent.

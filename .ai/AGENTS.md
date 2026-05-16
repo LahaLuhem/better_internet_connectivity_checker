@@ -14,21 +14,23 @@ outcomes, backed by pluggable `ConnectivityProbe` and `ReachabilityPolicy` layer
 README for usage; APPENDIX for design rationale.
 
 ## Stack
-- **Dart ≥ 3.10** (constraint pinned in `pubspec.yaml`). 3.10 is the floor because of
-  the static dot-shorthand feature; bump only when a new language feature is actually
-  consumed.
-- **[FVM](https://fvm.app/)** for SDK version pinning (`.fvmrc`). Use `fvm dart …` rather
-  than the host `dart` unless you've confirmed they match.
-- **`fvm dart test`** for tests, **`fvm dart --no-version-check analyze .`** for pedantic
-  static analysis (matches what `flutter --no-version-check analyze .` runs on a Flutter
-  app — pedantic mode is intentional, not negotiable). No Flutter dep, no platform
-  channels.
+- **Dart ≥ 3.10** (constraint pinned in `pubspec.yaml`, version pinned in `.fvmrc`).
+  3.10 is the floor because of the static dot-shorthand feature; bump only when a new
+  language feature is actually consumed. Whatever toolchain serves the pinned version is
+  fine — the host toolchain manager is a local implementation detail.
+- **`dart test`** for tests, **`dart --no-version-check analyze .`** for pedantic static
+  analysis (matches what `flutter --no-version-check analyze .` runs on a Flutter app —
+  pedantic mode is intentional, not negotiable). No Flutter dep, no platform channels.
+- **`shellcheck`** for shell-script lint (`scripts/*.sh`). Installed via
+  `brew install shellcheck`; required by `scripts/release.sh` preflight.
 - **CHANGELOG + version are owned by [`scripts/release.sh`](../scripts/release.sh).** Do
   not invoke `cider` commands by hand and do not edit `CHANGELOG.md` or `version:`
   directly — run the script (or, on request, ask the user to run it) so the bump,
   CHANGELOG finalisation, commit, tag, and push stay in lockstep. The `cider:` block in
   `pubspec.yaml` is the script's static configuration (URLs, link templates) and may be
-  hand-edited freely.
+  hand-edited freely. Full release procedure (CLI flags, preflight checks, pipeline-owned
+  vs. hand-editable yaml) is documented in
+  [`scripts/README.md`](../scripts/README.md).
 - **Published to pub.dev.** `.pubignore` controls what ships in the tarball.
 - **`.editorconfig`** is the source of truth for text-file conventions — line width 100,
   LF endings, UTF-8, per-language indent rules. The Dart formatter's `page_width: 100` in
@@ -148,3 +150,11 @@ For everything else — naming, idioms (`Uri.https`, `.wait`, dot shorthands,
   than the Dart default — code that fails lint won't pass review.
 - **Surface semver implications loudly.** If a change touches anything re-exported from
   `lib/<package>.dart`, call out whether it's patch / minor / major before the diff lands.
+- **Before proposing a performance or memory optimisation, read the existing rationale.**
+  README's *Performance & memory*, *Caveats*, and *Roadmap* sections enumerate what's
+  already in place and what's deliberately deferred. APPENDIX anchors
+  [`#why-http-head-default-probe`](../APPENDIX.md#why-http-head-default-probe),
+  [`#why-no-perf-preset`](../APPENDIX.md#why-no-perf-preset), and
+  [`#why-no-checkonce-coalescing`](../APPENDIX.md#why-no-checkonce-coalescing) cover the
+  trade-offs behind the non-features. Don't re-propose a cheaper default probe, a
+  perf-preset enum, or a single-flight wrapper without engaging with what's already there.

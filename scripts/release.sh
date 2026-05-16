@@ -18,6 +18,13 @@
 # .github/workflows/publish.yml (`[0-9]+.[0-9]+.[0-9]+`) and pub.dev's
 # canonical `{{version}}` convention.
 #
+# Note: if `.fvm/flutter_sdk/bin/dart` exists (FVM users), the script
+# prepends it to PATH so plain `dart` resolves to the `.fvmrc`-pinned SDK.
+# Otherwise it falls back to whatever `dart` is on PATH — a non-FVM
+# contributor can run the script unchanged. SDK-version compatibility is
+# enforced indirectly via `pub publish --dry-run` in preflight. See
+# CODESTYLE.md.
+#
 # Usage:
 #   scripts/release.sh                # fully interactive
 #   scripts/release.sh patch          # bump type set, confirm on TTY
@@ -28,6 +35,21 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
+
+# Resolve `dart`: prefer the project's FVM symlink (gives the `.fvmrc`-pinned
+# SDK); fall back to whatever's on PATH for non-FVM users. Done before
+# anything that calls `dart` so the rest of the script can use plain
+# invocations.
+if [ -x "${REPO_ROOT}/.fvm/flutter_sdk/bin/dart" ]; then
+    PATH="${REPO_ROOT}/.fvm/flutter_sdk/bin:${PATH}"
+    DART_SOURCE="${REPO_ROOT}/.fvm/flutter_sdk/bin/dart (.fvmrc-pinned via FVM)"
+elif command -v dart >/dev/null 2>&1; then
+    DART_SOURCE="$(command -v dart) (host PATH — no .fvm/flutter_sdk symlink)"
+else
+    printf "[release] ERROR: no 'dart' on PATH and no .fvm/flutter_sdk/bin/dart found.\n" >&2
+    printf "[release] Install Dart 3.10+, or run 'fvm install' from the project root.\n" >&2
+    exit 1
+fi
 
 MAIN_BRANCH="main"
 
@@ -51,13 +73,16 @@ Options:
   -h, --help      show this message
 
 Preflight (all must pass):
-  - cider + fvm on PATH
+  - `dart` resolvable (via `.fvm/flutter_sdk/bin/` if FVM is set up, else PATH)
+  - cider on PATH
+  - shellcheck on PATH
   - working tree clean, on `main`, in sync with origin/main (fetches first)
   - CHANGELOG.md has a non-empty `## Unreleased` (or `## [Unreleased]`) section
-  - `fvm dart format --output=none --set-exit-if-changed .` clean
-  - `fvm dart --no-version-check analyze .` clean
-  - `fvm dart test` green
-  - `fvm dart pub publish --dry-run` clean
+  - `shellcheck scripts/*.sh` clean
+  - `dart format --output=none --set-exit-if-changed .` clean
+  - `dart --no-version-check analyze .` clean
+  - `dart test` green
+  - `dart pub publish --dry-run` clean
   - computed tag unused locally AND on origin
 
 Sequence:
@@ -119,20 +144,17 @@ fi
 # Preflight: tooling (fail fast — cheapest checks first)
 # ---------------------------------------------------------------------------
 step 'Preflight: tooling'
-fail=0
-if ! command -v fvm >/dev/null 2>&1; then
-    err 'fvm not on PATH. Install: https://fvm.app/'
-    fail=1
-else
-    log 'fvm available.'
-fi
+log "Using Dart from: ${DART_SOURCE}"
 if ! command -v cider >/dev/null 2>&1; then
-    err 'cider not on PATH. Install: fvm dart pub global activate cider'
-    fail=1
-else
-    log 'cider available.'
+    err 'cider not on PATH. Install: dart pub global activate cider'
+    exit 1
 fi
-[ "$fail" -eq 1 ] && { err 'Tooling preflight failed — aborting.'; exit 1; }
+log 'cider available.'
+if ! command -v shellcheck >/dev/null 2>&1; then
+    err 'shellcheck not on PATH. Install: brew install shellcheck'
+    exit 1
+fi
+log 'shellcheck available.'
 
 # ---------------------------------------------------------------------------
 # Preflight: git state
@@ -207,7 +229,7 @@ fi
 # ---------------------------------------------------------------------------
 step 'Preflight: CHANGELOG'
 if ! grep -qiE '^## \[?Unreleased\]?' CHANGELOG.md 2>/dev/null; then
-    err 'CHANGELOG.md is missing a `## Unreleased` section.'
+    err "CHANGELOG.md is missing a '## Unreleased' section."
     err 'Add notes for this release first, e.g.:'
     err '  ## Unreleased'
     err '  - Describe the change.'
@@ -222,36 +244,42 @@ unreleased_block="$(awk '
 ' CHANGELOG.md)"
 
 if [ -z "$(printf '%s' "$unreleased_block" | tr -d '[:space:]-')" ]; then
-    err 'CHANGELOG.md has `## Unreleased` but no entries beneath it.'
+    err "CHANGELOG.md has '## Unreleased' but no entries beneath it."
     err 'Populate the section before re-running.'
     exit 1
 fi
-log '`## Unreleased` populated.'
+log "'## Unreleased' populated."
 
 # ---------------------------------------------------------------------------
 # Preflight: format / analyze / test / publish dry-run (cheapest → slowest)
 # ---------------------------------------------------------------------------
-step 'Preflight: fvm dart format'
-if ! fvm dart format --output=none --set-exit-if-changed .; then
-    err 'Formatting check failed. Run `fvm dart format .` and commit.'
+step 'Preflight: shellcheck scripts/'
+if ! shellcheck scripts/*.sh; then
+    err 'shellcheck failed on one or more shell scripts.'
     exit 1
 fi
 
-step 'Preflight: fvm dart --no-version-check analyze'
-if ! fvm dart --no-version-check analyze .; then
+step 'Preflight: dart format'
+if ! dart format --output=none --set-exit-if-changed .; then
+    err "Formatting check failed. Run 'dart format .' and commit."
+    exit 1
+fi
+
+step 'Preflight: dart --no-version-check analyze'
+if ! dart --no-version-check analyze .; then
     err 'Static analysis failed.'
     exit 1
 fi
 
-step 'Preflight: fvm dart test'
-if ! fvm dart test; then
+step 'Preflight: dart test'
+if ! dart test; then
     err 'Test suite failed.'
     exit 1
 fi
 
-step 'Preflight: fvm dart pub publish --dry-run'
-if ! fvm dart pub publish --dry-run; then
-    err '`pub publish --dry-run` failed.'
+step 'Preflight: dart pub publish --dry-run'
+if ! dart pub publish --dry-run; then
+    err "'pub publish --dry-run' failed."
     exit 1
 fi
 
@@ -301,6 +329,8 @@ fi
 # succeeds — after that, the commit + tag are in the local repo and
 # automatic cleanup would silently nuke real work.
 cider_phase=0
+# ShellCheck's flow analysis doesn't follow assignments across a quoted trap string.
+# shellcheck disable=SC2154
 trap '
     rc=$?
     if [ "$cider_phase" = "1" ]; then

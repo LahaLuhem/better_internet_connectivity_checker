@@ -363,3 +363,24 @@ carry the *what*. `public_member_api_docs` is enabled; see
 - **Anchor stability is load-bearing.** When renaming a heading, keep the existing
   anchor. If you must change it, `rg '#<old-anchor>'` across the repo and update every
   caller in the same change.
+- **Bare `dart` / `flutter` in command examples, never `fvm dart` / `fvm flutter`.** FVM
+  is a local implementation detail — `.fvmrc` pins the SDK version. Docs (this file,
+  README.md, AGENTS.md, CLAUDE.md, APPENDIX.md) stay tool-agnostic so external
+  contributors aren't forced into FVM. The maintainer's shell aliases `dart` to the
+  pinned toolchain for interactive use; scripts under `scripts/` prepend
+  `.fvm/flutter_sdk/bin` to `PATH` if the symlink exists (so FVM users get the project
+  pin) and fall back to whatever `dart` is on `PATH` otherwise — non-FVM contributors
+  can run the scripts unchanged.
+
+## Shell scripts
+
+- **`shellcheck` is the lint contract** for `scripts/*.sh`, mirroring `dart analyze` for
+  Dart. Run via `shellcheck scripts/*.sh`; `scripts/release.sh` preflight enforces it.
+  Install with `brew install shellcheck`.
+- **Prefer `# shellcheck disable=SC<code>` + a one-line "why" comment over refactoring
+  for simple cases.** Refactor when the warning points at a real bug or when the rewrite
+  is genuinely clearer; reach for the directive when the code is correct as-is and
+  ShellCheck's analysis is just over-conservative (e.g. SC2154 inside a quoted trap
+  body, where ShellCheck can't follow assignment-then-use within the same string).
+  Always pair the directive with a comment so the next reader knows it's intentional,
+  not a TODO.

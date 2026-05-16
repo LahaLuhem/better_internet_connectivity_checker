@@ -35,12 +35,12 @@ back (unpublished versions stay reserved for 7 days).
 
 ## Tool preferences
 - **Read / Edit / Grep / Glob** over `cat` / `sed` / `grep` / `find`. Always.
-- **Bash** only for things without a dedicated tool: `dart`, `fvm`, `git`.
-- **Use the FVM-pinned Dart** when running `dart …` — `.fvmrc` is the source of truth.
-  Prefer `fvm dart …` unless the host shell is already wrapped.
-- **Lint with `fvm dart --no-version-check analyze .`** — the project runs pedantic mode
-  by intent (mirrors `flutter --no-version-check analyze .` in Flutter-app projects).
-  Don't substitute `fvm dart analyze` and ignore lints it surfaces; they're the contract.
+- **Bash** only for things without a dedicated tool: `dart`, `git`. (The user's shell
+  aliases `dart` to whatever toolchain manager serves the `.fvmrc`-pinned SDK — invoke
+  plain `dart`, not the manager directly.)
+- **Lint with `dart --no-version-check analyze .`** — the project runs pedantic mode by
+  intent (mirrors `flutter --no-version-check analyze .` in Flutter-app projects). Don't
+  substitute `dart analyze` and ignore lints it surfaces; they're the contract.
 - **Agent tool** for wide / open-ended searches or to keep large outputs out of main
   context. Not for trivial lookups.
 
@@ -95,9 +95,9 @@ link templates) and may be hand-edited like any other yaml.
   approval.
 
 ## Forbidden / confirm-first actions
-- **Never** `dart pub publish` (or `fvm dart pub publish`). Publishing is effectively
-  one-way — pub.dev reserves the version for 7 days after retraction. The user runs
-  `publish` manually.
+- **Never** `dart pub publish`. Publishing is effectively one-way — pub.dev reserves the
+  version for 7 days after retraction. Releases go through `scripts/release.sh`, which
+  the user runs manually.
 - **Never** run `cider` commands (`cider bump`, `cider release`, …) or manually edit
   `CHANGELOG.md` / the `version:` field in `pubspec.yaml`. Version bumps and CHANGELOG
   entries are owned by [`scripts/release.sh`](../scripts/release.sh); manual edits will
@@ -114,14 +114,15 @@ link templates) and may be hand-edited like any other yaml.
   first.
 
 ## Definition of done
-- `fvm dart --no-version-check analyze .` clean (pedantic mode — non-negotiable).
-- `fvm dart format --output=none --set-exit-if-changed .` clean.
-- `fvm dart test` green (where tests exist).
+- `dart --no-version-check analyze .` clean (pedantic mode — non-negotiable).
+- `dart format --output=none --set-exit-if-changed .` clean.
+- `dart test` green (where tests exist).
+- `shellcheck scripts/*.sh` clean (where shell scripts exist).
 - DCM rules in `analysis_options.yaml` applied by hand (`dart analyze` does not run
   them): `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`,
   plus the project-wide rule that blank lines segment logical chunks inside methods.
-- `fvm dart pub publish --dry-run` clean if the change is publish-relevant. Do **not**
-  bump the version or add a CHANGELOG entry to make the dry-run happy — the pipeline
+- `dart pub publish --dry-run` clean if the change is publish-relevant. Do **not** bump
+  the version or add a CHANGELOG entry to make the dry-run happy — `scripts/release.sh`
   owns those.
 - Public API additions documented with `///` dartdoc and reflected in README.
 - Explicitly call out what you did NOT verify (e.g. "didn't exercise on a real network —

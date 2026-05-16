@@ -12,8 +12,10 @@
     * [Injecting a custom `http.Client`](#injecting-a-custom-httpclient)
     * [Writing a custom `ConnectivityProbe`](#writing-a-custom-connectivityprobe)
     * [Wiring `connectivity_plus` (Flutter)](#wiring-connectivity_plus-flutter)
+- [Performance & memory](#performance--memory)
+- [Caveats](#caveats)
+- [Roadmap](#roadmap)
 - [Testing](#testing)
-- [Releasing](#releasing)
 - [Contributing](#contributing)
     * [Optional: AI-agent discovery symlinks](#optional-ai-agent-discovery-symlinks)
 
@@ -47,7 +49,7 @@ Add the package to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  better_internet_connectivity_checker: ^0.0.0
+    better_internet_connectivity_checker: ^0.0.0
 ```
 
 Then run:
@@ -67,10 +69,10 @@ project — CLI, server-side, web, and Flutter alike.
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
 Future<void> main() async {
-  final checker = InternetConnection();
-  final status = await checker.checkOnce();
-  print(status is Reachable ? 'online' : 'offline');
-  await checker.dispose();
+    final checker = InternetConnection();
+    final status = await checker.checkOnce();
+    print(status is Reachable ? 'online' : 'offline');
+    await checker.dispose();
 }
 ```
 
@@ -81,10 +83,10 @@ it — the compiler will tell you if a future variant is added.
 
 ```dart
 switch (await checker.checkOnce()) {
-  case Reachable(:final responseTime, :final quality):
-    print('online — $quality, ${responseTime.inMilliseconds} ms');
-  case Unreachable(:final failedProbes):
-    print('offline — ${failedProbes.length} probes failed');
+case Reachable(:final responseTime, :final quality):
+print('online — $quality, ${responseTime.inMilliseconds} ms');
+case Unreachable(:final failedProbes):
+print('offline — ${failedProbes.length} probes failed');
 }
 ```
 
@@ -93,7 +95,7 @@ switch (await checker.checkOnce()) {
 ```dart
 final checker = InternetConnection();
 final subscription = checker.onStatusChange.listen((status) {
-  // Same status kind is not re-emitted, so this fires only on real transitions.
+    // Same status kind is not re-emitted, so this fires only on real transitions.
 });
 
 // later:
@@ -107,7 +109,7 @@ Pass a `slowThreshold` to classify the `quality` field on every `Reachable` stat
 
 ```dart
 final checker = InternetConnection(
-  slowThreshold: const Duration(milliseconds: 500),
+    slowThreshold: const Duration(milliseconds: 500),
 );
 ```
 
@@ -117,13 +119,13 @@ Override the default reliability endpoints, e.g. to probe your own healthchecks:
 
 ```dart
 final checker = InternetConnection(
-  targets: [
-    ProbeTarget(uri: Uri.parse('https://my-api.example.com/health')),
-    ProbeTarget(
-      uri: Uri.parse('https://other.example.com/ping'),
-      isSuccess: (response) => response.statusCode == 204,
-    ),
-  ],
+    targets: [
+        ProbeTarget(uri: Uri.parse('https://my-api.example.com/health')),
+        ProbeTarget(
+            uri: Uri.parse('https://other.example.com/ping'),
+            isSuccess: (response) => response.statusCode == 204,
+        ),
+    ],
 );
 ```
 
@@ -131,7 +133,7 @@ final checker = InternetConnection(
 
 ```dart
 final checker = InternetConnection(
-  policy: const AllReachablePolicy(),
+    policy: const AllReachablePolicy(),
 );
 ```
 
@@ -146,7 +148,7 @@ For proxies, middleware, or a `MockClient` in tests:
 import 'package:http/http.dart' as http;
 
 final checker = InternetConnection(
-  probe: HttpHeadProbe(client: myHttpClient),
+    probe: HttpHeadProbe(client: myHttpClient),
 );
 ```
 
@@ -180,28 +182,89 @@ final checker = InternetConnection(
 );
 ```
 
-A runnable example will live in `example/` once the example app is added.
+Runnable examples live in [`example/`](./example/) — a Flutter demo app exercising
+one-shot checks, status streaming, both aggregation policies, slow-connection detection,
+and a custom probe.
+
+## Performance & memory
+
+What the default configuration buys you, with no further configuration:
+
+- **Race-and-cancel probes** — `AnyReachablePolicy` returns on the first success and
+  aborts in-flight siblings at the transport layer (sockets release immediately, not at
+  timeout-drain). See
+  [`APPENDIX.md#probe-cancellation-via-http-abortable`](./APPENDIX.md#probe-cancellation-via-http-abortable).
+- **Shared `http.Client`** — connection pooling and TLS-session reuse across periodic
+  ticks, instead of a fresh socket per probe.
+- **HTTP HEAD, not GET** — no response body on the wire. See
+  [`APPENDIX.md#why-http-head-default-probe`](./APPENDIX.md#why-http-head-default-probe)
+  for why HEAD over a cheaper DNS / TCP probe.
+- **Listener-gated periodic timer** — auto-suspends when nothing is listening to
+  `onStatusChange`, auto-resumes on first re-subscription. No CPU or network spend while
+  the stream has no consumers.
+- **Status-kind de-duping** — two consecutive `Reachable(quality: good)` events do not
+  re-emit, so downstream `setState` / listener rebuilds fire only on real transitions.
+  Quality flips and reachability flips do re-emit.
+- **`const` defaults and `ConstUri` lazy parsing** — the default target list and its URIs
+  are compile-time constants shared process-wide; constructing
+  `InternetConnection()` with no `targets` argument allocates nothing for the target
+  list.
+- **Growth-bounded result lists** — `failedProbes` uses `growable: false`; no status
+  history buffer, rolling window, or per-probe cache is kept anywhere.
+
+Memory footprint per `InternetConnection` is well under 1 KB at steady state.
+
+## Caveats
+
+Deliberate non-features that may affect how you use the package:
+
+- **Concurrent `checkOnce()` calls are not coalesced.** Each spins a full probe fan-out;
+  there is no built-in single-flight. If your app issues many simultaneous reachability
+  checks, wrap your own debouncer or share one `Future`. Rationale in
+  [`APPENDIX.md#why-no-checkonce-coalescing`](./APPENDIX.md#why-no-checkonce-coalescing).
+- **`Unreachable.failedProbes` retains caught `Exception` objects** on each
+  `ProbeResult.error`. If those exceptions chain heavy transport state (TLS context,
+  request bodies, custom error payloads), an `Unreachable` reference can keep that memory
+  alive. Drop the reference — or extract only what you need from it — once you're done.
+- **HTTP caching on probe endpoints will mask outages.** Use endpoints that respond with
+  `Cache-Control: no-cache` — the defaults do. On the web platform, probe targets must
+  also allow CORS for the request to reach the probe.
+- **`AllReachablePolicy` is brittle with arbitrary public endpoints** — any one being
+  briefly unavailable flags a working connection as offline. Use it only with a curated
+  probe list (e.g. enterprise internal endpoints); see the policy's dartdoc.
+
+## Roadmap
+
+Features deferred today but inside the design envelope (no API break required to add):
+
+- **Single-flight `checkOnce()` coalescing** — share one in-flight `Future` across
+  concurrent callers. Will land if real-world demand surfaces. See
+  [`APPENDIX.md#why-no-checkonce-coalescing`](./APPENDIX.md#why-no-checkonce-coalescing).
+- **Optional status-history buffer for diagnostics** — a rolling window of recent
+  transitions, opt-in with a buffer-size knob. This is the one genuine
+  memory-vs-observability trade-off in the package; until it lands, the package keeps
+  no history.
+- **DNS / TCP probes as custom `ConnectivityProbe` implementations** — faster but lose
+  captive-portal / TLS / transparent-proxy detection. Out of scope as defaults; valid as
+  user-supplied custom probes against the existing `ConnectivityProbe` seam. See
+  [`APPENDIX.md#why-http-head-default-probe`](./APPENDIX.md#why-http-head-default-probe).
+
+Not on the roadmap (deliberate non-features):
+
+- **No performance-preset enum or perf-vs-memory slider.** The orthogonal knobs
+  (`checkInterval`, `targets`, `policy`, `probe`) already control the real trade-offs;
+  collapsing them onto one slider loses information. Rationale in
+  [`APPENDIX.md#why-no-perf-preset`](./APPENDIX.md#why-no-perf-preset).
 
 ## Testing
 
 ```bash
-fvm dart test                                            # full test suite
-fvm dart analyze                                         # strict-mode static analysis
-fvm dart format --output=none --set-exit-if-changed .    # formatter check
+dart test                                            # full test suite
+dart analyze                                         # strict-mode static analysis
+dart format --output=none --set-exit-if-changed .    # formatter check
 ```
 
-The Dart/Flutter SDK version is pinned via [FVM](https://fvm.app/); see `.fvmrc`. Run
-`fvm install` once before the first build.
-
-## Releasing
-
-Version bumps and CHANGELOG entries are owned by an automated release pipeline (TBA).
-**Do not edit `CHANGELOG.md` or the `version:` field in `pubspec.yaml` by hand** — the
-pipeline reorders and overwrites manual edits. The `cider:` block in `pubspec.yaml` and
-the `link_template` it carries are pipeline configuration.
-
-Released tags will follow `v<MAJOR>.<MINOR>.<PATCH>` and link to GitHub releases via the
-`link_template` block.
+Dart 3.10+ required (see `pubspec.yaml`).
 
 ## Contributing
 
