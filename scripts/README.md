@@ -58,9 +58,15 @@ The script refuses to proceed unless every check passes:
 - `shellcheck` on PATH.
 - Working tree clean, on `main`, in sync with `origin/main` (fetches first).
 - `CHANGELOG.md` has a non-empty `## Unreleased` (or `## [Unreleased]`) section.
-- `dart format`, `dart analyze`, `dart test`, and `dart pub publish --dry-run` all
-  clean.
+- `dart format`, `dart analyze`, and `dart test` all clean.
 - The target tag does not already exist locally or on the remote.
+
+`dart pub publish --dry-run` is *not* in preflight: pub's "current version in
+CHANGELOG" cross-check is only meaningful against the post-bump state, and running
+it pre-bump would block the first release (`0.0.0` has no `## 0.0.0` entry). The
+dry-run runs after `cider bump` + `cider release` in the execute phase — failure
+auto-reverts `pubspec.yaml` and `CHANGELOG.md` via the script's `ERR` trap, since
+nothing has been committed yet.
 
 ## FVM note
 

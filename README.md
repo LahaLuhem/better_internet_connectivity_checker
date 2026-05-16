@@ -58,7 +58,7 @@ Then run:
 dart pub get
 ```
 
-This package is **pure Dart** and does not depend on Flutter. It works in any Dart 3.11+
+This package is **pure Dart** and does not depend on Flutter. It works in any Dart 3.10+
 project — CLI, server-side, web, and Flutter alike.
 
 ## Usage
@@ -193,11 +193,11 @@ What the default configuration buys you, with no further configuration:
 - **Race-and-cancel probes** — `AnyReachablePolicy` returns on the first success and
   aborts in-flight siblings at the transport layer (sockets release immediately, not at
   timeout-drain). See
-  [`APPENDIX.md#probe-cancellation-via-http-abortable`](./APPENDIX.md#probe-cancellation-via-http-abortable).
+  [`APPENDIX.md`](./APPENDIX.md#probe-cancellation-via-http-abortable).
 - **Shared `http.Client`** — connection pooling and TLS-session reuse across periodic
   ticks, instead of a fresh socket per probe.
 - **HTTP HEAD, not GET** — no response body on the wire. See
-  [`APPENDIX.md#why-http-head-default-probe`](./APPENDIX.md#why-http-head-default-probe)
+  [`APPENDIX.md`](./APPENDIX.md#why-http-head-default-probe)
   for why HEAD over a cheaper DNS / TCP probe.
 - **Listener-gated periodic timer** — auto-suspends when nothing is listening to
   `onStatusChange`, auto-resumes on first re-subscription. No CPU or network spend while
@@ -221,7 +221,7 @@ Deliberate non-features that may affect how you use the package:
 - **Concurrent `checkOnce()` calls are not coalesced.** Each spins a full probe fan-out;
   there is no built-in single-flight. If your app issues many simultaneous reachability
   checks, wrap your own debouncer or share one `Future`. Rationale in
-  [`APPENDIX.md#why-no-checkonce-coalescing`](./APPENDIX.md#why-no-checkonce-coalescing).
+  [`APPENDIX.md`](./APPENDIX.md#why-no-checkonce-coalescing).
 - **`Unreachable.failedProbes` retains caught `Exception` objects** on each
   `ProbeResult.error`. If those exceptions chain heavy transport state (TLS context,
   request bodies, custom error payloads), an `Unreachable` reference can keep that memory
@@ -239,7 +239,7 @@ Features deferred today but inside the design envelope (no API break required to
 
 - **Single-flight `checkOnce()` coalescing** — share one in-flight `Future` across
   concurrent callers. Will land if real-world demand surfaces. See
-  [`APPENDIX.md#why-no-checkonce-coalescing`](./APPENDIX.md#why-no-checkonce-coalescing).
+  [`APPENDIX.md`](./APPENDIX.md#why-no-checkonce-coalescing).
 - **Optional status-history buffer for diagnostics** — a rolling window of recent
   transitions, opt-in with a buffer-size knob. This is the one genuine
   memory-vs-observability trade-off in the package; until it lands, the package keeps
@@ -247,14 +247,14 @@ Features deferred today but inside the design envelope (no API break required to
 - **DNS / TCP probes as custom `ConnectivityProbe` implementations** — faster but lose
   captive-portal / TLS / transparent-proxy detection. Out of scope as defaults; valid as
   user-supplied custom probes against the existing `ConnectivityProbe` seam. See
-  [`APPENDIX.md#why-http-head-default-probe`](./APPENDIX.md#why-http-head-default-probe).
+  [`APPENDIX.md`](./APPENDIX.md#why-http-head-default-probe).
 
 Not on the roadmap (deliberate non-features):
 
 - **No performance-preset enum or perf-vs-memory slider.** The orthogonal knobs
   (`checkInterval`, `targets`, `policy`, `probe`) already control the real trade-offs;
   collapsing them onto one slider loses information. Rationale in
-  [`APPENDIX.md#why-no-perf-preset`](./APPENDIX.md#why-no-perf-preset).
+  [`APPENDIX.md`](./APPENDIX.md#why-no-perf-preset).
 
 ## Testing
 
@@ -302,5 +302,5 @@ each level. The arrangement is opt-in per contributor:
 
 The `CODESTYLE.md` files are not symlinked — they sit directly at the repo root and at
 `example/`, since style serves humans and agents alike and is not AI-specific. See
-[`APPENDIX.md#ai-files-symlinked`](./APPENDIX.md#ai-files-symlinked) for the rationale
+[`APPENDIX.md`](./APPENDIX.md#ai-files-symlinked) for the rationale
 behind the `.ai/` arrangement.

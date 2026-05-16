@@ -11,8 +11,11 @@
 #
 # Laptop-only — does not run inside CI. Safe by default: preflight refuses to
 # proceed on a dirty tree, wrong branch, origin mismatch, missing tooling,
-# an empty/missing `## Unreleased` section, failing format/analyze/test or
-# `pub publish --dry-run`, or a tag that already exists.
+# an empty/missing `## Unreleased` section, failing format/analyze/test, or a
+# tag that already exists. `pub publish --dry-run` runs after the bump
+# (validating the post-bump state, when "current version" matches the new
+# CHANGELOG header) — failure mid-release auto-reverts pubspec.yaml +
+# CHANGELOG.md via the ERR trap.
 #
 # Tags are pushed without a `v` prefix, matching the trigger pattern in
 # .github/workflows/publish.yml (`[0-9]+.[0-9]+.[0-9]+`) and pub.dev's
@@ -22,7 +25,7 @@
 # prepends it to PATH so plain `dart` resolves to the `.fvmrc`-pinned SDK.
 # Otherwise it falls back to whatever `dart` is on PATH — a non-FVM
 # contributor can run the script unchanged. SDK-version compatibility is
-# enforced indirectly via `pub publish --dry-run` in preflight. See
+# enforced indirectly via `pub publish --dry-run` (post-bump). See
 # CODESTYLE.md.
 #
 # Usage:
@@ -82,12 +85,12 @@ Preflight (all must pass):
   - `dart format --output=none --set-exit-if-changed .` clean
   - `dart --no-version-check analyze .` clean
   - `dart test` green
-  - `dart pub publish --dry-run` clean
   - computed tag unused locally AND on origin
 
 Sequence:
   cider bump <BUMP>          (pubspec.yaml version → new)
   cider release              (CHANGELOG.md ## Unreleased → ## <new> dated today)
+  dart pub publish --dry-run (validates the bumped state; auto-reverts on fail)
   git add  pubspec.yaml CHANGELOG.md
   git commit -m "Prep for release <new>"
   git tag <new>
@@ -277,11 +280,12 @@ if ! dart test; then
     exit 1
 fi
 
-step 'Preflight: dart pub publish --dry-run'
-if ! dart pub publish --dry-run; then
-    err "'pub publish --dry-run' failed."
-    exit 1
-fi
+# `dart pub publish --dry-run` is NOT run here. Its "current version in
+# CHANGELOG" check is meaningful only against the *post-bump* state — running
+# it pre-bump would block the first release (0.0.0 has no `## 0.0.0` entry)
+# and provide no extra signal on later releases. The dry-run runs after
+# `cider release` in the execute phase, where the ERR trap still auto-reverts
+# pubspec.yaml + CHANGELOG.md on failure (cider_phase=1 window).
 
 # ---------------------------------------------------------------------------
 # Plan
@@ -291,10 +295,11 @@ cat <<PLAN
 Will execute, in order:
   1. cider bump ${BUMP}                                    (pubspec.yaml: ${current_version} → ${new_version})
   2. cider release                                         (CHANGELOG.md: ## Unreleased → ## ${new_version} [dated today])
-  3. git add  pubspec.yaml CHANGELOG.md
-  4. git commit -m "Prep for release ${new_version}"
-  5. git tag ${new_version}
-  6. git push --atomic origin HEAD:${MAIN_BRANCH} ${new_version}   (triggers .github/workflows/publish.yml)
+  3. dart pub publish --dry-run                            (validate bumped state; auto-revert on failure)
+  4. git add  pubspec.yaml CHANGELOG.md
+  5. git commit -m "Prep for release ${new_version}"
+  6. git tag ${new_version}
+  7. git push --atomic origin HEAD:${MAIN_BRANCH} ${new_version}   (triggers .github/workflows/publish.yml)
 
 publish.yml will then build & publish ${new_version} to pub.dev via OIDC.
 PLAN
@@ -352,6 +357,13 @@ fi
 
 step 'cider release'
 cider release
+
+# Post-bump validation. By this point pubspec.yaml is at <new_version> and
+# CHANGELOG.md has a `## <new_version>` block, so pub's "current version in
+# CHANGELOG" cross-check is satisfied. set -e + the ERR trap above
+# (cider_phase=1) revert pubspec.yaml + CHANGELOG.md on failure.
+step 'dart pub publish --dry-run'
+dart pub publish --dry-run
 
 step 'git add pubspec.yaml CHANGELOG.md'
 git add pubspec.yaml CHANGELOG.md
