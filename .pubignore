@@ -1,23 +1,26 @@
+# .pubignore — exclude maintainer-only / generated / non-consumer files from the
+# published tarball. Syntax is .gitignore-compatible. Patterns are unanchored unless
+# prefixed with `/`, so e.g. `test/` matches both `test/` at the package root AND
+# `example/test/`.
+
+# Test sources.
+test/
+
+# Local-dev config — consumer machines have their own.
 .fvmrc
 analysis_options.yaml
-**/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/flutter_export_environment.sh
-**/ios/Runner/GeneratedPluginRegistrant.*
-test/
 
 # Build / IDE artefacts.
 build/
 *.iml
 
-# `example/pubspec.lock` cannot be excluded — pub always re-includes it in the tarball
-# (verified empirically against the dry-run: every other `example/...` pattern below
-# works, but this one is silently overridden). pub.dev needs the lockfile to render the
-# example's static analysis. Leaving the file as-is.
+# Maintainer-only tooling.
+scripts/
 
 # Internal contributor / AI-agent docs — not useful to pub.dev consumers.
-# AGENTS.md / CLAUDE.md are root symlinks into .ai/; .ai/ itself is auto-excluded by
-# pub's hidden-path rule, but pub follows symlinks before that check, so the symlink
-# targets need explicit entries.
+# `AGENTS.md` and `CLAUDE.md` at the package root are symlinks into `.ai/`. `.ai/`
+# itself is auto-excluded by pub's hidden-path rule, but pub follows symlinks before
+# that check, so the symlink targets need explicit entries.
 AGENTS.md
 CLAUDE.md
 APPENDIX.md
@@ -25,9 +28,14 @@ CODESTYLE.md
 example/AGENTS.md
 example/CODESTYLE.md
 
-# Example platform dirs — pub.dev only renders example/lib/ + example/pubspec.yaml +
-# example/README.md for the "Example" tab. Platform scaffolding adds bloat with no
+# Example platform scaffolding — pub.dev's "Example" tab only renders example/lib/,
+# example/pubspec.yaml, and example/README.md. Platform dirs add bloat with no
 # pub.dev-side benefit.
 example/android/
 example/ios/
 example/devtools_options.yaml
+
+# Note: `example/pubspec.lock` cannot be excluded — pub always re-includes it in the
+# tarball (verified empirically against the dry-run: every other `example/...` pattern
+# above works, but this one is silently overridden). pub.dev needs the lockfile to
+# render the example's static analysis. Leaving the file as-is.

@@ -23,10 +23,12 @@ README for usage; APPENDIX for design rationale.
   static analysis (matches what `flutter --no-version-check analyze .` runs on a Flutter
   app — pedantic mode is intentional, not negotiable). No Flutter dep, no platform
   channels.
-- **CHANGELOG + version are owned by automated release pipelines (TBA).** Do not invoke
-  `cider` commands by hand and do not edit `CHANGELOG.md` or `version:` directly. The
-  `cider:` block in `pubspec.yaml` is the pipeline's static configuration (URLs, link
-  templates) — hand-edit it freely.
+- **CHANGELOG + version are owned by [`scripts/release.sh`](../scripts/release.sh).** Do
+  not invoke `cider` commands by hand and do not edit `CHANGELOG.md` or `version:`
+  directly — run the script (or, on request, ask the user to run it) so the bump,
+  CHANGELOG finalisation, commit, tag, and push stay in lockstep. The `cider:` block in
+  `pubspec.yaml` is the script's static configuration (URLs, link templates) and may be
+  hand-edited freely.
 - **Published to pub.dev.** `.pubignore` controls what ships in the tarball.
 - **`.editorconfig`** is the source of truth for text-file conventions — line width 100,
   LF endings, UTF-8, per-language indent rules. The Dart formatter's `page_width: 100` in
@@ -105,9 +107,11 @@ better_internet_connectivity_checker/
    to this `pubspec.yaml`. See
    [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter).
 7. **No manual `CHANGELOG.md` or `version:` edits, no hand-run `cider` commands.** All
-   three are owned by automated release pipelines (TBA); manual entries / runs will be
-   reordered or overwritten. The `cider:` block in `pubspec.yaml` is static
-   configuration (link templates, URLs) and may be hand-edited.
+   three are owned by [`scripts/release.sh`](../scripts/release.sh); manual entries /
+   runs will be reordered or overwritten. Curate the `## Unreleased` section of
+   `CHANGELOG.md` by hand between releases — the script consumes it. The `cider:` block
+   in `pubspec.yaml` is static configuration (link templates, URLs) and may be
+   hand-edited.
 
 ## Style
 Full guide: [`../CODESTYLE.md`](../CODESTYLE.md). The lint posture is deliberately strict

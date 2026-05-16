@@ -98,11 +98,15 @@ link templates) and may be hand-edited like any other yaml.
 - **Never** `dart pub publish` (or `fvm dart pub publish`). Publishing is effectively
   one-way — pub.dev reserves the version for 7 days after retraction. The user runs
   `publish` manually.
-- **Never** run `cider` commands (`cider bump`, `cider release`, …) and **never**
-  manually edit `CHANGELOG.md` or the `version:` field in `pubspec.yaml`. Version bumps
-  and CHANGELOG entries are owned by automated release pipelines (TBA); manual edits
-  there will be reordered or overwritten. The `cider:` block in `pubspec.yaml` is static
-  configuration (link templates, URLs) — hand-edit it freely.
+- **Never** run `cider` commands (`cider bump`, `cider release`, …) or manually edit
+  `CHANGELOG.md` / the `version:` field in `pubspec.yaml`. Version bumps and CHANGELOG
+  entries are owned by [`scripts/release.sh`](../scripts/release.sh); manual edits will
+  be reordered or overwritten. If the user asks for a release, suggest running
+  `scripts/release.sh <bump>` — don't invoke it for them (it pushes to `origin/main` and
+  triggers pub.dev publish). Curating the `## Unreleased` section of `CHANGELOG.md`
+  between releases IS allowed (and required — the script bails if it's empty). The
+  `cider:` block in `pubspec.yaml` is static configuration (link templates, URLs) —
+  hand-edit it freely.
 - **Never** edit `pubspec.lock` directly. It's `dart pub get`'s output.
 - **Never** delete files under `.fvm/`, `.dart_tool/`, or `pubspec.lock` without approval.
   These are tooling state; deleting them forces a re-resolve.
