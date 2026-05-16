@@ -61,12 +61,28 @@ The script refuses to proceed unless every check passes:
 - `dart format`, `dart analyze`, and `dart test` all clean.
 - The target tag does not already exist locally or on the remote.
 
-`dart pub publish --dry-run` is *not* in preflight: pub's "current version in
-CHANGELOG" cross-check is only meaningful against the post-bump state, and running
-it pre-bump would block the first release (`0.0.0` has no `## 0.0.0` entry). The
-dry-run runs after `cider bump` + `cider release` in the execute phase — failure
-auto-reverts `pubspec.yaml` and `CHANGELOG.md` via the script's `ERR` trap, since
-nothing has been committed yet.
+`dart pub publish --dry-run` is *not* in preflight. It cross-checks three things
+that must be satisfied simultaneously:
+
+1. `pubspec.yaml`'s `version:` matches a CHANGELOG header.
+2. No checked-in files are modified in the working tree.
+3. The tarball builds and validates against pub.dev rules.
+
+(1) only holds *after* `cider bump` + `cider release`. (2) only holds *after*
+`git commit` — running the dry-run against the working tree mid-execute would
+trip on the bump/release modifications. So the dry-run runs as step 5, after
+the prep commit lands. The `ERR` trap handles failure in two phases:
+
+- **Pre-commit failure** (bump or release errored, no commit yet): restore
+  `pubspec.yaml` + `CHANGELOG.md` from `HEAD`.
+- **Post-commit, pre-tag failure** (dry-run rejected the prep commit):
+  `git reset --hard HEAD~1` to drop the prep commit, leaving the working
+  tree exactly as it was before `release.sh` started. No remote tag is ever
+  created in this case — the validation gate sits between commit and tag, so
+  there's nothing to clean up on `origin`.
+
+After the dry-run passes, the trap clears — `git tag` / `git push` failures
+require manual recovery (the script prints the recipe).
 
 ## FVM note
 

@@ -1,7 +1,15 @@
+[![Pub Version](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)
+[![Pub Points](https://img.shields.io/pub/points/better_internet_connectivity_checker?logo=dart)](https://pub.dev/packages/better_internet_connectivity_checker/score)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
+
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [What it does](#what-it-does)
 - [Getting started](#getting-started)
+- [Platform setup](#platform-setup)
+    * [Android](#android)
+    * [iOS and macOS](#ios-and-macos)
+    * [Web](#web)
 - [Usage](#usage)
     * [One-shot check](#one-shot-check)
     * [Pattern-matching the sealed status](#pattern-matching-the-sealed-status)
@@ -12,6 +20,7 @@
     * [Injecting a custom `http.Client`](#injecting-a-custom-httpclient)
     * [Writing a custom `ConnectivityProbe`](#writing-a-custom-connectivityprobe)
     * [Wiring `connectivity_plus` (Flutter)](#wiring-connectivity_plus-flutter)
+- [When to reach for this](#when-to-reach-for-this)
 - [Performance & memory](#performance--memory)
 - [Caveats](#caveats)
 - [Roadmap](#roadmap)
@@ -22,16 +31,21 @@
 <!-- TOC end -->
 
 `better_internet_connectivity_checker` is a pure-Dart package for **robust
-internet-connectivity checking**. The goal is to answer "can I actually reach the public
-internet right now?" — distinct from "is a network interface up?", which is what most
-OS-level checks report.
+internet-connectivity checking** and **actual internet reachability** detection. The goal
+is to answer "can I actually reach the public internet right now?" — distinct from "is a
+network interface up?", which is what most OS-reported connectivity signals (and most
+existing Dart / Flutter checkers) ultimately rely on. Bridges the gap where DNS resolves
+and the OS reports connected, but HTTP traffic is silently dropped — captive portals,
+transparent proxies, broken middleboxes, and LAN-only networks.
 
 ## What it does
 
 - Probes one or more URIs to determine *actual* internet reachability — not just "an
-  interface is up".
+  interface is up". Catches the "DNS works but no internet" / "OS says connected but
+  every request times out" failure modes that interface-level checks miss.
 - Distinguishes **Reachable** / **Unreachable** with an optional **good** / **slow**
-  quality classification when a response-time threshold is configured.
+  quality classification — slow-connection detection via a single response-time
+  threshold, no extra plumbing.
 - Streams status transitions on a broadcast stream, de-duped so the same status kind is
   not re-emitted on every periodic tick.
 - Ships a default HTTP-HEAD probe; the probe layer is pluggable, so retry decorators,
@@ -60,6 +74,44 @@ dart pub get
 
 This package is **pure Dart** and does not depend on Flutter. It works in any Dart 3.10+
 project — CLI, server-side, web, and Flutter alike.
+
+## Platform setup
+
+The package is pure Dart, but the underlying OS still gates outbound network access. The
+defaults probe over HTTPS only; HTTP-only probes you wire in have extra caveats on iOS
+and macOS.
+
+Pure-Dart CLI and server-side targets need no setup. Flutter targets do:
+
+### Android
+
+Add `android.permission.INTERNET` to `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- ... -->
+</manifest>
+```
+
+Flutter scaffolds this permission into the **debug** and **profile** manifest variants
+(so the tooling can attach for hot reload) but **not** into `main` — the only variant
+included in release builds. Without the declaration above, every probe fails immediately
+with `_ClientSocketException` in single-digit milliseconds — the OS is denying the
+socket, not a real timeout — so `flutter run --release` reports unreachable while
+`flutter run` works.
+
+### iOS and macOS
+
+HTTPS probes work out of the box. HTTP-only probes need an App Transport Security
+exception in `ios/Runner/Info.plist` (and the macOS equivalent). Sandboxed macOS apps
+additionally need the `com.apple.security.network.client` entitlement in
+`macos/Runner/*.entitlements`.
+
+### Web
+
+Probe targets must serve `Access-Control-Allow-Origin` matching your app's origin — see
+[Caveats](#caveats).
 
 ## Usage
 
@@ -186,7 +238,44 @@ Runnable examples live in [`example/`](./example/) — a Flutter demo app exerci
 one-shot checks, status streaming, both aggregation policies, slow-connection detection,
 and a custom probe.
 
-## Performance & memory
+## When to reach for this
+
+The Dart / Flutter ecosystem already has reachability and connectivity packages. They
+each answer a slightly different question — and the right pick depends on the question
+*you* are trying to answer.
+
+**Reach for this package when** your problem looks like one of these:
+
+- The OS reports a Wi-Fi or cellular connection, but the app times out on every request.
+- A captive portal (hotel, airport, conference Wi-Fi) is intercepting traffic, and your
+  app needs to know it's not really online.
+- You need to distinguish "slow but reachable" from "offline" — for a slow-connection
+  UI banner, a quality-aware retry policy, or analytics on degraded connections.
+- You need diagnostic output on a failed check — *which* probe failed, *what* error,
+  *how long* it took — not a bare `false`.
+- You're on a non-Flutter Dart target (CLI, server, web) and need internet-reachability
+  detection without a Flutter plugin in the dep tree.
+
+**Compared to the other established choices:**
+
+- [`connectivity_plus`](https://pub.dev/packages/connectivity_plus) answers a *different*
+  question: "what network type is the OS on (Wi-Fi / cellular / none)?". It does not
+  probe actual reachability — a captive portal will register as a healthy Wi-Fi
+  connection. The two packages are complementary: wire `connectivity_plus` as this
+  package's `externalRecheckTrigger` to get instant rechecks on OS network-state flips
+  (canonical wiring in [Usage](#wiring-connectivity_plus-flutter)).
+- [`internet_connection_checker`](https://pub.dev/packages/internet_connection_checker)
+  and
+  [`internet_connection_checker_plus`](https://pub.dev/packages/internet_connection_checker_plus)
+  answer the *same* question this package does. They're battle-tested and a fine default
+  if you don't need slow-connection classification (missing from the `_plus` fork — see
+  [issue #71](https://github.com/OutdatedGuy/internet_connection_checker_plus/issues/71)),
+  pluggable aggregation policies, or per-probe failure diagnostics. This package layers
+  a probe / policy / scheduler architecture under the same headline feature set —
+  worth the extra surface area if you need the seams; overkill if you don't.
+
+**Don't reach for this if** you only need "what network type am I on?" — use
+`connectivity_plus` directly and skip the per-check probe cost.
 
 What the default configuration buys you, with no further configuration:
 

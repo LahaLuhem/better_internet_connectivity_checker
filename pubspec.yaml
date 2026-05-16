@@ -2,7 +2,6 @@ name: better_internet_connectivity_checker
 description: >-
   Pure-Dart internet connectivity checker. Distinguishes "interface up" from
   "can reach the public internet". Pluggable probes, policies, and triggers.
-version: 0.0.0
 repository: https://github.com/LahaLuhem/better_internet_connectivity_checker
 topics:
   - connectivity
@@ -10,17 +9,43 @@ topics:
   - monitoring
   - network
   - utilities
+screenshots:
+  - description: >-
+      Live status stream cycling Reachable(good) → Reachable(slow) →
+      Unreachable — de-duped to fire only on real transitions.
+    path: doc/screenshots/1-status-stream.webp
+  - description: >-
+      Unreachable diagnostic view with per-probe failure breakdown — error
+      class and response time for every failed probe in the last check.
+    path: doc/screenshots/2-failure-inspection.png
+
+
+
+
+version: 0.0.0
+
+
+
 
 environment:
   sdk: ^3.10.0
 
+
+
+
 dependencies:
   http: ^1.6.0
+
+
+
 
 dev_dependencies:
   checks: ^0.3.1
   fake_async: ^1.3.3
   test: ^1.31.1
+
+
+
 
 cider:
   link_template:

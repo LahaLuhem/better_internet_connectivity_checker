@@ -12,10 +12,14 @@
 # Laptop-only — does not run inside CI. Safe by default: preflight refuses to
 # proceed on a dirty tree, wrong branch, origin mismatch, missing tooling,
 # an empty/missing `## Unreleased` section, failing format/analyze/test, or a
-# tag that already exists. `pub publish --dry-run` runs after the bump
-# (validating the post-bump state, when "current version" matches the new
-# CHANGELOG header) — failure mid-release auto-reverts pubspec.yaml +
-# CHANGELOG.md via the ERR trap.
+# tag that already exists. `pub publish --dry-run` runs after the prep commit
+# — it cross-checks pubspec version against CHANGELOG headers AND that no
+# checked-in files are modified, so all three signals must be satisfied
+# before the tag is ever created. Failure mid-release auto-reverts via the
+# ERR trap: pre-commit failures restore files from HEAD; post-commit failures
+# `git reset --hard HEAD~1` to drop the prep commit. Tag/push failures and
+# (rare) server-side validation failures in publish.yml need manual recovery;
+# the script prints the recipe.
 #
 # Tags are pushed without a `v` prefix, matching the trigger pattern in
 # .github/workflows/publish.yml (`[0-9]+.[0-9]+.[0-9]+`) and pub.dev's
@@ -25,7 +29,7 @@
 # prepends it to PATH so plain `dart` resolves to the `.fvmrc`-pinned SDK.
 # Otherwise it falls back to whatever `dart` is on PATH — a non-FVM
 # contributor can run the script unchanged. SDK-version compatibility is
-# enforced indirectly via `pub publish --dry-run` (post-bump). See
+# enforced indirectly via `pub publish --dry-run` (post-commit). See
 # CODESTYLE.md.
 #
 # Usage:
@@ -90,9 +94,9 @@ Preflight (all must pass):
 Sequence:
   cider bump <BUMP>          (pubspec.yaml version → new)
   cider release              (CHANGELOG.md ## Unreleased → ## <new> dated today)
-  dart pub publish --dry-run (validates the bumped state; auto-reverts on fail)
   git add  pubspec.yaml CHANGELOG.md
   git commit -m "Prep for release <new>"
+  dart pub publish --dry-run (validates clean committed state; resets HEAD~1 on fail)
   git tag <new>
   git push --atomic origin HEAD:main <new>   (triggers publish.yml)
 
@@ -165,6 +169,10 @@ log 'shellcheck available.'
 step 'Preflight: git state'
 log 'Fetching origin (with tag prune)...'
 git fetch origin --quiet --tags --prune --prune-tags
+
+# Initialise the rollup flag — `set -u` would trip later check if every check below passed
+# and no branch ever assigned `fail=1`.
+fail=0
 
 if [ -n "$(git status --porcelain)" ]; then
     err 'Working tree is dirty. Commit or stash first.'
@@ -295,9 +303,9 @@ cat <<PLAN
 Will execute, in order:
   1. cider bump ${BUMP}                                    (pubspec.yaml: ${current_version} → ${new_version})
   2. cider release                                         (CHANGELOG.md: ## Unreleased → ## ${new_version} [dated today])
-  3. dart pub publish --dry-run                            (validate bumped state; auto-revert on failure)
-  4. git add  pubspec.yaml CHANGELOG.md
-  5. git commit -m "Prep for release ${new_version}"
+  3. git add  pubspec.yaml CHANGELOG.md
+  4. git commit -m "Prep for release ${new_version}"
+  5. dart pub publish --dry-run                            (validate clean committed state; reset HEAD~1 on failure)
   6. git tag ${new_version}
   7. git push --atomic origin HEAD:${MAIN_BRANCH} ${new_version}   (triggers .github/workflows/publish.yml)
 
@@ -330,18 +338,31 @@ fi
 # Execute
 # ---------------------------------------------------------------------------
 # Auto-revert pubspec.yaml + CHANGELOG.md if anything fails between the
-# `cider bump` step and the `git commit` step. Cleared once the commit
-# succeeds — after that, the commit + tag are in the local repo and
-# automatic cleanup would silently nuke real work.
+# `cider bump` step and the `dart pub publish --dry-run` validation. The
+# revert strategy depends on how far we got:
+#
+#   cider_phase=1 — bump/release ran, no commit yet → restore from HEAD
+#   cider_phase=2 — prep commit landed, dry-run pending → reset --hard HEAD~1
+#   cider_phase=0 — past dry-run (tag/push window) OR before bump → no auto-revert
+#
+# `cider_phase=0` after dry-run because the tag + push window is the user's
+# domain by then; automatic cleanup would silently nuke real work if the push
+# happened to be the failing step.
 cider_phase=0
 # ShellCheck's flow analysis doesn't follow assignments across a quoted trap string.
 # shellcheck disable=SC2154
 trap '
     rc=$?
-    if [ "$cider_phase" = "1" ]; then
-        printf "[release] failure mid-release — restoring pubspec.yaml + CHANGELOG.md from HEAD\n" >&2
-        git checkout HEAD -- pubspec.yaml CHANGELOG.md 2>/dev/null || true
-    fi
+    case "$cider_phase" in
+        1)
+            printf "[release] failure mid-release — restoring pubspec.yaml + CHANGELOG.md from HEAD\n" >&2
+            git checkout HEAD -- pubspec.yaml CHANGELOG.md 2>/dev/null || true
+            ;;
+        2)
+            printf "[release] failure post-commit — git reset --hard HEAD~1 to drop the prep commit\n" >&2
+            git reset --hard HEAD~1 2>/dev/null || true
+            ;;
+    esac
     exit $rc
 ' ERR
 
@@ -358,18 +379,27 @@ fi
 step 'cider release'
 cider release
 
-# Post-bump validation. By this point pubspec.yaml is at <new_version> and
-# CHANGELOG.md has a `## <new_version>` block, so pub's "current version in
-# CHANGELOG" cross-check is satisfied. set -e + the ERR trap above
-# (cider_phase=1) revert pubspec.yaml + CHANGELOG.md on failure.
-step 'dart pub publish --dry-run'
-dart pub publish --dry-run
-
 step 'git add pubspec.yaml CHANGELOG.md'
 git add pubspec.yaml CHANGELOG.md
 
 step "git commit -m \"Prep for release ${new_version}\""
 git commit -m "Prep for release ${new_version}"
+
+# Commit landed. Trap switches to "reset HEAD~1" mode for the dry-run window.
+cider_phase=2
+
+# Post-commit validation. By this point pubspec.yaml is at <new_version>,
+# CHANGELOG.md has a `## <new_version>` block, AND the working tree is clean
+# (both files committed). Pub's --dry-run cross-checks all three:
+#   - version field matches a CHANGELOG header
+#   - no uncommitted modifications to checked-in files
+#   - the tarball builds and validates
+# Running it pre-commit would trip the "checked-in files are modified" warning
+# even though every other check passed. ERR trap reverts via reset HEAD~1 on
+# failure — keeps the local repo identical to its pre-release state and
+# spares the user from creating + then deleting a remote tag.
+step 'dart pub publish --dry-run'
+dart pub publish --dry-run
 
 # Past this point: trap no longer auto-reverts. Manual recovery if the
 # tag/push fails:
