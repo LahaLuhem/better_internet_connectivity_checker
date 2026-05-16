@@ -1,7 +1,9 @@
 # CLAUDE.md — `better_internet_connectivity_checker`
 
-Claude-Code-specific guidance. Project facts, stack, hard rules, and style live in
-[AGENTS.md](./AGENTS.md) — read it first.
+Claude-Code-specific guidance. Project facts, stack, hard rules, and AI-agent
+guidelines live in [AGENTS.md](./AGENTS.md); the full code-style guide lives in
+[`../CODESTYLE.md`](../CODESTYLE.md); design rationale lives in
+[`../APPENDIX.md`](../APPENDIX.md). Read AGENTS.md and CODESTYLE.md first.
 
 ## Role & context
 You're assisting with **better_internet_connectivity_checker**: a pure Dart package that

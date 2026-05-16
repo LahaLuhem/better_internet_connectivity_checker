@@ -309,7 +309,7 @@ linter:
     use_null_aware_elements: true
     use_raw_strings: true
     use_rethrow_when_possible: true
-    use_setters_to_change_properties: false  # App-level leaf — conflicts with the on<Event>(value) view-callback idiom. See example/AGENTS.md.
+    use_setters_to_change_properties: false  # App-level leaf — conflicts with the on<Event>(value) view-callback idiom. See example/CODESTYLE.md#naming-callbacks.
     use_string_buffers: true
     use_string_in_part_of_directives: true
     use_super_parameters: true

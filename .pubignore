@@ -4,3 +4,30 @@ analysis_options.yaml
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/Runner/GeneratedPluginRegistrant.*
 test/
+
+# Build / IDE artefacts.
+build/
+*.iml
+
+# `example/pubspec.lock` cannot be excluded — pub always re-includes it in the tarball
+# (verified empirically against the dry-run: every other `example/...` pattern below
+# works, but this one is silently overridden). pub.dev needs the lockfile to render the
+# example's static analysis. Leaving the file as-is.
+
+# Internal contributor / AI-agent docs — not useful to pub.dev consumers.
+# AGENTS.md / CLAUDE.md are root symlinks into .ai/; .ai/ itself is auto-excluded by
+# pub's hidden-path rule, but pub follows symlinks before that check, so the symlink
+# targets need explicit entries.
+AGENTS.md
+CLAUDE.md
+APPENDIX.md
+CODESTYLE.md
+example/AGENTS.md
+example/CODESTYLE.md
+
+# Example platform dirs — pub.dev only renders example/lib/ + example/pubspec.yaml +
+# example/README.md for the "Example" tab. Platform scaffolding adds bloat with no
+# pub.dev-side benefit.
+example/android/
+example/ios/
+example/devtools_options.yaml
