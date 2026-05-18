@@ -35,6 +35,6 @@ export 'src/policy/strategies/any_reachable_policy.dart' show AnyReachablePolicy
 export 'src/probe/connectivity_probe.dart' show ConnectivityProbe;
 export 'src/probe/models/probe_result.dart' show ProbeResult;
 export 'src/probe/models/probe_target.dart' show ProbeTarget;
-export 'src/probe/transports/http_head_probe.dart' show HttpHeadProbe;
+export 'src/probe/transports/http_probe.dart' show HttpProbe;
 export 'src/status/internet_status.dart' show InternetStatus, Reachable, Unreachable;
 export 'src/status/models/connection_quality.dart' show ConnectionQuality;

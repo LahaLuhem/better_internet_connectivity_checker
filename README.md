@@ -18,6 +18,7 @@
     * [Custom probe targets](#custom-probe-targets)
     * [Strict aggregation (every probe must succeed)](#strict-aggregation-every-probe-must-succeed)
     * [Injecting a custom `http.Client`](#injecting-a-custom-httpclient)
+    * [Falling back to GET](#falling-back-to-get)
     * [Writing a custom `ConnectivityProbe`](#writing-a-custom-connectivityprobe)
     * [Wiring `connectivity_plus` (Flutter)](#wiring-connectivity_plus-flutter)
 - [When to reach for this](#when-to-reach-for-this)
@@ -48,8 +49,10 @@ transparent proxies, broken middleboxes, and LAN-only networks.
   threshold, no extra plumbing.
 - Streams status transitions on a broadcast stream, de-duped so the same status kind is
   not re-emitted on every periodic tick.
-- Ships a default HTTP-HEAD probe; the probe layer is pluggable, so retry decorators,
-  alternative transports, or test stubs slot in without touching the rest of the package.
+- Ships a default HTTP-HEAD probe with a GET fallback (`HttpProbe.head()` /
+  `HttpProbe.get()`) for endpoints that reject HEAD; the probe layer is pluggable, so
+  retry decorators, alternative transports, or test stubs slot in without touching the
+  rest of the package.
 - Ships **any-of-N** (default) and **all-of-N** (strict) aggregation policies; the policy
   layer is also pluggable.
 - Exposes an `externalRecheckTrigger` hook so callers can plug in OS-level network-change
@@ -200,25 +203,43 @@ For proxies, middleware, or a `MockClient` in tests:
 import 'package:http/http.dart' as http;
 
 final checker = InternetConnection(
-    probe: HttpHeadProbe(client: myHttpClient),
+    probe: HttpProbe.head(client: myHttpClient),
 );
 ```
 
+### Falling back to GET
+
+Some endpoints reject HEAD (HTTP 405) or strip caching headers on it. Swap to
+`HttpProbe.get()` per-instance:
+
+```dart
+final checker = InternetConnection(
+    probe: HttpProbe.get(),
+);
+```
+
+The GET probe drains the response body from the wire but does not buffer it into
+memory, so a verbose endpoint does not bloat the probe's footprint. Any custom
+`isSuccess` predicate sees an empty `response.body` regardless of what the server
+returned — inspect `statusCode` and `headers` instead.
+
 ### Writing a custom `ConnectivityProbe`
 
-For probes that go beyond HTTP HEAD — DNS, TCP, a private API, or a decorator wrapping
+For probes that go beyond HTTP — DNS, TCP, a private API, or a decorator wrapping
 another probe — implement `ConnectivityProbe.probe(target, {cancelSignal})`. Honour the
 optional `cancelSignal` whenever your transport supports cancellation: under
 `AnyReachablePolicy` it fires the moment a sibling probe succeeds, so the in-flight
 request can release its socket at the transport layer instead of waiting out the
-per-target timeout. The built-in `HttpHeadProbe` honours it via `http.AbortableRequest`;
+per-target timeout. The built-in `HttpProbe` honours it via `http.AbortableRequest`;
 probes that cannot abort simply ignore the parameter and the policy still resolves
 correctly.
 
 See [`example/lib/features/custom_targets/method_aware_probe.dart`](example/lib/features/custom_targets/method_aware_probe.dart)
-for the canonical pattern — dispatching HEAD or GET per-target, surfacing protocol-specific
-response data on the probe itself, and honouring `cancelSignal` alongside the per-target
-deadline through a single abort trigger.
+for the canonical pattern: when your probe needs to surface protocol-specific response
+data (the HTTP `Allow` header on 405 responses, in this demo) that `ProbeResult`
+intentionally omits, expose it on the probe itself via a constructor callback. The
+example wires the built-in `HttpProbe.head()` / `HttpProbe.get()` as the main probe and
+falls back to `MethodAwareProbe` only on the failure-inspection path.
 
 ### Wiring `connectivity_plus` (Flutter)
 

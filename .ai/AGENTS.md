@@ -110,10 +110,14 @@ better_internet_connectivity_checker/
    [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter).
 7. **No manual `CHANGELOG.md` or `version:` edits, no hand-run `cider` commands.** All
    three are owned by [`scripts/release.sh`](../scripts/release.sh); manual entries /
-   runs will be reordered or overwritten. Curate the `## Unreleased` section of
-   `CHANGELOG.md` by hand between releases — the script consumes it. The `cider:` block
-   in `pubspec.yaml` is static configuration (link templates, URLs) and may be
-   hand-edited.
+   runs will be reordered or overwritten. Curate the `## [Unreleased]` section of
+   `CHANGELOG.md` by hand between releases — the script consumes it. Keep the
+   bracket-and-link-reference format consistent with the already-released entries
+   (`## [Unreleased]` heading, `[Unreleased]: …/compare/<last-tag>...vHEAD` reference
+   at the bottom of the file, `### Added` / `### Changed` / `### Fixed` subsections) —
+   that is the shape cider's `link_template` expects; inconsistent headings get
+   rewritten on release. The `cider:` block in `pubspec.yaml` is static configuration
+   (link templates, URLs) and may be hand-edited.
 
 ## Style
 Full guide: [`../CODESTYLE.md`](../CODESTYLE.md). The lint posture is deliberately strict

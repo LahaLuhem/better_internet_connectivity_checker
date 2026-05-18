@@ -7,10 +7,10 @@ import 'package:http/testing.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {
-  group('HttpHeadProbe', () {
+  group('HttpProbe.head', () {
     test('returns a successful result when the predicate accepts the response', () async {
       final client = MockClient((_) async => http.Response('', 200));
-      final probe = HttpHeadProbe(client: client);
+      final probe = HttpProbe.head(client: client);
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
       final result = await probe.probe(target);
@@ -22,7 +22,7 @@ void main() {
 
     test('returns a failed result when the predicate rejects the response', () async {
       final client = MockClient((_) async => http.Response('', 500));
-      final probe = HttpHeadProbe(client: client);
+      final probe = HttpProbe.head(client: client);
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
       final result = await probe.probe(target);
@@ -34,7 +34,7 @@ void main() {
     test('captures exceptions raised by the underlying transport', () async {
       final boom = Exception('network down');
       final client = MockClient((_) async => throw boom);
-      final probe = HttpHeadProbe(client: client);
+      final probe = HttpProbe.head(client: client);
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
       final result = await probe.probe(target);
@@ -50,7 +50,7 @@ void main() {
 
         return http.Response('', 200);
       });
-      final probe = HttpHeadProbe(client: client);
+      final probe = HttpProbe.head(client: client);
       final target = ProbeTarget(
         uri: Uri.https('example.com', '/ping'),
         headers: const {'X-Custom': 'yes'},
@@ -64,7 +64,59 @@ void main() {
     });
   });
 
-  group('HttpHeadProbe cancellation', () {
+  group('HttpProbe.get', () {
+    test('issues an HTTP GET request with the target URI and headers', () async {
+      late http.BaseRequest captured;
+      final client = MockClient((request) async {
+        captured = request;
+
+        return http.Response('', 200);
+      });
+      final probe = HttpProbe.get(client: client);
+      final target = ProbeTarget(
+        uri: Uri.https('example.com', '/ping'),
+        headers: const {'X-Custom': 'yes'},
+      );
+
+      await probe.probe(target);
+
+      check(captured.method).equals('GET');
+      check(captured.url).equals(target.uri);
+      check(captured.headers['x-custom']).equals('yes');
+    });
+
+    test('drains the response body without buffering it for the isSuccess predicate', () async {
+      late http.Response observed;
+      final client = MockClient((_) async => http.Response('a verbose payload', 200));
+      bool capture(http.Response response) {
+        observed = response;
+
+        return response.statusCode == 200;
+      }
+
+      final probe = HttpProbe.get(client: client);
+      final target = ProbeTarget(uri: Uri.https('example.com'), isSuccess: capture);
+
+      final result = await probe.probe(target);
+
+      check(result.isSuccess).isTrue();
+      check(observed.statusCode).equals(200);
+      check(observed.body).isEmpty();
+    });
+
+    test('returns a failed result when the predicate rejects the response', () async {
+      final client = MockClient((_) async => http.Response('nope', 500));
+      final probe = HttpProbe.get(client: client);
+      final target = ProbeTarget(uri: Uri.https('example.com'));
+
+      final result = await probe.probe(target);
+
+      check(result.isSuccess).isFalse();
+      check(result.error).isNull();
+    });
+  });
+
+  group('HttpProbe cancellation', () {
     test('issues an AbortableRequest whose trigger fires when cancelSignal does', () async {
       final capturedRequest = Completer<http.BaseRequest>();
       final responseCompleter = Completer<http.StreamedResponse>();
@@ -73,7 +125,7 @@ void main() {
 
         return responseCompleter.future;
       });
-      final probe = HttpHeadProbe(client: client);
+      final probe = HttpProbe.head(client: client);
       final cancelCompleter = Completer<void>();
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
@@ -110,7 +162,7 @@ void main() {
 
         return body.future;
       });
-      final probe = HttpHeadProbe(client: client);
+      final probe = HttpProbe.head(client: client);
       final target = ProbeTarget(
         uri: Uri.https('example.com'),
         timeout: const Duration(seconds: 30),

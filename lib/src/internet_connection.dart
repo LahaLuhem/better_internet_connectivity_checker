@@ -5,7 +5,7 @@ import 'policy/reachability_policy.dart';
 import 'policy/strategies/any_reachable_policy.dart';
 import 'probe/connectivity_probe.dart';
 import 'probe/models/probe_target.dart';
-import 'probe/transports/http_head_probe.dart';
+import 'probe/transports/http_probe.dart';
 import 'status/internet_status.dart';
 import 'status/models/connection_quality.dart';
 
@@ -64,9 +64,10 @@ final class InternetConnection {
   /// `policy` selects the aggregation strategy. Defaults to
   /// [AnyReachablePolicy] (any-of-N suffices).
   ///
-  /// `probe` runs a single check; defaults to [HttpHeadProbe]. Pass a custom
-  /// probe to swap the transport (e.g. a retry-wrapping decorator) or to
-  /// inject a mock in tests.
+  /// `probe` runs a single check; defaults to [HttpProbe.head]. Pass a custom
+  /// probe to swap the transport (e.g. a retry-wrapping decorator, an
+  /// [HttpProbe.get] for HEAD-unfriendly endpoints) or to inject a mock in
+  /// tests.
   ///
   /// `externalRecheckTrigger` is an optional stream whose events force an
   /// immediate recheck regardless of the timer. Typical Flutter wiring:
@@ -83,7 +84,7 @@ final class InternetConnection {
        _checkInterval = checkInterval,
        _slowThreshold = slowThreshold,
        _policy = policy,
-       _probe = probe ?? HttpHeadProbe(),
+       _probe = probe ?? HttpProbe.head(),
        _externalTrigger = externalRecheckTrigger;
 
   /// The current periodic check interval.

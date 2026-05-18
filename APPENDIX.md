@@ -67,8 +67,9 @@ anchor stable or grep-and-update every caller.
 
 - **Chosen:** the package splits into three independent concerns:
   1. **`ConnectivityProbe`** — runs one check against one `ProbeTarget`, returns one
-     `ProbeResult`. The built-in `HttpHeadProbe` is one implementation; others can wrap
-     it (retry decorators) or replace it (DNS / TCP / mock).
+     `ProbeResult`. The built-in `HttpProbe` (with `.head()` and `.get()` factories) is
+     one implementation; others can wrap it (retry decorators) or replace it (DNS / TCP
+     / mock).
   2. **`ReachabilityPolicy`** — aggregates per-probe results into an `InternetStatus`.
      Built-ins: `AnyReachablePolicy` (any-of-N), `AllReachablePolicy` (all-of-N). Future
      variants (k-of-N, majority, circuit-breaker) slot in at this layer.
@@ -172,7 +173,7 @@ anchor stable or grep-and-update every caller.
 
 - **Chosen:** `ConnectivityProbe.probe(target, {cancelSignal})` accepts an optional
   `Future<void>?`. When it completes, the probe should abandon I/O and return a failed
-  `ProbeResult`. The built-in `HttpHeadProbe` wires this — and its own per-target timeout
+  `ProbeResult`. The built-in `HttpProbe` wires this — and its own per-target timeout
   — into a single [`http.AbortableRequest`](https://pub.dev/documentation/http/latest/http/AbortableRequest-class.html)
   via the `abortTrigger` named parameter. `IOClient` calls `HttpClientRequest.abort()` on
   the underlying socket; `BrowserClient` calls `AbortController.abort()`. Either way the
@@ -186,7 +187,7 @@ anchor stable or grep-and-update every caller.
   resolves correctly.
 - **Why `http.Abortable` rather than per-call `http.Client` + `Client.close()`:** the
   closure approach was the original plan and would have worked, but it forced a breaking
-  change to `HttpHeadProbe`'s constructor — replacing `{http.Client? client}` with a
+  change to `HttpProbe`'s constructor — replacing `{http.Client? client}` with a
   factory function so each probe call could mint and close its own client. That sacrifices
   connection pooling on the injected-client path for no gain over the canonical primitive
   `package:http` 1.6.0 already provides. `Abortable` keeps the constructor untouched, the
@@ -200,7 +201,7 @@ anchor stable or grep-and-update every caller.
   and the policy decides whether and when to release siblings.
 - **Implication for the failure path:** `RequestAbortedException` is an `Exception`
   subtype (via `ClientException`), so the existing `on Exception catch (error)` clause in
-  `HttpHeadProbe` captures it and the result lands as `ProbeResult.failure(error: …)`.
+  `HttpProbe` captures it and the result lands as `ProbeResult.failure(error: …)`.
   Aborted-by-deadline failures now surface as `RequestAbortedException` rather than
   `TimeoutException` — a small but visible behaviour shift for any caller that
   type-discriminates on `ProbeResult.error`.
@@ -237,7 +238,7 @@ anchor stable or grep-and-update every caller.
 <a id="why-http-head-default-probe"></a>
 ## Why HTTP HEAD, not DNS / TCP, is the default probe
 
-- **Chosen:** the default `ConnectivityProbe` (`HttpHeadProbe`) issues an HTTP HEAD
+- **Chosen:** the default `ConnectivityProbe` (`HttpProbe.head()`) issues an HTTP HEAD
   request and accepts HTTP 200 as success.
 - **Rejected:** DNS-only or TCP-connect probes, both of which would be cheaper per check.
 - **Why:** the package answers "can I actually reach the public internet right now", not
@@ -247,6 +248,13 @@ anchor stable or grep-and-update every caller.
   miss TLS-handshake failures and HTTP-layer interception (captive portals returning a 302
   to a sign-in page on port 443). HTTP HEAD costs one extra round-trip but exercises the
   entire path the user cares about: DNS, TCP, TLS, and an HTTP response.
+- **GET ships alongside HEAD as a built-in fallback.** Same class (`HttpProbe`), different
+  named constructor (`HttpProbe.get()`). Some reliability endpoints reject HEAD with HTTP
+  405; some CDNs strip cache-control headers on HEAD responses; some legacy APIs simply
+  misbehave under it. GET is the universal fallback, paid for with one extra response body
+  on the wire. The body is drained but not buffered, so the per-call memory cost matches
+  HEAD; the wire cost does not. HEAD stays the default because the body cost matters at
+  the periodic-check interval the scheduler runs at.
 - **Faster probes remain available as custom impls.** Users who explicitly accept the
   trade-off can implement DNS or TCP probes against the `ConnectivityProbe` interface and
   pass them via `InternetConnection(probe: …)`. The seam exists; the default is

@@ -65,13 +65,13 @@ final class CustomTargetsViewModel extends ViewModel {
   }
 
   Future<void> _attemptCheck(ProbeTarget target, {required bool allowRetry}) async {
-    String? allowSeen;
-    final probe = MethodAwareProbe(
-      probeMethod: _probeMethodNotifier.value,
-      onAllowHeader: (value) => allowSeen = value,
-    );
+    final probeMethod = _probeMethodNotifier.value;
+    final mainProbe = switch (probeMethod) {
+      .head => HttpProbe.head(),
+      .get => HttpProbe.get(),
+    };
 
-    final connection = InternetConnection(targets: [target], probe: probe);
+    final connection = InternetConnection(targets: [target], probe: mainProbe);
     InternetStatus status;
     try {
       status = await connection.checkOnce();
@@ -81,12 +81,14 @@ final class CustomTargetsViewModel extends ViewModel {
 
     _lastOutcomeNotifier.value = (status: status, targetUrl: target.uri.toString());
 
-    if (status is! Unreachable || allowSeen == null) return;
+    if (status is! Unreachable) return;
 
-    final suggestedProbeMethod = _parseAllowedMethod(allowSeen!);
-    if (suggestedProbeMethod == null || suggestedProbeMethod == _probeMethodNotifier.value) return;
+    final allowSeen = await _inspectAllowHeader(target, probeMethod);
+    if (allowSeen == null) return;
 
-    final previousLabel = _probeMethodNotifier.value.label;
+    final suggestedProbeMethod = _parseAllowedMethod(allowSeen);
+    if (suggestedProbeMethod == null || suggestedProbeMethod == probeMethod) return;
+
     _probeMethodNotifier.value = suggestedProbeMethod;
 
     if (!disposed && context.mounted) {
@@ -94,7 +96,7 @@ final class CustomTargetsViewModel extends ViewModel {
         SnackBar(
           content: Text(
             'Server replied 405 with allow: $allowSeen — switched '
-            '$previousLabel → ${suggestedProbeMethod.label}'
+            '${probeMethod.label} → ${suggestedProbeMethod.label}'
             '${allowRetry ? ' and retrying.' : '.'}',
           ),
         ),
@@ -102,6 +104,17 @@ final class CustomTargetsViewModel extends ViewModel {
     }
 
     if (allowRetry) await _attemptCheck(target, allowRetry: false);
+  }
+
+  Future<String?> _inspectAllowHeader(ProbeTarget target, ProbeMethod probeMethod) async {
+    String? allowSeen;
+    final inspector = MethodAwareProbe(
+      httpMethod: probeMethod.label,
+      onAllowHeader: (value) => allowSeen = value,
+    );
+    await inspector.probe(target);
+
+    return allowSeen;
   }
 
   static ProbeMethod? _parseAllowedMethod(String allow) {

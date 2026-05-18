@@ -3,67 +3,48 @@ import 'dart:async';
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:http/http.dart' as http;
 
-import 'data/enums/probe_method.dart';
-
-/// Inline [ConnectivityProbe] that dispatches HEAD or GET based on a
-/// configured [probeMethod], and surfaces the response's `Allow` header (when
-/// present) via [onAllowHeader]. Demonstrates the pluggable probe seam —
-/// the package's built-in [HttpHeadProbe] only does HEAD, and
-/// [ProbeResult] is intentionally protocol-agnostic, so HTTP-specific data
-/// is surfaced on the probe itself rather than on the result.
+/// Inline [ConnectivityProbe] that fires one HTTP request with [httpMethod]
+/// and surfaces the response's `Allow` header (when present) via
+/// [onAllowHeader]. Demonstrates the *only* lesson the built-in [HttpProbe]
+/// cannot teach: [ProbeResult] is intentionally protocol-agnostic, so
+/// HTTP-specific data (status codes, headers, …) has to be exposed on the
+/// probe itself — not on the shared result. See APPENDIX
+/// `#no-response-data-on-result` for the rationale.
 ///
-/// Also demonstrates honouring [ConnectivityProbe.probe]'s `cancelSignal`
-/// via [http.AbortableRequest]: a single abort completer is fed by both the
-/// per-target timeout and the policy-supplied signal, so the in-flight
-/// request is released at the transport layer the moment either fires.
+/// Intentionally minimal: the per-target timeout is honoured via
+/// `Future.timeout`, and `cancelSignal` is accepted (interface contract) but
+/// ignored — this probe only runs on the failure-inspection path, never
+/// inside a policy fan-out, so there is no sibling probe to race against.
+/// The library's [HttpProbe] is the reference implementation for full
+/// transport-layer abort handling.
 final class MethodAwareProbe implements ConnectivityProbe {
-  final ProbeMethod probeMethod;
+  final String httpMethod;
   final void Function(String allow)? onAllowHeader;
   final http.Client _client;
 
-  MethodAwareProbe({required this.probeMethod, this.onAllowHeader, http.Client? client})
+  MethodAwareProbe({required this.httpMethod, this.onAllowHeader, http.Client? client})
     : _client = client ?? http.Client();
 
   @override
   Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) async {
     final stopwatch = Stopwatch()..start();
-    final abortCompleter = Completer<void>();
-    void triggerAbort() {
-      if (!abortCompleter.isCompleted) abortCompleter.complete();
-    }
-
-    final timeoutTimer = Timer(target.timeout, triggerAbort);
-    unawaited(cancelSignal?.whenComplete(triggerAbort));
-
-    final httpMethod = switch (probeMethod) {
-      .head => 'HEAD',
-      .get => 'GET',
-    };
 
     try {
-      final request = http.AbortableRequest(
-        httpMethod,
-        target.uri,
-        abortTrigger: abortCompleter.future,
-      )..headers.addAll(target.headers);
-      final streamedResponse = await _client.send(request);
+      final request = http.Request(httpMethod, target.uri)..headers.addAll(target.headers);
+      final streamedResponse = await _client.send(request).timeout(target.timeout);
       final response = await http.Response.fromStream(streamedResponse);
       stopwatch.stop();
 
-      if (target.isSuccess(response)) {
-        return .success(target: target, responseTime: stopwatch.elapsed);
-      }
-
-      final allow = response.headers['allow'] ?? response.headers['Allow'];
+      final allow = response.headers['allow'];
       if (allow != null && allow.isNotEmpty) onAllowHeader?.call(allow);
 
-      return .failure(target: target, responseTime: stopwatch.elapsed);
+      return target.isSuccess(response)
+          ? .success(target: target, responseTime: stopwatch.elapsed)
+          : .failure(target: target, responseTime: stopwatch.elapsed);
     } on Exception catch (error) {
       stopwatch.stop();
 
       return .failure(target: target, responseTime: stopwatch.elapsed, error: error);
-    } finally {
-      timeoutTimer.cancel();
     }
   }
 }

@@ -164,10 +164,12 @@ class _AutoSwitchInfoCard extends StatelessWidget {
           const Icon(Icons.info_outline, size: 20),
           Expanded(
             child: Text(
-              'If the server replies 405 Method Not Allowed with an Allow header, '
-              'this demo switches the dropdown to a supported method and retries '
-              'once. Powered by an inline MethodAwareProbe — see method_aware_probe.dart '
-              'for the ConnectivityProbe implementation.',
+              'Main probing uses the built-in HttpProbe.head() / HttpProbe.get(). '
+              'On Unreachable, the demo re-fetches via an inline MethodAwareProbe '
+              'to read the response’s Allow header — ProbeResult is intentionally '
+              'protocol-agnostic, so HTTP-specific data must be surfaced on the '
+              'probe itself. If Allow names a supported method, the dropdown '
+              'switches and retries once. See method_aware_probe.dart.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),

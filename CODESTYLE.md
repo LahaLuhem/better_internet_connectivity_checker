@@ -128,7 +128,7 @@ style.
   it. Within constructors, unnamed first, then factories (matches
   `sort_unnamed_constructors_first`). Static helpers go after the methods. Applies to
   value types (`ProbeTarget`, `Reachable`, …), service classes (`InternetConnection`,
-  `HttpHeadProbe`), test helpers (`StubProbe`) — wherever a class has both state and a
+  `HttpProbe`), test helpers (`StubProbe`) — wherever a class has both state and a
   constructor. Pure-static namespace classes (`Values`) and field-less interface
   classes (`ConnectivityProbe`, `ReachabilityPolicy`) have nothing to order; the rule
   applies vacuously.

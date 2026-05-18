@@ -12,7 +12,7 @@ import '../reachability_policy.dart';
 /// Runs every probe in parallel and races them for the first success. On the
 /// first success, returns a [Reachable] status immediately and signals
 /// pending probes to cancel via [ConnectivityProbe.probe]'s `cancelSignal`.
-/// Probes that honour the signal — the built-in `HttpHeadProbe` does — abort
+/// Probes that honour the signal — the built-in `HttpProbe` does — abort
 /// at the transport layer so siblings do not leave sockets dangling for the
 /// remainder of their timeout.
 ///
