@@ -40,6 +40,10 @@ existing Dart / Flutter checkers) ultimately rely on. Bridges the gap where DNS 
 and the OS reports connected, but HTTP traffic is silently dropped — captive portals,
 transparent proxies, broken middleboxes, and LAN-only networks.
 
+<p align="center">
+  <img src="doc/screenshots/1-status-stream.webp" alt="Live status stream cycling Reachable(good) → Reachable(slow) → Unreachable, de-duped to fire only on real transitions" width="320">
+</p>
+
 ## What it does
 
 - Probes one or more URIs to determine *actual* internet reachability — not just "an
