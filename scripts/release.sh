@@ -4,10 +4,11 @@
 #
 # Cut a versioned release of better_internet_connectivity_checker. Bumps the
 # pubspec.yaml `version:` with `cider`, finalises the CHANGELOG.md
-# `## Unreleased` section into a dated `## <new_version>` block, commits both
-# files, creates a SemVer tag, and pushes commit + tag atomically. The tag
-# push triggers .github/workflows/publish.yml, which then publishes to
-# pub.dev via OIDC.
+# `## Unreleased` section into a dated `## <new_version>` block, regenerates
+# `example/pubspec.lock` so its `path: ../` parent entry tracks the new
+# version, commits all three files, creates a SemVer tag, and pushes commit
+# + tag atomically. The tag push triggers .github/workflows/publish.yml,
+# which then publishes to pub.dev via OIDC.
 #
 # Laptop-only — does not run inside CI. Safe by default: preflight refuses to
 # proceed on a dirty tree, wrong branch, origin mismatch, missing tooling,
@@ -63,6 +64,7 @@ MAIN_BRANCH="main"
 BUMP=""
 YES=0
 DRY_RUN=0
+TAG_MESSAGE=""
 
 usage() {
     cat <<'USAGE'
@@ -75,12 +77,16 @@ Arguments:
   BUMP            one of: major, minor, patch  (prompted if omitted on a TTY)
 
 Options:
-  -y, --yes       skip the confirmation prompt (required for non-TTY)
-  -n, --dry-run   run full preflight + print the plan, no side effects
-  -h, --help      show this message
+  -y, --yes               skip the confirmation prompt (required for non-TTY)
+  -n, --dry-run           run full preflight + print the plan, no side effects
+  -m, --tag-message MSG   attach MSG as the tag message (creates an annotated,
+                          signed-if-configured tag). Without this flag the tag
+                          is lightweight.
+  -h, --help              show this message
 
 Preflight (all must pass):
   - `dart` resolvable (via `.fvm/flutter_sdk/bin/` if FVM is set up, else PATH)
+  - `flutter` on PATH (needed to regenerate example/pubspec.lock)
   - cider on PATH
   - shellcheck on PATH
   - working tree clean, on `main`, in sync with origin/main (fetches first)
@@ -92,13 +98,14 @@ Preflight (all must pass):
   - computed tag unused locally AND on origin
 
 Sequence:
-  cider bump <BUMP>          (pubspec.yaml version → new)
-  cider release              (CHANGELOG.md ## Unreleased → ## <new> dated today)
-  git add  pubspec.yaml CHANGELOG.md
+  cider bump <BUMP>                                (pubspec.yaml version → new)
+  cider release                                    (CHANGELOG.md ## Unreleased → ## <new> dated today)
+  (cd example && flutter pub get)                  (resync example/pubspec.lock to new parent version)
+  git add  pubspec.yaml CHANGELOG.md example/pubspec.lock
   git commit -m "Prep for release <new>"
-  dart pub publish --dry-run (validates clean committed state; resets HEAD~1 on fail)
-  git tag <new>
-  git push --atomic origin HEAD:main <new>   (triggers publish.yml)
+  dart pub publish --dry-run                       (validates clean committed state; resets HEAD~1 on fail)
+  git tag <new>                                    (lightweight by default; annotated when -m given)
+  git push --atomic origin HEAD:main <new>         (triggers publish.yml)
 
 Non-interactive example:
   scripts/release.sh patch --yes
@@ -110,6 +117,14 @@ while (($#)); do
         major|minor|patch) BUMP="$1" ;;
         -y|--yes)          YES=1 ;;
         -n|--dry-run)      DRY_RUN=1 ;;
+        -m|--tag-message)
+            shift
+            if [ $# -eq 0 ] || [ -z "${1}" ]; then
+                printf '%s requires a non-empty MSG argument\n' "${0##*/} -m/--tag-message" >&2
+                exit 2
+            fi
+            TAG_MESSAGE="$1"
+            ;;
         -h|--help)         usage; exit 0 ;;
         *)                 printf 'unknown arg: %s (use --help)\n' "$1" >&2; exit 2 ;;
     esac
@@ -162,6 +177,17 @@ if ! command -v shellcheck >/dev/null 2>&1; then
     exit 1
 fi
 log 'shellcheck available.'
+# `flutter` is needed to regenerate example/pubspec.lock so its `path: ../`
+# entry tracks the new parent version. Without this, the lockfile committed
+# at release time still references the old version → CI's pub publish run
+# sees the lockfile as stale and either rewrites it (causing a "modified
+# checked-in file" complaint) or ships an inconsistent tarball.
+if ! command -v flutter >/dev/null 2>&1; then
+    err 'flutter not on PATH (needed to regenerate example/pubspec.lock at release time).'
+    err "Install: brew install --cask flutter, or run 'fvm install' from the project root."
+    exit 1
+fi
+log 'flutter available.'
 
 # ---------------------------------------------------------------------------
 # Preflight: git state
@@ -291,23 +317,30 @@ fi
 # `dart pub publish --dry-run` is NOT run here. Its "current version in
 # CHANGELOG" check is meaningful only against the *post-bump* state — running
 # it pre-bump would block the first release (0.0.0 has no `## 0.0.0` entry)
-# and provide no extra signal on later releases. The dry-run runs after
-# `cider release` in the execute phase, where the ERR trap still auto-reverts
-# pubspec.yaml + CHANGELOG.md on failure (cider_phase=1 window).
+# and provide no extra signal on later releases. The dry-run runs after the
+# bump + CHANGELOG finalisation + example-lockfile resync in the execute
+# phase, where the ERR trap still auto-reverts those three files on failure
+# (cider_phase=1 window).
 
 # ---------------------------------------------------------------------------
 # Plan
 # ---------------------------------------------------------------------------
 step 'Plan'
+if [ -n "${TAG_MESSAGE}" ]; then
+    tag_kind_note="(annotated, message: \"${TAG_MESSAGE}\")"
+else
+    tag_kind_note="(lightweight; pass -m \"MSG\" to annotate)"
+fi
 cat <<PLAN
 Will execute, in order:
   1. cider bump ${BUMP}                                    (pubspec.yaml: ${current_version} → ${new_version})
   2. cider release                                         (CHANGELOG.md: ## Unreleased → ## ${new_version} [dated today])
-  3. git add  pubspec.yaml CHANGELOG.md
-  4. git commit -m "Prep for release ${new_version}"
-  5. dart pub publish --dry-run                            (validate clean committed state; reset HEAD~1 on failure)
-  6. git tag ${new_version}
-  7. git push --atomic origin HEAD:${MAIN_BRANCH} ${new_version}   (triggers .github/workflows/publish.yml)
+  3. (cd example && flutter pub get)                       (resync example/pubspec.lock to ${new_version})
+  4. git add  pubspec.yaml CHANGELOG.md example/pubspec.lock
+  5. git commit -m "Prep for release ${new_version}"
+  6. dart pub publish --dry-run                            (validate clean committed state; reset HEAD~1 on failure)
+  7. git tag ${new_version}                                ${tag_kind_note}
+  8. git push --atomic origin HEAD:${MAIN_BRANCH} ${new_version}   (triggers .github/workflows/publish.yml)
 
 publish.yml will then build & publish ${new_version} to pub.dev via OIDC.
 PLAN
@@ -337,11 +370,11 @@ fi
 # ---------------------------------------------------------------------------
 # Execute
 # ---------------------------------------------------------------------------
-# Auto-revert pubspec.yaml + CHANGELOG.md if anything fails between the
-# `cider bump` step and the `dart pub publish --dry-run` validation. The
-# revert strategy depends on how far we got:
+# Auto-revert pipeline-owned files if anything fails between the `cider bump`
+# step and the `dart pub publish --dry-run` validation. The revert strategy
+# depends on how far we got:
 #
-#   cider_phase=1 — bump/release ran, no commit yet → restore from HEAD
+#   cider_phase=1 — bump/release/example-resync ran, no commit yet → restore from HEAD
 #   cider_phase=2 — prep commit landed, dry-run pending → reset --hard HEAD~1
 #   cider_phase=0 — past dry-run (tag/push window) OR before bump → no auto-revert
 #
@@ -355,8 +388,8 @@ trap '
     rc=$?
     case "$cider_phase" in
         1)
-            printf "[release] failure mid-release — restoring pubspec.yaml + CHANGELOG.md from HEAD\n" >&2
-            git checkout HEAD -- pubspec.yaml CHANGELOG.md 2>/dev/null || true
+            printf "[release] failure mid-release — restoring pubspec.yaml + CHANGELOG.md + example/pubspec.lock from HEAD\n" >&2
+            git checkout HEAD -- pubspec.yaml CHANGELOG.md example/pubspec.lock 2>/dev/null || true
             ;;
         2)
             printf "[release] failure post-commit — git reset --hard HEAD~1 to drop the prep commit\n" >&2
@@ -379,8 +412,19 @@ fi
 step 'cider release'
 cider release
 
-step 'git add pubspec.yaml CHANGELOG.md'
-git add pubspec.yaml CHANGELOG.md
+# Resync example/pubspec.lock to point at the freshly-bumped parent version.
+# example/pubspec.yaml uses `path: ../`, so the lockfile records the parent's
+# version at resolve time. Without this step, `example/pubspec.lock` still
+# references the previous version, and the next `flutter pub get` anywhere
+# in the pipeline (CI's publish step, pana on pub.dev, or even an IDE on a
+# contributor's machine) would rewrite it — triggering "modified checked-in
+# file" complaints during `dart pub publish`. Regenerating + staging it here
+# folds the resync into the same prep commit so the tree is consistent.
+step 'flutter pub get (example/) — resync example/pubspec.lock to new parent version'
+(cd example && flutter pub get)
+
+step 'git add pubspec.yaml CHANGELOG.md example/pubspec.lock'
+git add pubspec.yaml CHANGELOG.md example/pubspec.lock
 
 step "git commit -m \"Prep for release ${new_version}\""
 git commit -m "Prep for release ${new_version}"
@@ -408,7 +452,20 @@ dart pub publish --dry-run
 cider_phase=0
 
 step "git tag ${new_version}"
-git tag "${new_version}"
+if [ -n "${TAG_MESSAGE}" ]; then
+    # Annotated tag with explicit message — gpg signing honours user's git
+    # config (`tag.gpgSign`, `user.signingKey`, etc.) because `git tag -m`
+    # produces an annotated object that the config can attach a signature to.
+    git tag -m "${TAG_MESSAGE}" "${new_version}"
+else
+    # Lightweight tag — just a ref pointer, no body, no signature. The
+    # per-command `-c tag.gpgSign=false` overrides the user's global
+    # `tag.gpgSign=true` for *this* invocation only; without it git would
+    # auto-promote a plain `git tag NAME` into a signed-annotated tag and
+    # demand a message via the editor. This bypass is the documented intent
+    # of "no -m → lightweight" — the user explicitly opted in by omitting -m.
+    git -c tag.gpgSign=false tag "${new_version}"
+fi
 
 step "git push --atomic origin HEAD:${MAIN_BRANCH} ${new_version}"
 git push --atomic origin "HEAD:${MAIN_BRANCH}" "${new_version}"

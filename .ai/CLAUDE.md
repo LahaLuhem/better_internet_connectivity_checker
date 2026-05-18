@@ -79,10 +79,11 @@ back (unpublished versions stay reserved for 7 days).
 
 For single-file, single-concern fixes inside `lib/src/`: just do it.
 
-The release flow — `CHANGELOG.md` and `version:` in `pubspec.yaml` — is **not** in this
-list. It's pipeline-owned; see *Forbidden / confirm-first actions* below. Don't plan a
-CHANGELOG edit; don't make one. The `cider:` block itself is static configuration (URLs,
-link templates) and may be hand-edited like any other yaml.
+The release flow — `CHANGELOG.md`, `version:` in `pubspec.yaml`, and
+`example/pubspec.lock` — is **not** in this list. All three are pipeline-owned; see
+*Forbidden / confirm-first actions* below. Don't plan a CHANGELOG edit, a version bump,
+or an `example/` lockfile refresh; don't make one. The `cider:` block itself is static
+configuration (URLs, link templates) and may be hand-edited like any other yaml.
 
 ## Commit / PR etiquette
 - **Never commit without being asked.** Not after a fix, not as a "checkpoint".
@@ -99,15 +100,17 @@ link templates) and may be hand-edited like any other yaml.
   version for 7 days after retraction. Releases go through `scripts/release.sh`, which
   the user runs manually.
 - **Never** run `cider` commands (`cider bump`, `cider release`, …) or manually edit
-  `CHANGELOG.md` / the `version:` field in `pubspec.yaml`. Version bumps and CHANGELOG
-  entries are owned by [`scripts/release.sh`](../scripts/release.sh); manual edits will
-  be reordered or overwritten. If the user asks for a release, suggest running
+  `CHANGELOG.md`, the `version:` field in `pubspec.yaml`, or `example/pubspec.lock`.
+  Version bumps, CHANGELOG entries, and the example-lockfile resync are owned by
+  [`scripts/release.sh`](../scripts/release.sh); manual edits will be reordered or
+  overwritten. If the user asks for a release, suggest running
   `scripts/release.sh <bump>` — don't invoke it for them (it pushes to `origin/main` and
   triggers pub.dev publish). Curating the `## Unreleased` section of `CHANGELOG.md`
   between releases IS allowed (and required — the script bails if it's empty). The
   `cider:` block in `pubspec.yaml` is static configuration (link templates, URLs) —
   hand-edit it freely.
-- **Never** edit `pubspec.lock` directly. It's `dart pub get`'s output.
+- **Never** edit `pubspec.lock` directly (root or `example/`). The root file is
+  `dart pub get`'s output; the `example/` file is pipeline-owned — see the rule above.
 - **Never** delete files under `.fvm/`, `.dart_tool/`, or `pubspec.lock` without approval.
   These are tooling state; deleting them forces a re-resolve.
 - **Destructive git** (`reset --hard`, `push --force`, `branch -D`, `clean -fd`) → ask
