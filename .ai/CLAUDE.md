@@ -105,10 +105,12 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
   [`scripts/release.sh`](../scripts/release.sh); manual edits will be reordered or
   overwritten. If the user asks for a release, suggest running
   `scripts/release.sh <bump>` — don't invoke it for them (it pushes to `origin/main` and
-  triggers pub.dev publish). Curating the `## Unreleased` section of `CHANGELOG.md`
-  between releases IS allowed (and required — the script bails if it's empty). The
-  `cider:` block in `pubspec.yaml` is static configuration (link templates, URLs) —
-  hand-edit it freely.
+  triggers pub.dev publish). **The `## [Unreleased]` section is also bot-owned** —
+  the post-merge CI automation in `.github/workflows/changelog.yml` runs `cider log`
+  to append the merged-PR title under Unreleased on its own. Do not curate, prepend,
+  or hand-write Unreleased bullets when landing a feature; the PR title (governed by
+  its `sem-*` label) *is* the changelog entry. The `cider:` block in `pubspec.yaml`
+  is static configuration (link templates, URLs) — hand-edit it freely.
 - **Never** edit `pubspec.lock` directly (root or `example/`). The root file is
   `dart pub get`'s output; the `example/` file is pipeline-owned — see the rule above.
 - **Never** delete files under `.fvm/`, `.dart_tool/`, or `pubspec.lock` without approval.

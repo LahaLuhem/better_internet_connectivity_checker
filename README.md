@@ -242,6 +242,46 @@ final checker = InternetConnection(
 );
 ```
 
+### Logging and observability
+
+Pass a `ConnectivityObserver` to receive lifecycle callbacks for every check completion,
+status emission, external-trigger event, interval change, and dispose — without having to
+add stream listeners and format domain objects in your own code. Methods on the observer
+default to no-ops, so subclasses override only the events they care about; events left
+alone cost essentially nothing.
+
+`PrintingConnectivityObserver` is a ready-to-use default that forwards each event through
+`dart:developer`'s `log()` (integrates with Flutter DevTools' logging view; in plain Dart
+it surfaces via stdout):
+
+```dart
+final checker = InternetConnection(
+  observer: const PrintingConnectivityObserver(),
+);
+```
+
+For custom integration with an app's existing logging service, subclass
+`ConnectivityObserver` and override only the events that matter:
+
+```dart
+final class _AppConnectivityObserver extends ConnectivityObserver {
+  const _AppConnectivityObserver(this._logger);
+  final AppLogger _logger;
+
+  @override
+  void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) =>
+      _logger.info('connectivity: ${previous ?? '<none>'} -> $next');
+
+  @override
+  void onExternalTriggerError(Object error, StackTrace stackTrace) =>
+      _logger.error('connectivity trigger failed', error, stackTrace);
+}
+```
+
+Observer methods are invoked **synchronously** on the same zone as the underlying event.
+Heavy work or blocking IO inside an override will stall the checker's scheduling loop;
+buffer or defer to a queue/stream from within the override if that is a concern.
+
 Runnable examples live in [`example/`](./example/) — a Flutter demo app exercising
 one-shot checks, status streaming, both aggregation policies, slow-connection detection,
 and a custom probe.

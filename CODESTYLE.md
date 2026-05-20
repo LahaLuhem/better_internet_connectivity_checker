@@ -340,6 +340,29 @@ Public symbols carry `///` dartdoc that explains *why*, not *what* — types alr
 carry the *what*. `public_member_api_docs` is enabled; see
 [hard rule 4 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules) for the contract.
 
+### `@docImport` for dartdoc-only references
+
+When a file needs a symbol *only* for `[Name]` references in dartdoc (not in code), do
+**not** add a regular `import` — that pulls the dependency into the runtime import graph
+and hides intent. Use Dart's dartdoc-only directive instead:
+
+```dart
+/// @docImport '../internet_connection.dart';
+library;
+
+import '../status/internet_status.dart'; // Real code import — InternetStatus is used.
+```
+
+**Why.** A regular `import` declares a runtime dependency. If the only reason is
+`comment_references` resolution, the runtime graph lies — readers and tooling can't tell
+the import is documentation-only, and dead-code elimination has nothing to lean on.
+`@docImport` keeps `comment_references` satisfied without polluting the real import set.
+
+**How to apply.** Put the `@docImport` directive(s) as `///` comments directly above the
+file's `library;` directive. Code imports stay where they are (regular `import` lines).
+The `library;` directive is required for `@docImport` to attach to anything — but
+`unnecessary_library_directive` does not fire when a docImport is present.
+
 ---
 
 <a id="dcm-rules"></a>
