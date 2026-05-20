@@ -1,0 +1,159 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  branch-name:
+    name: Branch name
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch name pattern
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if ! echo "$BRANCH" | grep -Eq '^(feature|bugfix|chore|refactor|acceptance-test-issues|hotfix)/#[0-9]+-.+$'; then
+            echo "::error::Branch '$BRANCH' does not match required pattern."
+            echo "Expected: <type>/#<issue-number>-<name>"
+            echo "Where <type> is one of: feature, bugfix, chore, refactor, acceptance-test-issues, hotfix"
+            echo "Example: chore/#4-tidy-readme"
+            exit 1
+          fi
+          echo "Branch name OK"
+
+  commit-conventions:
+    name: Commit conventions
+    runs-on: ubuntu-latest
+    env:
+      MAX_COMMIT_MESSAGE_LENGTH: 82
+      PR_BODY: ${{ github.event.pull_request.body }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: PR body must not be empty
+        run: |
+          if [ -z "${PR_BODY// /}" ]; then
+            echo "::error::Pull request description is empty."
+            exit 1
+          fi
+
+      - name: No merge commits in PR range
+        run: |
+          merges=$(git log --merges "${BASE_SHA}..${HEAD_SHA}" --pretty=format:'%H')
+          if [ -n "$merges" ]; then
+            echo "::error::Merge commits found in the pull request range. Rebase instead."
+            echo "$merges"
+            exit 1
+          fi
+
+      - name: Commit subjects within length limit
+        run: |
+          fail=0
+          while IFS= read -r subject; do
+            if [ "${#subject}" -gt "$MAX_COMMIT_MESSAGE_LENGTH" ]; then
+              echo "::error::Commit subject exceeds ${MAX_COMMIT_MESSAGE_LENGTH} characters -> ${subject}"
+              fail=1
+            fi
+          done < <(git log "${BASE_SHA}..${HEAD_SHA}" --pretty=format:'%s')
+          exit "$fail"
+
+  format:
+    name: Dart format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Cache .pub-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+      - run: dart pub get --no-example
+      - run: dart format --output=none --set-exit-if-changed .
+
+  analyze:
+    name: Dart analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Cache .pub-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+      - run: dart pub get --no-example
+      - run: dart --no-version-check analyze lib test
+
+  deps:
+    name: Dependency validator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Cache .pub-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+      - run: dart pub get --no-example
+      - run: dart pub global activate dependency_validator
+      - run: dart pub global run dependency_validator
+
+  test:
+    name: Unit tests + coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Cache .pub-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+      - run: dart pub get --no-example
+      - run: dart pub global activate coverage
+      - name: Run tests with coverage
+        run: dart test --coverage=coverage
+      - name: Format coverage as lcov
+        run: |
+          dart pub global run coverage:format_coverage \
+            --lcov \
+            --in=coverage \
+            --report-on=lib \
+            --packages=.dart_tool/package_config.json \
+            -o coverage/lcov.info
+      - name: Enforce min coverage (80%)
+        uses: VeryGoodOpenSource/very_good_coverage@v3
+        with:
+          path: coverage/lcov.info
+          min_coverage: 80
