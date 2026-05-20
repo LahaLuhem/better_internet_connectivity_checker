@@ -2,6 +2,7 @@
 ### Added
 - Better CICD
 - `setSlowThreshold` to mutate slow-classification cutoff at runtime
+- \[#1\] Add a new logging module in the form of an `ConnectivityObserver`
 
 ## [0.1.0] - 2026-05-18
 ### Added
