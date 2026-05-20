@@ -2,6 +2,11 @@ name: PR conventions
 
 on:
   pull_request:
+    # `labeled` / `unlabeled` are in the trigger set so the sem-label job
+    # re-runs whenever a label is added or removed. The other two jobs
+    # (branch-name, commit-conventions) re-running on label events is a
+    # harmless few seconds of bash.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [main]
 
 concurrency:
@@ -69,3 +74,28 @@ jobs:
             fi
           done < <(git log "${BASE_SHA}..${HEAD_SHA}" --pretty=format:'%s')
           exit "$fail"
+
+  sem-label:
+    name: Sem-* label
+    runs-on: ubuntu-latest
+    env:
+      LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+    steps:
+      - name: Require exactly one sem-* label
+        run: |
+          allowed='sem-add, sem-change, sem-deprecate, sem-remove, sem-bugfix, sem-security, sem-skip'
+          count=$(echo "$LABELS" | jq '[.[] | select(startswith("sem-"))] | length')
+          if [ "$count" -ne 1 ]; then
+            echo "::error::PR must have exactly one sem-* label (found $count). Allowed: $allowed"
+            exit 1
+          fi
+          sem=$(echo "$LABELS" | jq -r '.[] | select(startswith("sem-"))')
+          case "$sem" in
+            sem-add|sem-change|sem-deprecate|sem-remove|sem-bugfix|sem-security|sem-skip)
+              echo "Sem label OK: $sem"
+              ;;
+            *)
+              echo "::error::Unknown sem-* label: '$sem'. Allowed: $allowed"
+              exit 1
+              ;;
+          esac

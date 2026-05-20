@@ -27,7 +27,7 @@ jobs:
       - run: flutter --no-version-check analyze .
 
   deps:
-    name: Dependency validator
+    name: Dependency validator (example)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
