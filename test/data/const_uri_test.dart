@@ -55,6 +55,54 @@ void main() {
 
       check(resolved.toString()).equals('https://example.com/foo/bar');
     });
+
+    test('delegates the full Uri surface against a fully-featured URI', () {
+      const raw = 'https://user:pass@example.com:8443/api/v2/path?limit=1&offset=2#section';
+      const wrapped = ConstUri(raw);
+      final reference = Uri.parse(raw);
+
+      check(wrapped.authority).equals(reference.authority);
+      check(wrapped.fragment).equals(reference.fragment);
+      check(wrapped.hasAbsolutePath).equals(reference.hasAbsolutePath);
+      check(wrapped.hasAuthority).equals(reference.hasAuthority);
+      check(wrapped.hasEmptyPath).equals(reference.hasEmptyPath);
+      check(wrapped.hasFragment).equals(reference.hasFragment);
+      check(wrapped.hasPort).equals(reference.hasPort);
+      check(wrapped.hasQuery).equals(reference.hasQuery);
+      check(wrapped.hasScheme).equals(reference.hasScheme);
+      check(wrapped.isAbsolute).equals(reference.isAbsolute);
+      check(wrapped.isScheme('https')).isTrue();
+      check(wrapped.origin).equals(reference.origin);
+      check(wrapped.pathSegments.length).equals(reference.pathSegments.length);
+      check(wrapped.pathSegments.first).equals(reference.pathSegments.first);
+      check(wrapped.queryParameters['limit']).equals('1');
+      check(wrapped.queryParameters['offset']).equals('2');
+      check(wrapped.queryParametersAll['limit']?.length).equals(1);
+      check(wrapped.userInfo).equals(reference.userInfo);
+      check(wrapped.data).isNull();
+    });
+
+    test('normalizePath, removeFragment, resolveUri delegate correctly', () {
+      const wrapped = ConstUri('https://example.com/foo/./bar#frag');
+
+      check(wrapped.normalizePath().path).equals('/foo/bar');
+      check(wrapped.removeFragment().fragment).equals('');
+      check(wrapped.resolveUri(Uri.parse('baz')).toString()).equals('https://example.com/foo/baz');
+    });
+
+    test('toFilePath delegates for file URIs', () {
+      const wrapped = ConstUri('file:///tmp/test.txt');
+      final reference = Uri.parse('file:///tmp/test.txt');
+
+      check(wrapped.toFilePath()).equals(reference.toFilePath());
+    });
+
+    test('data accessor returns parsed UriData for data URIs', () {
+      const wrapped = ConstUri('data:text/plain,Hello');
+
+      check(wrapped.data).isNotNull();
+      check(wrapped.data!.mimeType).equals('text/plain');
+    });
   });
 
   group('ConstUri equality', () {
