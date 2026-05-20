@@ -1,11 +1,11 @@
-## [Unreleased]
+## [0.2.0] - 2026-05-20
 ### Added
 - Better CICD
 - `setSlowThreshold` to mutate slow-classification cutoff at runtime
 - \[#1\] Add a new logging module in the form of an `ConnectivityObserver`
 
 ### Changed
-- `setCheckInterval` and `setSlowThreshold` renamed to setters -&gt; `checkInterval` and `slowThreshold`
+- `setCheckInterval` and `setSlowThreshold` renamed to setters -> `checkInterval` and `slowThreshold`
 
 ## [0.1.0] - 2026-05-18
 ### Added
@@ -24,6 +24,6 @@
 - Sibling-probe cancellation via http.AbortableRequest: under any-of-N, in-flight probes abort at the transport layer the moment one succeeds, releasing sockets immediately instead of waiting out the per-target timeout.
 - an `externalRecheckTrigger` constructor hook forces an immediate recheck on any Stream<void> event (e.g. connectivity\_plus.onConnectivityChanged.map(noopWithVal) on Flutter) without the package itself depending on Flutter.
 
-[Unreleased]: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/0.1.0...vHEAD
+[0.2.0]: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/0.1.0...v0.2.0
 [0.1.0]: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/0.0.1...v0.1.0
 [0.0.1]: https://github.com/LahaLuhem/better_internet_connectivity_checker/releases/tag/0.0.1

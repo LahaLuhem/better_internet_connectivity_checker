@@ -13,12 +13,12 @@ dependencies:
   better_internet_connectivity_checker:
     path: ../
 
-  connectivity_plus: ^7.1.1
-  gap: ^3.0.1
-  http: ^1.6.0
-  material_ui: ^0.0.1
-  pmvvm: ^4.0.1
-  tap_debouncer: ^2.2.0
+  connectivity_plus: 7.1.1
+  gap: 3.0.1
+  http: 1.6.0
+  material_ui: 0.0.1
+  pmvvm: 4.0.1
+  tap_debouncer: 2.2.0
 
 dev_dependencies:
   flutter_test:
