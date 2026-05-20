@@ -16,7 +16,7 @@ import '../connectivity_observer.dart';
 /// {@macro connectivity_observer_threading}
 final class PrintingConnectivityObserver extends ConnectivityObserver {
   /// Default logger name used for every emitted record.
-  static const defaultName = 'better_internet_connectivity_checker';
+  static const _defaultName = 'better_internet_connectivity_checker';
 
   /// Severity level forwarded to [developer.log] for trigger errors —
   /// matches `Level.SEVERE` from `package:logging`'s scale so consumers
@@ -31,7 +31,7 @@ final class PrintingConnectivityObserver extends ConnectivityObserver {
   /// [name] is forwarded to [developer.log]'s `name:` argument; it shows up
   /// as the source channel in DevTools and lets consumers filter records
   /// from this package distinctly from their own logging.
-  const PrintingConnectivityObserver({String name = defaultName}) : _name = name;
+  const PrintingConnectivityObserver({String name = _defaultName}) : _name = name;
 
   @override
   void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) =>

@@ -24,6 +24,7 @@ final class FailureInspectionViewModel extends ViewModel {
     final connection = InternetConnection(
       targets: _unreachableTargets,
       policy: const AllReachablePolicy(),
+      observer: const PrintingConnectivityObserver(name: 'failure_inspection'),
     );
     try {
       _lastResultNotifier.value = await connection.checkOnce();

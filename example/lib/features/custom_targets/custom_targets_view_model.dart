@@ -71,7 +71,11 @@ final class CustomTargetsViewModel extends ViewModel {
       .get => HttpProbe.get(),
     };
 
-    final connection = InternetConnection(targets: [target], probe: mainProbe);
+    final connection = InternetConnection(
+      targets: [target],
+      probe: mainProbe,
+      observer: const PrintingConnectivityObserver(name: 'custom_targets'),
+    );
     InternetStatus status;
     try {
       status = await connection.checkOnce();
