@@ -110,7 +110,13 @@ better_internet_connectivity_checker/
    platform — server, CLI, web, Flutter. If platform-channel features ever become
    necessary, a sibling Flutter-plugin package can depend on this one — don't add Flutter
    to this `pubspec.yaml`. See
-   [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter).
+   [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter). The
+   `example/` directory itself is Flutter, so any pure-Dart context resolving from the
+   root (CI, scripts, downstream tooling) must pass `dart pub get --no-example`; pub
+   resolves example dependencies by default and they require the Flutter SDK. Same
+   reason: scope `dart analyze` to `lib test` (not `.`) and exclude `example/**` via
+   `dart_dependency_validator.yaml` for `dependency_validator` — both descend into
+   `example/` by default and break without Flutter.
 7. **No manual `CHANGELOG.md`, `version:`, or `example/pubspec.lock` edits; no hand-run
    `cider` commands.** All four are owned by
    [`scripts/release.sh`](../scripts/release.sh); manual entries / runs will be reordered
