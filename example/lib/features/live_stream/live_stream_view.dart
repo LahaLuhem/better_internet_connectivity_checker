@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:gap/gap.dart';
-import 'package:material_ui/material_ui.dart' show AppBar, Card, Icons, Scaffold, Slider, Theme;
+import 'package:material_ui/material_ui.dart'
+    show AppBar, Card, Colors, Icons, Scaffold, Slider, Theme;
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '../core/data/constants/core_constants.dart';
@@ -106,50 +107,65 @@ class LiveStreamView extends StatelessWidget {
   }
 }
 
-/// Slider with a soft "expected slow" / "expected good" gradient band
-/// behind it. Approximation: probe response time is ~1 s plus per-request
-/// TLS / TCP overhead and live network jitter, so the transition is fuzzy
-/// rather than at a hard cutoff — the gradient between the 40 % and 60 %
-/// stops (≈ 800–1200 ms of the 0–2000 ms range) reflects that uncertainty.
+/// Slider with an "expected slow" → "expected good" gradient band behind
+/// it. The band is flat orange below the [_errorBandLowerStop], flat
+/// green above the [_errorBandUpperStop], and smoothly transitions
+/// between in the middle — visually honest about where the actual
+/// quality flip is likely to land given probe response-time variance.
+/// Colours match the status badges: orange for slow, green for good (see
+/// `status_badge.dart`).
 class _ThresholdSlider extends StatelessWidget {
   const _ThresholdSlider({required this.viewModel, required this.sliderValueMs});
+
+  /// Visual band height. Eyeball against the slider knob diameter.
+  static const _bandHeight = 20.0;
+
+  /// Lower edge of the response-time "error band", expressed as a
+  /// fraction of the slider's 0–[ConstDurations.maxSelectableLiveStreamSlowThreshold]
+  /// range. Below this, response time is confidently above the threshold
+  /// → `slow`.
+  ///
+  /// Estimate: the configured `/delay/1` probe targets nominally respond
+  /// in 1000 ms; TLS / TCP overhead and network jitter add variance.
+  /// Casual sampling lands the faster of the two between 800 ms and
+  /// 1200 ms, so the band brackets 1000 ms ± 200 ms ≈ 40 %–60 % of the
+  /// 0–2000 ms slider range.
+  static const _errorBandLowerStop = 0.4;
+
+  /// Upper edge of the error band — 60 % of the slider range = 1200 ms.
+  /// Above this, response time is confidently below the threshold →
+  /// `good`. See [_errorBandLowerStop] for the variance estimate.
+  static const _errorBandUpperStop = 0.6;
 
   final LiveStreamViewModel viewModel;
   final double sliderValueMs;
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Stack(
-      alignment: .center,
-      children: [
-        Container(
-          height: 8,
-          width: double.infinity,
-          margin: const .symmetric(horizontal: 24),
-          decoration: BoxDecoration(
-            borderRadius: .circular(4),
-            gradient: LinearGradient(
-              colors: [
-                colorScheme.errorContainer,
-                colorScheme.errorContainer,
-                colorScheme.primaryContainer,
-                colorScheme.primaryContainer,
-              ],
-              stops: const [0, 0.4, 0.6, 1],
-            ),
+  Widget build(BuildContext context) => Stack(
+    alignment: .center,
+    children: [
+      Container(
+        height: _bandHeight,
+        width: double.infinity,
+        margin: const .symmetric(horizontal: 24),
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          gradient: LinearGradient(
+            colors: [Colors.orange, Colors.orange, Colors.green, Colors.green]
+                .map((colour) => colour.withValues(alpha: ConstTheme.statusOutlineAlpha))
+                .toList(growable: false),
+            stops: const [0, _errorBandLowerStop, _errorBandUpperStop, 1],
           ),
         ),
-        Slider(
-          max: ConstDurations.maxSelectableLiveStreamSlowThreshold.inMilliseconds.toDouble(),
-          divisions: ConstValues.liveStreamSlowThresholdSliderDivisions,
-          value: sliderValueMs,
-          label: sliderValueMs <= 0 ? 'off' : '${sliderValueMs.round()} ms',
-          onChanged: viewModel.onSlowThresholdSliderChanged,
-          onChangeEnd: (value) => unawaited(viewModel.onSlowThresholdSliderReleased(value)),
-        ),
-      ],
-    );
-  }
+      ),
+      Slider(
+        max: ConstDurations.maxSelectableLiveStreamSlowThreshold.inMilliseconds.toDouble(),
+        divisions: ConstValues.liveStreamSlowThresholdSliderDivisions,
+        value: sliderValueMs,
+        label: sliderValueMs <= 0 ? 'off' : '${sliderValueMs.round()} ms',
+        onChanged: viewModel.onSlowThresholdSliderChanged,
+        onChangeEnd: (value) => unawaited(viewModel.onSlowThresholdSliderReleased(value)),
+      ),
+    ],
+  );
 }

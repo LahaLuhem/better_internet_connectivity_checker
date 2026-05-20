@@ -2,6 +2,8 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Chip, Colors, Icons;
 
+import '../data/constants/core_constants.dart';
+
 class StatusBadge extends StatelessWidget {
   final InternetStatus? internetStatus;
 
@@ -23,7 +25,7 @@ class StatusBadge extends StatelessWidget {
         style: TextStyle(color: color, fontWeight: .w600),
       ),
       backgroundColor: color.withValues(alpha: 0.08),
-      side: BorderSide(color: color.withValues(alpha: 0.3)),
+      side: BorderSide(color: color.withValues(alpha: ConstTheme.statusOutlineAlpha)),
     );
   }
 }
