@@ -73,6 +73,7 @@ final class LiveStreamViewModel extends ViewModel {
     final connection = InternetConnection(
       targets: ConstProbeTargets.liveStreamSlowTargets,
       slowThreshold: _slowThreshold,
+      checkInterval: const Duration(seconds: 2),
       externalRecheckTrigger: _externalTrigger,
       observer: const PrintingConnectivityObserver(name: 'live_stream'),
     );

@@ -70,16 +70,13 @@ class LiveStreamView extends StatelessWidget {
                               ? 'Disabled — every reachable status reports good.'
                               : 'Above ${sliderValueMs.round()} ms a probe is classified as slow.',
                         ),
-                        Slider(
-                          max: ConstDurations.maxSelectableLiveStreamSlowThreshold.inMilliseconds
-                              .toDouble(),
-                          divisions: ConstValues.liveStreamSlowThresholdSliderDivisions,
-                          value: sliderValueMs,
-                          label: sliderValueMs <= 0 ? 'off' : '${sliderValueMs.round()} ms',
-                          onChanged: viewModel.onSlowThresholdSliderChanged,
-                          onChangeEnd: (value) =>
-                              unawaited(viewModel.onSlowThresholdSliderReleased(value)),
+                        const Gap(4),
+                        Text(
+                          'Approximate hint: probes nominally delay ~1 s, so the '
+                          'transition lands fuzzily around the shaded band.',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
+                        _ThresholdSlider(viewModel: viewModel, sliderValueMs: sliderValueMs),
                       ],
                     ),
                   ),
@@ -106,5 +103,53 @@ class LiveStreamView extends StatelessWidget {
     final ss = at.second.toString().padLeft(2, '0');
 
     return '$hh:$mm:$ss';
+  }
+}
+
+/// Slider with a soft "expected slow" / "expected good" gradient band
+/// behind it. Approximation: probe response time is ~1 s plus per-request
+/// TLS / TCP overhead and live network jitter, so the transition is fuzzy
+/// rather than at a hard cutoff — the gradient between the 40 % and 60 %
+/// stops (≈ 800–1200 ms of the 0–2000 ms range) reflects that uncertainty.
+class _ThresholdSlider extends StatelessWidget {
+  const _ThresholdSlider({required this.viewModel, required this.sliderValueMs});
+
+  final LiveStreamViewModel viewModel;
+  final double sliderValueMs;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Stack(
+      alignment: .center,
+      children: [
+        Container(
+          height: 8,
+          width: double.infinity,
+          margin: const .symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            borderRadius: .circular(4),
+            gradient: LinearGradient(
+              colors: [
+                colorScheme.errorContainer,
+                colorScheme.errorContainer,
+                colorScheme.primaryContainer,
+                colorScheme.primaryContainer,
+              ],
+              stops: const [0, 0.4, 0.6, 1],
+            ),
+          ),
+        ),
+        Slider(
+          max: ConstDurations.maxSelectableLiveStreamSlowThreshold.inMilliseconds.toDouble(),
+          divisions: ConstValues.liveStreamSlowThresholdSliderDivisions,
+          value: sliderValueMs,
+          label: sliderValueMs <= 0 ? 'off' : '${sliderValueMs.round()} ms',
+          onChanged: viewModel.onSlowThresholdSliderChanged,
+          onChangeEnd: (value) => unawaited(viewModel.onSlowThresholdSliderReleased(value)),
+        ),
+      ],
+    );
   }
 }
