@@ -59,13 +59,15 @@ final class InternetConnection {
   ///
   /// `checkInterval` is the gap between periodic status checks once
   /// [onStatusChange] has at least one listener. Defaults to
-  /// [Values.defaultCheckInterval]. Adjust at runtime via [setCheckInterval].
+  /// [Values.defaultCheckInterval]. Adjust at runtime by assigning to the
+  /// [checkInterval] setter.
   ///
   /// `slowThreshold` is the response-time cutoff above which a successful
   /// probe is classified as slow. Defaults to null (no slow classification —
   /// every reachable status reports [ConnectionQuality.good]). Adjust at
-  /// runtime via [setSlowThreshold] — preserves [lastStatus] across the
-  /// change, unlike rebuilding the [InternetConnection].
+  /// runtime by assigning to the [slowThreshold] setter — preserves
+  /// [lastStatus] across the change, unlike rebuilding the
+  /// [InternetConnection].
   ///
   /// `policy` selects the aggregation strategy. Defaults to
   /// [AnyReachablePolicy] (any-of-N suffices).
@@ -130,7 +132,7 @@ final class InternetConnection {
       _policy.evaluate(targets: _targets, probe: _probe, slowThreshold: _slowThreshold);
 
   /// Updates the periodic check interval and resets any running timer.
-  void setCheckInterval(Duration interval) {
+  set checkInterval(Duration interval) {
     final previous = _checkInterval;
     _checkInterval = interval;
     _observer.onCheckIntervalChanged(previous, interval);
@@ -153,7 +155,7 @@ final class InternetConnection {
   /// the threshold changes: rebuilding loses the in-memory [lastStatus],
   /// so the next emission's `previous` value (surfaced via
   /// [ConnectivityObserver.onStatusChangeEmitted]) resets to null.
-  void setSlowThreshold(Duration? threshold) {
+  set slowThreshold(Duration? threshold) {
     final previous = _slowThreshold;
     _slowThreshold = threshold;
     _observer.onSlowThresholdChanged(previous, threshold);

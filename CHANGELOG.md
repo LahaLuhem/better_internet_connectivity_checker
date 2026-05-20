@@ -4,6 +4,9 @@
 - `setSlowThreshold` to mutate slow-classification cutoff at runtime
 - \[#1\] Add a new logging module in the form of an `ConnectivityObserver`
 
+### Changed
+- `setCheckInterval` and `setSlowThreshold` renamed to setters -&gt; `checkInterval` and `slowThreshold`
+
 ## [0.1.0] - 2026-05-18
 ### Added
 - `HttpProbe.get()` issues GET against endpoints that reject HEAD (HTTP 405) or misbehave under it. The response body is drained but not buffered, so per-call memory cost matches `HttpProbe.head()`.

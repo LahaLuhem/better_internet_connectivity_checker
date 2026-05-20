@@ -192,7 +192,7 @@ void main() {
     });
   });
 
-  group('setSlowThreshold', () {
+  group('slowThreshold setter', () {
     test('mutates the threshold and applies it at the next check', () {
       const responseTime = Duration(milliseconds: 100);
       final probe = StubProbe(
@@ -213,7 +213,7 @@ void main() {
         check((events.last as Reachable).quality).equals(ConnectionQuality.good);
 
         // Tighten the threshold below the (fixed) response time.
-        connection.setSlowThreshold(const Duration(milliseconds: 50));
+        connection.slowThreshold = const Duration(milliseconds: 50);
         check(connection.slowThreshold).equals(const Duration(milliseconds: 50));
 
         async.elapse(const Duration(seconds: 5));
@@ -248,7 +248,7 @@ void main() {
         check(connection.lastStatus).isA<Reachable>();
 
         // Tighten the threshold so the next check flips quality.
-        connection.setSlowThreshold(const Duration(milliseconds: 50));
+        connection.slowThreshold = const Duration(milliseconds: 50);
         // lastStatus is the pre-change observation and must survive.
         check(connection.lastStatus).isA<Reachable>();
 
@@ -279,7 +279,7 @@ void main() {
       );
       addTearDown(connection.dispose);
 
-      connection.setSlowThreshold(null);
+      connection.slowThreshold = null;
       check(connection.slowThreshold).isNull();
 
       final status = await connection.checkOnce();
@@ -353,7 +353,7 @@ void main() {
     });
   });
 
-  group('setCheckInterval', () {
+  group('checkInterval setter', () {
     test('reschedules subsequent ticks at the new interval', () {
       var probeCalls = 0;
       final probe = StubProbe((target) async {
@@ -374,7 +374,7 @@ void main() {
         async.flushMicrotasks();
         check(probeCalls).equals(1);
 
-        connection.setCheckInterval(const Duration(seconds: 2));
+        connection.checkInterval = const Duration(seconds: 2);
         async.elapse(const Duration(seconds: 2));
         check(probeCalls).equals(2);
 

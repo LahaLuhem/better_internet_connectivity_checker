@@ -61,7 +61,7 @@ final class LiveStreamViewModel extends ViewModel {
     final connection = _connection;
     if (connection == null) return _buildConnection();
 
-    connection.setSlowThreshold(newThreshold);
+    connection.slowThreshold = newThreshold;
   }
 
   Future<void> _buildConnection() async {

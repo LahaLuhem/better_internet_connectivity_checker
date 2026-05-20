@@ -92,20 +92,20 @@ abstract base class ConnectivityObserver {
     // No-op default; override to forward trigger-stream errors.
   }
 
-  /// Called when [InternetConnection.setCheckInterval] is invoked.
+  /// Called when [InternetConnection.checkInterval] is assigned.
   ///
-  /// [previous] is the interval that was in effect before the call;
-  /// [next] is the new interval. Fires even when [previous] equals
-  /// [next] — the underlying timer is reset on every call.
+  /// [previous] is the interval that was in effect before the
+  /// assignment; [next] is the new interval. Fires even when [previous]
+  /// equals [next] — the underlying timer is reset on every assignment.
   void onCheckIntervalChanged(Duration previous, Duration next) {
     // No-op default; override to trace interval reconfigurations.
   }
 
-  /// Called when [InternetConnection.setSlowThreshold] is invoked.
+  /// Called when [InternetConnection.slowThreshold] is assigned.
   ///
-  /// [previous] is the threshold that was in effect before the call;
-  /// [next] is the new threshold. Either may be null (slow classification
-  /// disabled). Fires even when [previous] equals [next].
+  /// [previous] is the threshold that was in effect before the
+  /// assignment; [next] is the new threshold. Either may be null (slow
+  /// classification disabled). Fires even when [previous] equals [next].
   void onSlowThresholdChanged(Duration? previous, Duration? next) {
     // No-op default; override to trace slow-threshold reconfigurations.
   }

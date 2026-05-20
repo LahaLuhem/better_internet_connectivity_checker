@@ -36,7 +36,7 @@ void main() {
         final sub = connection.onStatusChange.listen(noopWithVal);
         async.flushMicrotasks();
 
-        connection.setCheckInterval(const Duration(seconds: 3));
+        connection.checkInterval = const Duration(seconds: 3);
         trigger.add(null);
         async.elapse(const Duration(seconds: 3));
 
@@ -184,7 +184,7 @@ void main() {
       );
       addTearDown(connection.dispose);
 
-      connection.setCheckInterval(const Duration(seconds: 3));
+      connection.checkInterval = const Duration(seconds: 3);
 
       final changes = observer.events.whereType<CheckIntervalChanged>().toList();
       check(changes).length.equals(1);
@@ -204,8 +204,8 @@ void main() {
       addTearDown(connection.dispose);
 
       connection
-        ..setSlowThreshold(const Duration(milliseconds: 50))
-        ..setSlowThreshold(null);
+        ..slowThreshold = const Duration(milliseconds: 50)
+        ..slowThreshold = null;
 
       final changes = observer.events.whereType<SlowThresholdChanged>().toList();
       check(changes).length.equals(2);
