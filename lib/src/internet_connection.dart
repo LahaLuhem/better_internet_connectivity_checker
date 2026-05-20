@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'data/values.dart';
+import 'observer/connectivity_observer.dart';
 import 'policy/reachability_policy.dart';
 import 'policy/strategies/any_reachable_policy.dart';
 import 'probe/connectivity_probe.dart';
@@ -35,6 +36,7 @@ final class InternetConnection {
   final ReachabilityPolicy _policy;
   final ConnectivityProbe _probe;
   final Stream<void>? _externalTrigger;
+  final ConnectivityObserver _observer;
 
   late final _statusController = StreamController<InternetStatus>.broadcast(
     onListen: _handleFirstListener,
@@ -72,6 +74,13 @@ final class InternetConnection {
   /// `externalRecheckTrigger` is an optional stream whose events force an
   /// immediate recheck regardless of the timer. Typical Flutter wiring:
   /// `Connectivity().onConnectivityChanged.map(noopWithVal)`.
+  ///
+  /// `observer` is an optional [ConnectivityObserver] that receives
+  /// lifecycle callbacks for every status emission, check completion,
+  /// external-trigger event, interval change, and dispose. Defaults to a
+  /// silent observer — no events are surfaced unless one is supplied. Pass
+  /// `PrintingConnectivityObserver()` for a ready-to-use default that
+  /// writes each event through `dart:developer`.
   InternetConnection({
     List<ProbeTarget>? targets,
     Duration checkInterval = Values.defaultCheckInterval,
@@ -79,13 +88,15 @@ final class InternetConnection {
     ReachabilityPolicy policy = const AnyReachablePolicy(),
     ConnectivityProbe? probe,
     Stream<void>? externalRecheckTrigger,
+    ConnectivityObserver? observer,
   }) : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty'),
        _targets = targets != null ? List.unmodifiable(targets) : Values.defaultProbeTargets,
        _checkInterval = checkInterval,
        _slowThreshold = slowThreshold,
        _policy = policy,
        _probe = probe ?? HttpProbe.head(),
-       _externalTrigger = externalRecheckTrigger;
+       _externalTrigger = externalRecheckTrigger,
+       _observer = observer ?? const _SilentConnectivityObserver();
 
   /// The current periodic check interval.
   Duration get checkInterval => _checkInterval;
@@ -112,7 +123,9 @@ final class InternetConnection {
 
   /// Updates the periodic check interval and resets any running timer.
   void setCheckInterval(Duration interval) {
+    final previous = _checkInterval;
     _checkInterval = interval;
+    _observer.onCheckIntervalChanged(previous, interval);
 
     if (_timer == null) return;
     _timer!.cancel();
@@ -135,18 +148,20 @@ final class InternetConnection {
     await _triggerSubscription?.cancel();
     _triggerSubscription = null;
 
-    return _statusController.close();
+    await _statusController.close();
+    _observer.onDispose();
   }
 
   void _handleFirstListener() {
     _triggerSubscription ??= _externalTrigger?.listen(
-      (_) => unawaited(_runScheduledCheck()),
-      onError: (_, _) {
-        // TODO(LahaLuhem): forward trigger-stream errors once a diagnostics
-        // callback or logger seam is added. Swallowed today because the
-        // trigger is best-effort — its errors must not propagate to the
-        // status stream's listeners.
+      (_) {
+        _observer.onExternalTriggerFired();
+        unawaited(_runScheduledCheck());
       },
+      // Trigger errors are surfaced via the observer seam and otherwise
+      // swallowed — the trigger is best-effort and its errors must not
+      // propagate to the status stream's listeners.
+      onError: _observer.onExternalTriggerError,
     );
 
     unawaited(_runScheduledCheck());
@@ -171,7 +186,12 @@ final class InternetConnection {
     final status = await checkOnce();
     if (_disposed || !_statusController.hasListener) return;
 
-    if (_isDistinctKind(_lastStatus, status)) _statusController.add(status);
+    _observer.onCheckCompleted(status);
+
+    if (_isDistinctKind(_lastStatus, status)) {
+      _observer.onStatusChangeEmitted(_lastStatus, status);
+      _statusController.add(status);
+    }
     _lastStatus = status;
 
     _timer = Timer(_checkInterval, () => unawaited(_runScheduledCheck()));
@@ -186,4 +206,12 @@ final class InternetConnection {
       _ => true,
     };
   }
+}
+
+/// Internal default observer used when the caller passes none. Every
+/// method inherits the no-op default from [ConnectivityObserver], so the
+/// instance is `const` and the hot-path calls inline to nothing under
+/// AOT.
+final class _SilentConnectivityObserver extends ConnectivityObserver {
+  const _SilentConnectivityObserver();
 }
