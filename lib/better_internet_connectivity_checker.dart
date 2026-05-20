@@ -30,7 +30,7 @@ export 'src/data/typedefs.dart' show ResponseAcceptor;
 export 'src/data/values.dart' show noopWithVal;
 export 'src/internet_connection.dart' show InternetConnection;
 export 'src/observer/connectivity_observer.dart' show ConnectivityObserver;
-export 'src/observer/printing_connectivity_observer.dart' show PrintingConnectivityObserver;
+export 'src/observer/sinks/printing_connectivity_observer.dart' show PrintingConnectivityObserver;
 export 'src/policy/reachability_policy.dart' show ReachabilityPolicy;
 export 'src/policy/strategies/all_reachable_policy.dart' show AllReachablePolicy;
 export 'src/policy/strategies/any_reachable_policy.dart' show AnyReachablePolicy;

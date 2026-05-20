@@ -1,7 +1,7 @@
 import 'dart:developer' as developer;
 
-import '../status/internet_status.dart';
-import 'connectivity_observer.dart';
+import '../../status/internet_status.dart';
+import '../connectivity_observer.dart';
 
 /// A [ConnectivityObserver] that writes every event to
 /// [developer.log] under a configurable logger name.

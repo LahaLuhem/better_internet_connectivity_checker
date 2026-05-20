@@ -76,8 +76,13 @@ better_internet_connectivity_checker/
 
 **Feature-directory conventions** (apply within `lib/src/<feature>/`):
 - `<feature>.dart` at the root holds the abstract interface or the sealed parent.
-- `strategies/` or `transports/` — concrete implementations of the interface. Named for
-  what they *are* (Strategy-pattern impls, transport impls), not a generic `impl/`.
+- `strategies/` / `transports/` / `sinks/` — concrete implementations of the interface.
+  Named for what they *are* (Strategy-pattern impls, transport impls, event-sink impls),
+  not a generic `impl/`. Public impls (e.g. `PrintingConnectivityObserver` under
+  `observer/sinks/`) are regular libraries; private defaults (e.g.
+  `_SilentConnectivityObserver`) can use `part of` to scope themselves to the consumer
+  library that owns them — see the `observer/sinks/silent_connectivity_observer.dart`
+  → `internet_connection.dart` linkage for the pattern.
 - `models/` — value types serving the feature (request/result/options).
 - `outcomes/` — sealed-class cases. Uses `part of` to share library scope with the
   parent (required by Dart's sealed-class rules; see

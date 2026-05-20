@@ -10,6 +10,8 @@ import 'probe/transports/http_probe.dart';
 import 'status/internet_status.dart';
 import 'status/models/connection_quality.dart';
 
+part 'observer/sinks/silent_connectivity_observer.dart';
+
 /// Coordinates internet-connectivity checks.
 ///
 /// Owns three responsibilities:
@@ -84,19 +86,19 @@ final class InternetConnection {
   InternetConnection({
     List<ProbeTarget>? targets,
     Duration checkInterval = Values.defaultCheckInterval,
-    Duration? slowThreshold,
     ReachabilityPolicy policy = const AnyReachablePolicy(),
+    ConnectivityObserver observer = const _SilentConnectivityObserver(),
+    Duration? slowThreshold,
     ConnectivityProbe? probe,
     Stream<void>? externalRecheckTrigger,
-    ConnectivityObserver? observer,
   }) : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty'),
        _targets = targets != null ? List.unmodifiable(targets) : Values.defaultProbeTargets,
        _checkInterval = checkInterval,
        _slowThreshold = slowThreshold,
        _policy = policy,
-       _probe = probe ?? HttpProbe.head(),
        _externalTrigger = externalRecheckTrigger,
-       _observer = observer ?? const _SilentConnectivityObserver();
+       _observer = observer,
+       _probe = probe ?? HttpProbe.head();
 
   /// The current periodic check interval.
   Duration get checkInterval => _checkInterval;
@@ -206,12 +208,4 @@ final class InternetConnection {
       _ => true,
     };
   }
-}
-
-/// Internal default observer used when the caller passes none. Every
-/// method inherits the no-op default from [ConnectivityObserver], so the
-/// instance is `const` and the hot-path calls inline to nothing under
-/// AOT.
-final class _SilentConnectivityObserver extends ConnectivityObserver {
-  const _SilentConnectivityObserver();
 }
