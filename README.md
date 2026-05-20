@@ -1,3 +1,5 @@
+[![Package checks](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/package.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/package.yml)
+[![Coverage Status](https://coveralls.io/repos/github/LahaLuhem/better_internet_connectivity_checker/badge.svg?branch=main)](https://coveralls.io/github/LahaLuhem/better_internet_connectivity_checker?branch=main)
 [![Pub Version](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)
 [![Pub Points](https://img.shields.io/pub/points/better_internet_connectivity_checker?logo=dart)](https://pub.dev/packages/better_internet_connectivity_checker/score)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
