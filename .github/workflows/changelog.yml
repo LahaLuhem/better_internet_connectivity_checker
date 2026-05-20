@@ -1,0 +1,86 @@
+name: Update changelog
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+
+# Serialize so back-to-back merges don't race on the push to main.
+# cancel-in-progress is OFF — every merged PR must actually get its line.
+concurrency:
+  group: changelog-main
+  cancel-in-progress: false
+
+# pull_request_target runs in the base-repo context, so GITHUB_TOKEN write
+# scopes are honoured even when the PR comes from a fork. The workflow file
+# always loads from main (never from the PR), and we never check out PR code,
+# so the write token is not exposed to PR-controlled scripts.
+permissions:
+  contents: write
+
+jobs:
+  log:
+    name: Append cider entry
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve sem-* label → cider type
+        id: sem
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          sem=$(echo "$LABELS" | jq -r '.[] | select(startswith("sem-"))' | head -n1)
+          case "$sem" in
+            sem-skip)      echo 'type=skip'       >> "$GITHUB_OUTPUT" ;;
+            sem-add)       echo 'type=added'      >> "$GITHUB_OUTPUT" ;;
+            sem-change)    echo 'type=changed'    >> "$GITHUB_OUTPUT" ;;
+            sem-deprecate) echo 'type=deprecated' >> "$GITHUB_OUTPUT" ;;
+            sem-remove)    echo 'type=removed'    >> "$GITHUB_OUTPUT" ;;
+            sem-bugfix)    echo 'type=fixed'      >> "$GITHUB_OUTPUT" ;;
+            sem-security)  echo 'type=security'   >> "$GITHUB_OUTPUT" ;;
+            *)
+              if [ -z "$sem" ]; then
+                echo "::error::PR has no sem-* label. pr-conventions should have blocked this — investigate."
+              else
+                echo "::error::Unrecognized sem-* label: '$sem'."
+              fi
+              exit 1
+              ;;
+          esac
+
+      - name: Skip (sem-skip)
+        if: steps.sem.outputs.type == 'skip'
+        run: echo 'sem-skip applied — no changelog entry.'
+
+      - uses: actions/checkout@v4
+        if: steps.sem.outputs.type != 'skip'
+        with:
+          ref: main
+
+      # No project deps needed — cider is installed via `pub global activate`.
+      # Skip the setup-dart composite (which runs `dart pub get`) for the
+      # same reason repo.yml's format job does: ~10-30s faster per run.
+      - uses: dart-lang/setup-dart@v1
+        if: steps.sem.outputs.type != 'skip'
+        with:
+          sdk: stable
+
+      - name: Activate cider
+        if: steps.sem.outputs.type != 'skip'
+        run: dart pub global activate cider
+
+      - name: Append entry and push
+        if: steps.sem.outputs.type != 'skip'
+        env:
+          TYPE: ${{ steps.sem.outputs.type }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          dart pub global run cider log "$TYPE" "$TITLE"
+          git add CHANGELOG.md
+          # [skip ci] is belt-and-suspenders: GITHUB_TOKEN-authored pushes
+          # don't fire workflows by default, but the marker keeps intent
+          # visible to anyone reading main's history.
+          git commit -m 'Changelog updated [skip ci]'
+          git push origin HEAD:main
