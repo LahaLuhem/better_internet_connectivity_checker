@@ -29,4 +29,11 @@ final class Reachable extends InternetStatus {
         responseTime: responseTime,
         quality: slowThreshold != null && responseTime > slowThreshold ? .slow : .good,
       );
+
+  @override
+  String toString() =>
+      'Reachable('
+      'responseTime: $responseTime, '
+      'quality: $quality'
+      ')';
 }

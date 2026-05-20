@@ -148,7 +148,7 @@ void main() {
           externalRecheckTrigger: trigger.stream,
           checkInterval: const Duration(seconds: 5),
         );
-        final sub = connection.onStatusChange.listen((_) {});
+        final sub = connection.onStatusChange.listen(noopWithVal);
         async.flushMicrotasks();
         check(connection.lastStatus).isA<Reachable>();
 
@@ -243,7 +243,7 @@ void main() {
           checkInterval: const Duration(hours: 1),
         );
         final statusErrors = <Object>[];
-        connection.onStatusChange.listen((_) {}, onError: statusErrors.add);
+        connection.onStatusChange.listen(noopWithVal, onError: statusErrors.add);
 
         async.flushMicrotasks();
 

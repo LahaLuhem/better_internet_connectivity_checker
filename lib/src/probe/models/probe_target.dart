@@ -55,5 +55,13 @@ final class ProbeTarget {
     this.isSuccess = _statusIs200,
   });
 
+  @override
+  String toString() =>
+      'ProbeTarget('
+      'uri: $uri, '
+      'timeout: $timeout, '
+      'headers: $headers'
+      ')';
+
   static bool _statusIs200(http.Response response) => response.statusCode == Values.httpStatusOk;
 }

@@ -140,6 +140,19 @@ style.
   untrusted input, missing file, third-party API contract violations). Prefer
   init-list asserts — `prefer_asserts_in_initializer_lists` and
   `prefer_asserts_with_message` are both on.
+- **Value types override `toString`.** Immutable data classes (`ProbeTarget`,
+  `ProbeResult`, `Reachable`, `Unreachable`, …) implement `toString()` returning
+  `'ClassName(field1: value1, field2: value2)'`. The default
+  `Instance of 'ClassName'` is hostile in logs, exception traces, and `print`
+  debugging — readers should not have to attach a debugger to recover field values.
+  Include every field with a meaningful string representation; expression-bodied
+  one-liner placed after the constructors, before any static helpers. Opaque fields
+  (function/callback typedefs, controllers, subscriptions — anything whose
+  `.toString()` is just `Closure: …` or `Instance of …`) are omitted: they add noise
+  without informing the reader, and bare interpolation of a callable trips DCM's
+  `avoid-missed-calls`. Service classes (`InternetConnection`, `HttpProbe`) and
+  field-less interfaces (`ConnectivityProbe`) are exempt — they have no
+  caller-meaningful state to print.
 
 ---
 

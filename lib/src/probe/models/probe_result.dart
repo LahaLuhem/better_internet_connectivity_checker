@@ -43,4 +43,13 @@ final class ProbeResult {
   /// false.
   const ProbeResult.failure({required this.target, required this.responseTime, this.error})
     : isSuccess = false;
+
+  @override
+  String toString() =>
+      'ProbeResult('
+      'target: $target, '
+      'isSuccess: $isSuccess, '
+      'responseTime: $responseTime, '
+      'error: $error'
+      ')';
 }
