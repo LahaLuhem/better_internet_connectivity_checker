@@ -1,0 +1,52 @@
+name: Package checks
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}-package
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Dart analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-dart
+      - run: dart --no-version-check analyze lib test
+
+  deps:
+    name: Dependency validator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-dart
+      - run: dart pub global activate dependency_validator
+      - run: dart pub global run dependency_validator
+
+  test:
+    name: Unit tests + coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-dart
+      - run: dart pub global activate coverage
+      - run: dart test --coverage=coverage
+      - name: Format coverage as lcov
+        run: |
+          dart pub global run coverage:format_coverage \
+            --lcov \
+            --in=coverage \
+            --report-on=lib \
+            --packages=.dart_tool/package_config.json \
+            -o coverage/lcov.info
+      - name: Enforce min coverage (80%)
+        uses: VeryGoodOpenSource/very_good_coverage@v3
+        with:
+          path: coverage/lcov.info
+          min_coverage: 80
