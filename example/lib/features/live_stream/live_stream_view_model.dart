@@ -18,7 +18,7 @@ final class LiveStreamViewModel extends ViewModel {
   final _streamStateNotifier = ValueNotifier<StreamState?>(null);
 
   /// The slider's live value, in milliseconds. Decoupled from [_slowThreshold]
-  /// so we don't recreate the connection on every drag tick — only on
+  /// so we don't reconfigure the connection on every drag tick — only on
   /// release (see [onSlowThresholdSliderReleased]).
   final _sliderValueMillisNotifier = ValueNotifier(
     ConstDurations.defaultLiveStreamSlowThreshold.inMilliseconds.toDouble(),
@@ -53,12 +53,21 @@ final class LiveStreamViewModel extends ViewModel {
     if (newThreshold == _slowThreshold) return;
 
     _slowThreshold = newThreshold;
-    await _buildConnection();
+
+    // Adjust the live connection in-place so lastStatus survives the
+    // change — the next emission's `previous` reflects the actual
+    // user-visible status before the slider move, not a fresh-state null.
+    final connection = _connection;
+    if (connection == null) return _buildConnection();
+
+    connection.setSlowThreshold(newThreshold);
   }
 
   Future<void> _buildConnection() async {
-    await _subscription?.cancel();
-    await _connection?.dispose();
+    // Tear down the old subscription + connection in parallel — they are
+    // mutually independent and the library is robust to either order of
+    // listener-cancel and controller-close.
+    await [_subscription?.cancel(), _connection?.dispose()].nonNulls.wait;
 
     final connection = InternetConnection(
       slowThreshold: _slowThreshold,
