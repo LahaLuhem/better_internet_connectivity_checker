@@ -42,6 +42,30 @@ void main() {
     test('asserts when targets is empty (dev-time check)', () {
       check(() => InternetConnection(targets: const [])).throws<AssertionError>();
     });
+
+    test('constructs with default probe and disposes cleanly', () async {
+      // Exercises the `probe ?? HttpProbe.head()` fallback. We never invoke
+      // `checkOnce` here because the default probe would hit the public
+      // internet; we only want to verify construct-and-dispose is leak-free.
+      final connection = InternetConnection();
+
+      await connection.dispose();
+    });
+
+    test('checkInterval reflects the configured value', () {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
+      );
+      final connection = InternetConnection(
+        targets: [target],
+        probe: probe,
+        checkInterval: const Duration(seconds: 7),
+      );
+      addTearDown(connection.dispose);
+
+      check(connection.checkInterval).equals(const Duration(seconds: 7));
+    });
   });
 
   group('onStatusChange', () {
@@ -109,6 +133,34 @@ void main() {
       });
     });
 
+    test('resets timer and lastStatus when the last subscriber cancels', () {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
+      );
+      final trigger = StreamController<void>.broadcast();
+      addTearDown(trigger.close);
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          externalRecheckTrigger: trigger.stream,
+          checkInterval: const Duration(seconds: 5),
+        );
+        final sub = connection.onStatusChange.listen((_) {});
+        async.flushMicrotasks();
+        check(connection.lastStatus).isA<Reachable>();
+
+        unawaited(sub.cancel());
+        async.flushMicrotasks();
+
+        check(connection.lastStatus).isNull();
+
+        unawaited(connection.dispose());
+      });
+    });
+
     test('emits when ConnectionQuality flips from good to slow', () {
       var responseTime = const Duration(milliseconds: 100);
       final probe = StubProbe(
@@ -170,6 +222,35 @@ void main() {
         trigger.add(null);
         async.flushMicrotasks();
         check(probeCalls).equals(3);
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    test('swallows errors emitted on the external trigger stream', () {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
+      );
+      final trigger = StreamController<void>.broadcast();
+      addTearDown(trigger.close);
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          externalRecheckTrigger: trigger.stream,
+          checkInterval: const Duration(hours: 1),
+        );
+        final statusErrors = <Object>[];
+        connection.onStatusChange.listen((_) {}, onError: statusErrors.add);
+
+        async.flushMicrotasks();
+
+        trigger.addError(Exception('boom'));
+        async.flushMicrotasks();
+
+        check(statusErrors).isEmpty();
 
         unawaited(connection.dispose());
       });
