@@ -58,5 +58,11 @@ final class PrintingConnectivityObserver extends ConnectivityObserver {
       developer.log('check interval changed: $previous -> $next', name: _name);
 
   @override
+  void onSlowThresholdChanged(Duration? previous, Duration? next) => developer.log(
+    'slow threshold changed: ${previous ?? '<disabled>'} -> ${next ?? '<disabled>'}',
+    name: _name,
+  );
+
+  @override
   void onDispose() => developer.log('checker disposed', name: _name);
 }

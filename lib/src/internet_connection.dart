@@ -34,7 +34,7 @@ part 'observer/sinks/silent_connectivity_observer.dart';
 final class InternetConnection {
   final List<ProbeTarget> _targets;
   Duration _checkInterval;
-  final Duration? _slowThreshold;
+  Duration? _slowThreshold;
   final ReachabilityPolicy _policy;
   final ConnectivityProbe _probe;
   final Stream<void>? _externalTrigger;
@@ -63,7 +63,9 @@ final class InternetConnection {
   ///
   /// `slowThreshold` is the response-time cutoff above which a successful
   /// probe is classified as slow. Defaults to null (no slow classification —
-  /// every reachable status reports [ConnectionQuality.good]).
+  /// every reachable status reports [ConnectionQuality.good]). Adjust at
+  /// runtime via [setSlowThreshold] — preserves [lastStatus] across the
+  /// change, unlike rebuilding the [InternetConnection].
   ///
   /// `policy` selects the aggregation strategy. Defaults to
   /// [AnyReachablePolicy] (any-of-N suffices).
@@ -103,6 +105,10 @@ final class InternetConnection {
   /// The current periodic check interval.
   Duration get checkInterval => _checkInterval;
 
+  /// The current slow-classification cutoff, or null when slow detection is
+  /// disabled (every reachable status reports [ConnectionQuality.good]).
+  Duration? get slowThreshold => _slowThreshold;
+
   /// The most recently observed status, or null before the first check (or
   /// after the last [onStatusChange] subscriber cancels, which suspends the
   /// periodic timer).
@@ -132,6 +138,25 @@ final class InternetConnection {
     if (_timer == null) return;
     _timer!.cancel();
     _timer = Timer(_checkInterval, () => unawaited(_runScheduledCheck()));
+  }
+
+  /// Updates the slow-classification cutoff.
+  ///
+  /// Pass `null` to disable slow classification (every reachable status
+  /// will report [ConnectionQuality.good]). Does **not** reset the periodic
+  /// timer, run a check, or clear [lastStatus] — the new threshold takes
+  /// effect at the next scheduled or externally-triggered check. Use
+  /// [checkOnce] (without affecting the stream) or wait for the next tick
+  /// to see the impact.
+  ///
+  /// Prefer this over reconstructing the [InternetConnection] when only
+  /// the threshold changes: rebuilding loses the in-memory [lastStatus],
+  /// so the next emission's `previous` value (surfaced via
+  /// [ConnectivityObserver.onStatusChangeEmitted]) resets to null.
+  void setSlowThreshold(Duration? threshold) {
+    final previous = _slowThreshold;
+    _slowThreshold = threshold;
+    _observer.onSlowThresholdChanged(previous, threshold);
   }
 
   /// Releases the status stream, periodic timer, and external-trigger

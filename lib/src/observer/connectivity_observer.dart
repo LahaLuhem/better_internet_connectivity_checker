@@ -101,6 +101,15 @@ abstract base class ConnectivityObserver {
     // No-op default; override to trace interval reconfigurations.
   }
 
+  /// Called when [InternetConnection.setSlowThreshold] is invoked.
+  ///
+  /// [previous] is the threshold that was in effect before the call;
+  /// [next] is the new threshold. Either may be null (slow classification
+  /// disabled). Fires even when [previous] equals [next].
+  void onSlowThresholdChanged(Duration? previous, Duration? next) {
+    // No-op default; override to trace slow-threshold reconfigurations.
+  }
+
   /// Called once when [InternetConnection.dispose] finishes tearing down the timer, trigger subscription, and status stream.
   ///
   /// Subsequent calls to `dispose` are idempotent and do not re-invoke this callback.

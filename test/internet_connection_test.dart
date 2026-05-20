@@ -5,6 +5,7 @@ import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
 
+import '_helpers/recording_observer.dart';
 import '_helpers/stub_probe.dart';
 
 void main() {
@@ -188,6 +189,101 @@ void main() {
 
         unawaited(connection.dispose());
       });
+    });
+  });
+
+  group('setSlowThreshold', () {
+    test('mutates the threshold and applies it at the next check', () {
+      const responseTime = Duration(milliseconds: 100);
+      final probe = StubProbe(
+        (target) async => ProbeResult.success(target: target, responseTime: responseTime),
+      );
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          checkInterval: const Duration(seconds: 5),
+          slowThreshold: const Duration(milliseconds: 500),
+        );
+        final events = <InternetStatus>[];
+        connection.onStatusChange.listen(events.add);
+
+        async.flushMicrotasks();
+        check((events.last as Reachable).quality).equals(ConnectionQuality.good);
+
+        // Tighten the threshold below the (fixed) response time.
+        connection.setSlowThreshold(const Duration(milliseconds: 50));
+        check(connection.slowThreshold).equals(const Duration(milliseconds: 50));
+
+        async.elapse(const Duration(seconds: 5));
+        check((events.last as Reachable).quality).equals(ConnectionQuality.slow);
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    test('preserves lastStatus so the next emission carries a non-null previous', () {
+      // Regression for the live-stream example: rebuilding the connection
+      // on every slider release lost `_lastStatus`, causing the next
+      // emission's observer payload to report `previous = null`. The
+      // setter must mutate in place and keep history intact.
+      const responseTime = Duration(milliseconds: 100);
+      final probe = StubProbe(
+        (target) async => ProbeResult.success(target: target, responseTime: responseTime),
+      );
+
+      fakeAsync((async) {
+        final observer = RecordingObserver();
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          checkInterval: const Duration(seconds: 5),
+          slowThreshold: const Duration(milliseconds: 500),
+          observer: observer,
+        );
+        connection.onStatusChange.listen(noopWithVal);
+
+        async.flushMicrotasks();
+        check(connection.lastStatus).isA<Reachable>();
+
+        // Tighten the threshold so the next check flips quality.
+        connection.setSlowThreshold(const Duration(milliseconds: 50));
+        // lastStatus is the pre-change observation and must survive.
+        check(connection.lastStatus).isA<Reachable>();
+
+        async.elapse(const Duration(seconds: 5));
+
+        final transitions = observer.events.whereType<StatusChangeEmitted>().toList();
+        // Two transitions: the initial good (previous null) and the
+        // good -> slow flip (previous must be the good Reachable, NOT
+        // null).
+        check(transitions).length.equals(2);
+        check(transitions.last.previous)
+          ..isNotNull()
+          ..isA<Reachable>();
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    test('null disables slow classification', () async {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 800)),
+      );
+      final connection = InternetConnection(
+        targets: [target],
+        probe: probe,
+        slowThreshold: const Duration(milliseconds: 100),
+      );
+      addTearDown(connection.dispose);
+
+      connection.setSlowThreshold(null);
+      check(connection.slowThreshold).isNull();
+
+      final status = await connection.checkOnce();
+      check((status as Reachable).quality).equals(ConnectionQuality.good);
     });
   });
 

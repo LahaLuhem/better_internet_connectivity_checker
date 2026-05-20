@@ -192,6 +192,29 @@ void main() {
       check(changes.single.next).equals(const Duration(seconds: 3));
     });
 
+    test('onSlowThresholdChanged carries previous and next thresholds', () {
+      final probe = StubProbe((t) async => successResult(t));
+      final observer = RecordingObserver();
+      final connection = InternetConnection(
+        targets: [target],
+        probe: probe,
+        slowThreshold: const Duration(milliseconds: 200),
+        observer: observer,
+      );
+      addTearDown(connection.dispose);
+
+      connection
+        ..setSlowThreshold(const Duration(milliseconds: 50))
+        ..setSlowThreshold(null);
+
+      final changes = observer.events.whereType<SlowThresholdChanged>().toList();
+      check(changes).length.equals(2);
+      check(changes.first.previous).equals(const Duration(milliseconds: 200));
+      check(changes.first.next).equals(const Duration(milliseconds: 50));
+      check(changes.last.previous).equals(const Duration(milliseconds: 50));
+      check(changes.last.next).isNull();
+    });
+
     test('onDispose fires exactly once across multiple dispose calls', () async {
       final probe = StubProbe((t) async => successResult(t));
       final observer = RecordingObserver();

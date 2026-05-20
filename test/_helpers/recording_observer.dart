@@ -32,6 +32,10 @@ final class RecordingObserver extends ConnectivityObserver {
       events.add(CheckIntervalChanged(previous: previous, next: next));
 
   @override
+  void onSlowThresholdChanged(Duration? previous, Duration? next) =>
+      events.add(SlowThresholdChanged(previous: previous, next: next));
+
+  @override
   void onDispose() => events.add(const DisposeEvent());
 }
 
@@ -89,6 +93,20 @@ final class CheckIntervalChanged extends RecordedEvent {
 
   /// Records the [previous] / [next] pair passed to the observer.
   const CheckIntervalChanged({required this.previous, required this.next});
+}
+
+/// A recorded [ConnectivityObserver.onSlowThresholdChanged] event.
+final class SlowThresholdChanged extends RecordedEvent {
+  /// Threshold in effect before the change (null when slow detection was
+  /// disabled).
+  final Duration? previous;
+
+  /// Threshold in effect after the change (null when slow detection is
+  /// disabled).
+  final Duration? next;
+
+  /// Records the [previous] / [next] pair passed to the observer.
+  const SlowThresholdChanged({required this.previous, required this.next});
 }
 
 /// A recorded [ConnectivityObserver.onDispose] event.
