@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:pmvvm/pmvvm.dart';
 
 import '../core/data/constants/core_constants.dart';
+import 'data/constants/const_probe_targets.dart';
 
 typedef StreamState = ({InternetStatus status, int transitions, DateTime lastUpdate});
 
@@ -70,6 +71,7 @@ final class LiveStreamViewModel extends ViewModel {
     await [_subscription?.cancel(), _connection?.dispose()].nonNulls.wait;
 
     final connection = InternetConnection(
+      targets: ConstProbeTargets.liveStreamSlowTargets,
       slowThreshold: _slowThreshold,
       externalRecheckTrigger: _externalTrigger,
       observer: const PrintingConnectivityObserver(name: 'live_stream'),
