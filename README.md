@@ -7,7 +7,6 @@
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [What it does](#what-it-does)
-- [Getting started](#getting-started)
 - [Platform setup](#platform-setup)
     * [Android](#android)
     * [iOS and macOS](#ios-and-macos)
@@ -61,24 +60,6 @@ transparent proxies, broken middleboxes, and LAN-only networks.
   signals (`connectivity_plus` on Flutter is the canonical wiring) without the package
   itself taking a Flutter dependency.
 - Pure Dart — works on CLI, server, web, and Flutter with no platform channels.
-
-## Getting started
-
-Add the package to `pubspec.yaml`:
-
-```yaml
-dependencies:
-    better_internet_connectivity_checker: ^0.0.0
-```
-
-Then run:
-
-```bash
-dart pub get
-```
-
-This package is **pure Dart** and does not depend on Flutter. It works in any Dart 3.10+
-project — CLI, server-side, web, and Flutter alike.
 
 ## Platform setup
 
