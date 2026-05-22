@@ -1,9 +1,9 @@
 /// Scenario: many subscribers.
 ///
 /// Runs three sub-scenarios in sequence with N ∈ {1, 10, 100} subscribers on
-/// `onStatusChange`. Each emits its own JSON record (scenario names
-/// `many_subscribers_n1`, `_n10`, `_n100`) so the analyzer treats them as
-/// distinct series and can plot per-event cost as a function of N.
+/// `onStatusChange`. Each emits its own JSON record (scenario name is shared
+/// across all three; `subscriber_count` is the pivot key). With
+/// `--iterations K`, that's K × 3 records per invocation.
 ///
 /// Captures the per-subscriber broadcast cost — should scale linearly. After
 /// the refactor, the tier-1 status stream stays as-is so this number should
@@ -26,7 +26,7 @@ const _subscriberCounts = <int>[1, 10, 100];
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
 
-  // One writer file, one record per N. The analyzer groups by scenario name.
+  // One writer file across all iterations × subscriber counts.
   final writer = await ResultWriter.open(
     outputPath: args.outputPath,
     scenario: 'many_subscribers',
@@ -35,13 +35,17 @@ Future<void> main(List<String> argv) async {
     gitSha: args.gitSha,
   );
 
-  for (final subscriberCount in _subscriberCounts) {
-    await _runOneConfig(
-      subscriberCount: subscriberCount,
-      durationSeconds: args.durationSeconds,
-      iteration: args.iteration,
-      writer: writer,
-    );
+  for (var i = 0; i < args.iterations; i++) {
+    for (final subscriberCount in _subscriberCounts) {
+      await _runOneConfig(
+        subscriberCount: subscriberCount,
+        durationSeconds: args.durationSeconds,
+        iteration: i,
+        writer: writer,
+      );
+      forceGc();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
   }
 
   await writer.close();

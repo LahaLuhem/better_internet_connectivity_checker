@@ -30,14 +30,6 @@ final class _CheckOnceBenchmark extends AsyncBenchmarkBase {
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
 
-  final checker = InternetConnection(
-    targets: [ProbeTarget(uri: Uri.parse('http://fake/'))],
-    probe: FakeProbe.alwaysSuccess(responseTime: Duration.zero),
-  );
-
-  forceGc();
-  final microseconds = await _CheckOnceBenchmark(checker).measure();
-
   final writer = await ResultWriter.open(
     outputPath: args.outputPath,
     scenario: 'check_once_overhead',
@@ -45,13 +37,27 @@ Future<void> main(List<String> argv) async {
     packageVersion: args.packageVersion,
     gitSha: args.gitSha,
   );
-  writer.writeRecord(
-    iteration: args.iteration,
-    samples: {
-      'microseconds_per_check': [microseconds],
-    },
-    summary: {'median_microseconds': microseconds},
-  );
+
+  for (var i = 0; i < args.iterations; i++) {
+    final checker = InternetConnection(
+      targets: [ProbeTarget(uri: Uri.parse('http://fake/'))],
+      probe: FakeProbe.alwaysSuccess(responseTime: Duration.zero),
+    );
+
+    forceGc();
+    final microseconds = await _CheckOnceBenchmark(checker).measure();
+
+    writer.writeRecord(
+      iteration: i,
+      samples: {
+        'microseconds_per_check': [microseconds],
+      },
+      summary: {'median_microseconds': microseconds},
+    );
+
+    await checker.dispose();
+    forceGc();
+  }
+
   await writer.close();
-  await checker.dispose();
 }

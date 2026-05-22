@@ -5,7 +5,12 @@ import 'dart:io';
 /// All benchmark entrypoints accept a small standard set of flags so the
 /// Python orchestrator can drive them uniformly:
 ///
-/// * `--iteration N` — required. Zero-based iteration index within the run.
+/// * `--iterations N` — required. How many iterations the scenario should
+///   run in this single subprocess invocation. The scenario loops 0..N-1
+///   internally and emits one record per iteration. Batching iterations in
+///   a single process is the dominant optimisation in the suite — process
+///   startup and AOT-loading are amortised over N runs instead of paid N
+///   times.
 /// * `--output P` — required. Path to write the JSON result file to.
 /// * `--git-sha SHA` — required. Captured by the orchestrator via
 ///   `git rev-parse HEAD`. Recorded in every result record for traceability.
@@ -17,14 +22,14 @@ import 'dart:io';
 /// Hand-parsed (no `package:args` dep) — the surface is small enough that
 /// the dep would be overkill, and one less transitive constraint.
 final class ScenarioArgs {
-  final int iteration;
+  final int iterations;
   final String outputPath;
   final String gitSha;
   final String packageVersion;
   final int durationSeconds;
 
   const ScenarioArgs._({
-    required this.iteration,
+    required this.iterations,
     required this.outputPath,
     required this.gitSha,
     required this.packageVersion,
@@ -51,14 +56,17 @@ final class ScenarioArgs {
       flags[arg.substring(2)] = argv[++i];
     }
 
-    final iteration = _requiredInt(flags, 'iteration');
+    final iterations = _requiredInt(flags, 'iterations');
+    if (iterations <= 0) {
+      _die('--iterations must be >= 1, got: $iterations');
+    }
     final outputPath = _required(flags, 'output');
     final gitSha = _required(flags, 'git-sha');
     final packageVersion = _required(flags, 'package-version');
     final durationSeconds = int.tryParse(flags['duration-seconds'] ?? '10') ?? 10;
 
     return ScenarioArgs._(
-      iteration: iteration,
+      iterations: iterations,
       outputPath: outputPath,
       gitSha: gitSha,
       packageVersion: packageVersion,
