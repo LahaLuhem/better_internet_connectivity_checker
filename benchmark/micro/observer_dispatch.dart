@@ -42,7 +42,6 @@ final class _DispatchBenchmark extends BenchmarkBase {
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
 
-  final observer = _NoopCountingObserver();
   const previous = Reachable(
     responseTime: Duration(milliseconds: 10),
     quality: ConnectionQuality.good,
@@ -52,9 +51,6 @@ Future<void> main(List<String> argv) async {
     quality: ConnectionQuality.slow,
   );
 
-  forceGc();
-  final microseconds = _DispatchBenchmark(observer, previous, next).measure();
-
   final writer = await ResultWriter.open(
     outputPath: args.outputPath,
     scenario: 'observer_dispatch',
@@ -62,12 +58,24 @@ Future<void> main(List<String> argv) async {
     packageVersion: args.packageVersion,
     gitSha: args.gitSha,
   );
-  writer.writeRecord(
-    iteration: args.iteration,
-    samples: {
-      'microseconds_per_dispatch': [microseconds],
-    },
-    summary: {'median_microseconds': microseconds, 'total_dispatches': observer.count.toDouble()},
-  );
+
+  for (var i = 0; i < args.iterations; i++) {
+    final observer = _NoopCountingObserver();
+
+    forceGc();
+    final microseconds = _DispatchBenchmark(observer, previous, next).measure();
+
+    writer.writeRecord(
+      iteration: i,
+      samples: {
+        'microseconds_per_dispatch': [microseconds],
+      },
+      summary: {
+        'median_microseconds': microseconds,
+        'total_dispatches': observer.count.toDouble(),
+      },
+    );
+  }
+
   await writer.close();
 }

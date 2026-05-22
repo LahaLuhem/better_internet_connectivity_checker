@@ -23,6 +23,28 @@ import '../harness/tick_drift_meter.dart';
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
 
+  final writer = await ResultWriter.open(
+    outputPath: args.outputPath,
+    scenario: 'trigger_storm',
+    sdkVersion: ScenarioArgs.sdkVersion,
+    packageVersion: args.packageVersion,
+    gitSha: args.gitSha,
+  );
+
+  for (var i = 0; i < args.iterations; i++) {
+    await _runIteration(args, iteration: i, writer: writer);
+    forceGc();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+
+  await writer.close();
+}
+
+Future<void> _runIteration(
+  ScenarioArgs args, {
+  required int iteration,
+  required ResultWriter writer,
+}) async {
   final triggerController = StreamController<void>.broadcast();
   final checker = InternetConnection(
     targets: [ProbeTarget(uri: Uri.parse('http://127.0.0.1/fake'))],
@@ -55,15 +77,8 @@ Future<void> main(List<String> argv) async {
   await triggerController.close();
   await checker.dispose();
 
-  final writer = await ResultWriter.open(
-    outputPath: args.outputPath,
-    scenario: 'trigger_storm',
-    sdkVersion: ScenarioArgs.sdkVersion,
-    packageVersion: args.packageVersion,
-    gitSha: args.gitSha,
-  );
   writer.writeRecord(
-    iteration: args.iteration,
+    iteration: iteration,
     samples: {
       'rss_bytes': memorySampler.samples,
       'tick_drift_microseconds': driftMeter.drifts
@@ -82,5 +97,4 @@ Future<void> main(List<String> argv) async {
       'rss_delta_bytes': memorySampler.rssDelta,
     },
   );
-  await writer.close();
 }

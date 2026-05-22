@@ -22,6 +22,28 @@ import '../harness/tick_drift_meter.dart';
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
 
+  final writer = await ResultWriter.open(
+    outputPath: args.outputPath,
+    scenario: 'long_running',
+    sdkVersion: ScenarioArgs.sdkVersion,
+    packageVersion: args.packageVersion,
+    gitSha: args.gitSha,
+  );
+
+  for (var i = 0; i < args.iterations; i++) {
+    await _runIteration(args, iteration: i, writer: writer);
+    forceGc();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+
+  await writer.close();
+}
+
+Future<void> _runIteration(
+  ScenarioArgs args, {
+  required int iteration,
+  required ResultWriter writer,
+}) async {
   final server = LocalHttpServer();
   await server.start();
 
@@ -53,15 +75,8 @@ Future<void> main(List<String> argv) async {
   final minutes = args.durationSeconds / 60.0;
   final rssGrowthPerMinute = minutes <= 0 ? 0.0 : memorySampler.rssDelta / minutes;
 
-  final writer = await ResultWriter.open(
-    outputPath: args.outputPath,
-    scenario: 'long_running',
-    sdkVersion: ScenarioArgs.sdkVersion,
-    packageVersion: args.packageVersion,
-    gitSha: args.gitSha,
-  );
   writer.writeRecord(
-    iteration: args.iteration,
+    iteration: iteration,
     samples: {
       'rss_bytes': memorySampler.samples,
       'tick_drift_microseconds': driftMeter.drifts
@@ -80,5 +95,4 @@ Future<void> main(List<String> argv) async {
       'duration_seconds': args.durationSeconds,
     },
   );
-  await writer.close();
 }

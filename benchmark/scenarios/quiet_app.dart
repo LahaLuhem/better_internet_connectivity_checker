@@ -22,6 +22,31 @@ import '../harness/tick_drift_meter.dart';
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
 
+  final writer = await ResultWriter.open(
+    outputPath: args.outputPath,
+    scenario: 'quiet_app',
+    sdkVersion: ScenarioArgs.sdkVersion,
+    packageVersion: args.packageVersion,
+    gitSha: args.gitSha,
+  );
+
+  for (var i = 0; i < args.iterations; i++) {
+    await _runIteration(args, iteration: i, writer: writer);
+    // Settle between iterations: forceGc drops young-gen pressure; the small
+    // delay gives the event loop time to drain any deferred microtasks from
+    // the previous iteration's dispose chain before we open the next checker.
+    forceGc();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+
+  await writer.close();
+}
+
+Future<void> _runIteration(
+  ScenarioArgs args, {
+  required int iteration,
+  required ResultWriter writer,
+}) async {
   final server = LocalHttpServer();
   await server.start();
 
@@ -49,15 +74,8 @@ Future<void> main(List<String> argv) async {
   disposeStopwatch.stop();
   await server.stop();
 
-  final writer = await ResultWriter.open(
-    outputPath: args.outputPath,
-    scenario: 'quiet_app',
-    sdkVersion: ScenarioArgs.sdkVersion,
-    packageVersion: args.packageVersion,
-    gitSha: args.gitSha,
-  );
   writer.writeRecord(
-    iteration: args.iteration,
+    iteration: iteration,
     samples: {
       'rss_bytes': memorySampler.samples,
       'tick_drift_microseconds': driftMeter.drifts
@@ -76,5 +94,4 @@ Future<void> main(List<String> argv) async {
       'http_request_count': server.requestCount,
     },
   );
-  await writer.close();
 }

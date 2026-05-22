@@ -2,8 +2,8 @@
 /// listeners.
 ///
 /// Measures the broadcast-stream emission path in isolation — no probe, no
-/// scheduler, no observer. Three benchmark records emitted per invocation
-/// (scenario name shared; `subscriber_count` summary key is the pivot).
+/// scheduler, no observer. With `--iterations K`, emits `K × 3` records
+/// (three subscriber counts per iteration; `subscriber_count` is the pivot).
 ///
 /// Uses a **synchronous** broadcast (`sync: true`). The production
 /// `InternetConnection` uses async-default broadcast (events queue, deliver
@@ -69,16 +69,18 @@ Future<void> main(List<String> argv) async {
     gitSha: args.gitSha,
   );
 
-  for (final subscriberCount in _subscriberCounts) {
-    forceGc();
-    final microseconds = _StatusEmissionBenchmark(subscriberCount).measure();
-    writer.writeRecord(
-      iteration: args.iteration,
-      samples: {
-        'microseconds_per_emission': [microseconds],
-      },
-      summary: {'subscriber_count': subscriberCount, 'microseconds_per_emission': microseconds},
-    );
+  for (var i = 0; i < args.iterations; i++) {
+    for (final subscriberCount in _subscriberCounts) {
+      forceGc();
+      final microseconds = _StatusEmissionBenchmark(subscriberCount).measure();
+      writer.writeRecord(
+        iteration: i,
+        samples: {
+          'microseconds_per_emission': [microseconds],
+        },
+        summary: {'subscriber_count': subscriberCount, 'microseconds_per_emission': microseconds},
+      );
+    }
   }
 
   await writer.close();
