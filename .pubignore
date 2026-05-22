@@ -6,6 +6,11 @@
 # Test sources.
 test/
 
+# Benchmark framework — maintainer-only perf/memory measurement infra. Imports
+# from lib/ but ships nothing to downstream users. Excluded entirely from the
+# published tarball. See benchmark/README.md for what lives here and why.
+benchmark/
+
 # Local-dev config — consumer machines have their own.
 .fvmrc
 analysis_options.yaml
