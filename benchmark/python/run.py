@@ -6,12 +6,17 @@ Workflow (run from `benchmark/python/`):
     uv sync                                       # one-time: create .venv + install deps
     uv run python run.py build                    # AOT-compile all scenarios (parallel)
     uv run python run.py run --iterations 10 --out results-local/run-1/
-    uv run python run.py compare baseline.json results-local/run-1/aggregated.json
     uv run python run.py report results-local/run-1/aggregated.json
-                                                  # writes PNGs + SUMMARY.md alongside the JSON
-    uv run python run.py report results-local/run-1/aggregated.json --reference
-                                                  # writes to benchmark/charts/reference/
-                                                  # (the committed maintainer baseline)
+                                                  # writes PNGs + SUMMARY.md to ../reports/
+    uv run python run.py compare results-local/baseline/aggregated.json \
+                                  results-local/run-1/aggregated.json
+                                                  # writes paired charts + forest + COMPARE.md
+                                                  # to ../reports/
+
+Both `report` and `compare` default to writing into `benchmark/reports/` -
+the canonical committed dir referenced from the package README. Pass `--out`
+to override (e.g. for ad-hoc local snapshots that shouldn't overwrite the
+committed set).
 
 Design notes:
 - Dart owns scenario *bodies* (must be in-process - instantiates the lib,
@@ -45,6 +50,7 @@ import os
 import subprocess
 import sys
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Final
@@ -58,7 +64,11 @@ SCENARIOS_DIR: Final[Path] = BENCHMARK_DIR / "scenarios"
 MICRO_DIR: Final[Path] = BENCHMARK_DIR / "micro"
 BUILD_DIR: Final[Path] = BENCHMARK_DIR / "build"
 RESULTS_DIR: Final[Path] = BENCHMARK_DIR / "results-local"
-REFERENCE_CHARTS_DIR: Final[Path] = BENCHMARK_DIR / "charts" / "reference"
+# The canonical committed report+compare output dir. Both `report` and
+# `compare` write here by default; both honour `--out` for ad-hoc locations.
+# Referenced from the package README via committed PNGs, so contributors only
+# overwrite this when refreshing the maintainer baseline.
+REPORTS_DIR: Final[Path] = BENCHMARK_DIR / "reports"
 
 # Default number of iterations per scenario. Override with --iterations.
 DEFAULT_ITERATIONS: Final[int] = 10
@@ -72,6 +82,28 @@ WARMUP_ITERATIONS: Final[int] = 2
 # here and validate-on-use rather than ceremony with TypedDict / pydantic
 # models for a tool with a stable internal schema. `Any` is justified.
 ResultRecord = dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _CompareRow:
+    """One row in the cmd_compare significance table - drives both the
+    terminal output and the COMPARE.md table + forest plot.
+
+    `delta_pct` can be `float('inf')` when the baseline median is 0 and the
+    delta is therefore undefined; renderers must guard for that.
+    """
+
+    scenario: str
+    metric: str
+    baseline_median: float
+    current_median: float
+    delta_pct: float
+    p_value: float
+
+    @property
+    def significant(self) -> bool:
+        return self.p_value < 0.05
+
 
 # Per-scenario default durations (seconds). Tuned to capture meaningful
 # behaviour per scenario without wasting time. Micros ignore duration entirely
@@ -259,8 +291,18 @@ def cmd_run(args: argparse.Namespace) -> int:
 def cmd_compare(args: argparse.Namespace) -> int:
     """Diff two aggregated.json result sets with Mann-Whitney U.
 
-    Output: table of (scenario, metric, baseline median, current median,
-    delta %, p-value, significant?).
+    Prints a per-(scenario, metric) significance table to stdout for
+    interactive use, then writes the same data plus paired-chart PNGs and
+    a forest plot to the output dir (default: `benchmark/reports/`).
+
+    Output files in `<out>/`:
+      - compare_headline_tick_drift.png  - paired box plot of max_drift
+      - compare_memory_peak_rss.png      - paired box plot of peak RSS
+      - compare_scenario_stability.png   - paired box plot, slow_observer excluded
+      - compare_subscriber_scaling.png   - paired line plot from status_emission
+      - compare_forest.png               - horizontal bar chart of % deltas,
+                                           colored by significance + direction
+      - COMPARE.md                       - significance table + chart embeds
     """
     try:
         from scipy import stats as scipy_stats
@@ -271,20 +313,15 @@ def cmd_compare(args: argparse.Namespace) -> int:
         )
         return 1
 
-    baseline = _load_aggregated(args.baseline)
-    current = _load_aggregated(args.current)
+    baseline_records = _load_aggregated(args.baseline)
+    current_records = _load_aggregated(args.current)
 
-    base_groups = _group_samples(baseline)
-    curr_groups = _group_samples(current)
+    base_groups = _group_samples(baseline_records)
+    curr_groups = _group_samples(current_records)
 
-    header = (
-        f"{'scenario':<24} {'metric':<28} "
-        f"{'baseline':>12} {'current':>12} {'delta':>10} {'p-value':>10} {'sig?':<5}"
-    )
-    print(header)
-    print("-" * 105)
-
-    any_significant = False
+    # Build the significance table first - drives both the terminal output and
+    # the COMPARE.md table.
+    rows: list[_CompareRow] = []
     for key in sorted(set(base_groups) | set(curr_groups)):
         scenario, metric = key
         base_samples = base_groups.get(key, [])
@@ -305,14 +342,97 @@ def cmd_compare(args: argparse.Namespace) -> int:
         except ValueError:
             # All samples identical - Mann-Whitney undefined. Treat as not significant.
             p_value = 1.0
-        significant = p_value < 0.05
-        any_significant = any_significant or significant
 
-        sig_marker = "*" if significant else ""
+        rows.append(
+            _CompareRow(
+                scenario=scenario,
+                metric=metric,
+                baseline_median=base_median,
+                current_median=curr_median,
+                delta_pct=delta_pct,
+                p_value=float(p_value),
+            )
+        )
+
+    _print_compare_table(rows)
+
+    # Chart rendering needs the analysis deps; the text table above is the
+    # interactive-use deliverable, so we don't fail the whole command if charts
+    # can't render. Users can still get the table from `compare`.
+    import importlib.util as _importlib_util
+
+    missing = [
+        name
+        for name in ("matplotlib", "polars", "seaborn", "pandas")
+        if _importlib_util.find_spec(name) is None
+    ]
+    if missing:
         print(
-            f"{scenario:<24} {metric:<28} "
-            f"{base_median:>12.3f} {curr_median:>12.3f} "
-            f"{delta_pct:>+9.1f}% {p_value:>10.4f} {sig_marker:<5}"
+            f"\nskipping chart generation - missing deps: {', '.join(missing)}",
+            file=sys.stderr,
+        )
+        print("  run `uv sync` from benchmark/python/", file=sys.stderr)
+        return 0
+
+    import polars as pl
+    import seaborn as sns
+
+    out_dir = _resolve_outdir(args)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    paired = _paired_dataframe(baseline_records, current_records)
+    sns.set_theme(style="whitegrid", context="paper", palette=_CHART_PALETTE)
+
+    chart_paths: list[Path] = [
+        _plot_compare_headline_tick_drift(paired, out_dir / "compare_headline_tick_drift.png"),
+        _plot_compare_memory_peak_rss(paired, out_dir / "compare_memory_peak_rss.png"),
+        _plot_compare_scenario_stability(paired, out_dir / "compare_scenario_stability.png"),
+    ]
+    sub_chart = _plot_compare_subscriber_scaling(paired, out_dir / "compare_subscriber_scaling.png")
+    if sub_chart is not None:
+        chart_paths.append(sub_chart)
+    chart_paths.append(_plot_compare_forest(rows, out_dir / "compare_forest.png"))
+
+    compare_path = out_dir / "COMPARE.md"
+    compare_path.write_text(
+        _render_compare_markdown(
+            rows,
+            chart_paths=chart_paths,
+            baseline_records=baseline_records,
+            current_records=current_records,
+        )
+    )
+
+    # Suppress polars unused-import warning - kept for symmetry with cmd_report
+    # if we later want to do lazy-frame analysis here too.
+    _ = pl
+
+    print(f"\nwrote compare artifacts to: {out_dir}")
+    for p in chart_paths:
+        print(f"  {p.name}")
+    print(f"  {compare_path.name}")
+
+    return 0
+
+
+def _print_compare_table(rows: list[_CompareRow]) -> None:
+    """Print the Mann-Whitney significance table to stdout for interactive use."""
+    header = (
+        f"{'scenario':<24} {'metric':<28} "
+        f"{'baseline':>12} {'current':>12} {'delta':>10} {'p-value':>10} {'sig?':<5}"
+    )
+    print(header)
+    print("-" * 105)
+
+    any_significant = False
+    for row in rows:
+        any_significant = any_significant or row.significant
+        sig_marker = "*" if row.significant else ""
+        delta_str = f"{row.delta_pct:>+9.1f}%" if row.delta_pct != float("inf") else "       inf"
+        print(
+            f"{row.scenario:<24} {row.metric:<28} "
+            f"{row.baseline_median:>12.3f} {row.current_median:>12.3f} "
+            f"{delta_str} {row.p_value:>10.4f} {sig_marker:<5}"
         )
 
     print()
@@ -321,8 +441,6 @@ def cmd_compare(args: argparse.Namespace) -> int:
     else:
         print("no significant differences detected")
 
-    return 0
-
 
 # ---- subcommand: report ---------------------------------------------------
 
@@ -330,10 +448,9 @@ def cmd_compare(args: argparse.Namespace) -> int:
 def cmd_report(args: argparse.Namespace) -> int:
     """Generate PNG charts + SUMMARY.md from one aggregated.json file.
 
-    Default output dir is `<aggregated.json parent>/charts/` (contributor-local,
-    gitignored under `results-local/`). With `--reference`, writes to
-    `benchmark/charts/reference/` (committed - this is the maintainer's
-    blessed reference set inlined in the README).
+    Default output dir is `benchmark/reports/` (committed - inlined from the
+    package README). Override with `--out` for ad-hoc snapshots that
+    shouldn't overwrite the committed set.
 
     Charts (one PNG each):
     - headline_tick_drift.png  - max scheduler stall per scenario (THE bug viz)
@@ -367,7 +484,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         print("no records found in input", file=sys.stderr)
         return 1
 
-    out_dir = _resolve_report_outdir(args)
+    out_dir = _resolve_outdir(args)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Flatten records into a DataFrame. We carry both metadata cols
@@ -379,10 +496,11 @@ def cmd_report(args: argparse.Namespace) -> int:
     # without looking like a presentation slide.
     sns.set_theme(style="whitegrid", context="paper", palette=_CHART_PALETTE)
 
-    chart_paths: list[Path] = []
-    chart_paths.append(_plot_headline_tick_drift(dataframe, out_dir / "headline_tick_drift.png"))
-    chart_paths.append(_plot_memory_peak_rss(dataframe, out_dir / "memory_peak_rss.png"))
-    chart_paths.append(_plot_scenario_stability(dataframe, out_dir / "scenario_stability.png"))
+    chart_paths: list[Path] = [
+        _plot_headline_tick_drift(dataframe, out_dir / "headline_tick_drift.png"),
+        _plot_memory_peak_rss(dataframe, out_dir / "memory_peak_rss.png"),
+        _plot_scenario_stability(dataframe, out_dir / "scenario_stability.png"),
+    ]
 
     sub_chart = _plot_subscriber_scaling(dataframe, out_dir / "subscriber_scaling.png")
     if sub_chart is not None:
@@ -401,16 +519,14 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
-def _resolve_report_outdir(args: argparse.Namespace) -> Path:
-    """Pick the chart output directory based on flags.
+def _resolve_outdir(args: argparse.Namespace) -> Path:
+    """Pick the chart output directory used by both `report` and `compare`.
 
-    Precedence: --reference > --out > default (<results parent>/charts/).
+    Precedence: --out > default (REPORTS_DIR = `benchmark/reports/`, committed).
     """
-    if args.reference:
-        return REFERENCE_CHARTS_DIR
     if args.out:
-        return Path(args.out)
-    return Path(args.results).parent / "charts"
+        return Path(args.out).resolve()
+    return REPORTS_DIR
 
 
 def _flatten_records(records: list[ResultRecord]) -> list[dict[str, Any]]:
@@ -627,6 +743,351 @@ def _write_empty_chart(out_path: Path, message: str) -> None:
     plt.close(fig)
 
 
+# ---- compare chart renderers ---------------------------------------------
+
+
+def _paired_dataframe(
+    baseline_records: list[ResultRecord],
+    current_records: list[ResultRecord],
+) -> Any:
+    """Combine baseline + current records into one polars DataFrame.
+
+    Adds a `run` column ("baseline" / "current") so seaborn's `hue=` can
+    render the two series side-by-side on the same axes. Uses
+    `pl.concat(how="diagonal")` to align columns by name and fill missing
+    metrics with null - the two sides may have emitted slightly different
+    summary metrics if the schema drifted between captures.
+    """
+    import polars as pl
+
+    base = pl.DataFrame(_flatten_records(baseline_records), infer_schema_length=None).with_columns(
+        pl.lit("baseline").alias("run")
+    )
+    curr = pl.DataFrame(_flatten_records(current_records), infer_schema_length=None).with_columns(
+        pl.lit("current").alias("run")
+    )
+
+    return pl.concat([base, curr], how="diagonal")
+
+
+def _plot_compare_headline_tick_drift(paired: Any, out_path: Path) -> Path:
+    """Paired box plot of max_drift_microseconds per scenario, log y-scale.
+
+    `slow_observer` baseline should tower over its current box if the
+    refactor actually fixed the scheduler stall.
+    """
+    import matplotlib.pyplot as plt
+    import polars as pl
+    import seaborn as sns
+
+    metric = "max_drift_microseconds"
+    plot_df = (
+        paired.filter(pl.col(metric).is_not_null()).select(["scenario", metric, "run"]).to_pandas()
+    )
+    if plot_df.empty:
+        _write_empty_chart(out_path, "No tick-drift data in both runs.")
+        return out_path
+
+    fig, ax = plt.subplots(figsize=(11, 5))
+    sns.boxplot(
+        data=plot_df,
+        x="scenario",
+        y=metric,
+        hue="run",
+        ax=ax,
+        order=sorted(plot_df["scenario"].unique()),
+        hue_order=["baseline", "current"],
+    )
+    ax.set_yscale("log")
+    ax.set_ylabel("Max tick drift (us, log scale)")
+    ax.set_xlabel("")
+    ax.set_title("Worst-case scheduler stall: baseline vs current")
+    ax.legend(title="", loc="best")
+    plt.xticks(rotation=30, ha="right")
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=_CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
+def _plot_compare_memory_peak_rss(paired: Any, out_path: Path) -> Path:
+    """Paired box plot of peak RSS per scenario, MB on y-axis."""
+    import matplotlib.pyplot as plt
+    import polars as pl
+    import seaborn as sns
+
+    metric = "peak_rss_bytes"
+    plot_df = (
+        paired.filter(pl.col(metric).is_not_null()).select(["scenario", metric, "run"]).to_pandas()
+    )
+    if plot_df.empty:
+        _write_empty_chart(out_path, "No peak_rss data in both runs.")
+        return out_path
+
+    plot_df["peak_rss_mb"] = plot_df[metric] / (1024.0 * 1024.0)
+
+    fig, ax = plt.subplots(figsize=(11, 5))
+    sns.boxplot(
+        data=plot_df,
+        x="scenario",
+        y="peak_rss_mb",
+        hue="run",
+        ax=ax,
+        order=sorted(plot_df["scenario"].unique()),
+        hue_order=["baseline", "current"],
+    )
+    ax.set_ylabel("Peak RSS (MB)")
+    ax.set_xlabel("")
+    ax.set_title("Peak resident set size: baseline vs current")
+    ax.legend(title="", loc="best")
+    plt.xticks(rotation=30, ha="right")
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=_CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
+def _plot_compare_scenario_stability(paired: Any, out_path: Path) -> Path:
+    """Paired box plot of max_drift_microseconds EXCLUDING slow_observer.
+
+    Same framing as report's stability chart - excluding the outlier so the
+    noise-floor scenarios stay readable on a linear axis. Paired here shows
+    whether the refactor moved (or destabilised) the noise floor.
+    """
+    import matplotlib.pyplot as plt
+    import polars as pl
+    import seaborn as sns
+
+    metric = "max_drift_microseconds"
+    plot_df = (
+        paired.filter(pl.col(metric).is_not_null())
+        .filter(pl.col("scenario") != "slow_observer")
+        .select(["scenario", metric, "run"])
+        .to_pandas()
+    )
+    if plot_df.empty:
+        _write_empty_chart(out_path, "No non-slow_observer drift data in both runs.")
+        return out_path
+
+    fig, ax = plt.subplots(figsize=(11, 5))
+    sns.boxplot(
+        data=plot_df,
+        x="scenario",
+        y=metric,
+        hue="run",
+        ax=ax,
+        order=sorted(plot_df["scenario"].unique()),
+        hue_order=["baseline", "current"],
+    )
+    ax.set_ylabel("Max tick drift (us)")
+    ax.set_xlabel("")
+    ax.set_title("Per-scenario noise floor: baseline vs current (slow_observer excluded)")
+    ax.legend(title="", loc="best")
+    plt.xticks(rotation=30, ha="right")
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=_CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
+def _plot_compare_subscriber_scaling(paired: Any, out_path: Path) -> Path | None:
+    """Paired line plot of broadcast cost vs subscriber count.
+
+    Two lines (baseline + current) showing how the per-listener delivery
+    cost shifts. Returns None when the input has no status_emission data on
+    either side - the caller skips the slot in COMPARE.md.
+    """
+    import matplotlib.pyplot as plt
+    import polars as pl
+    import seaborn as sns
+
+    metric = "microseconds_per_emission"
+    if metric not in paired.columns or "subscriber_count" not in paired.columns:
+        return None
+
+    plot_df = (
+        paired.filter(pl.col("scenario") == "status_emission")
+        .filter(pl.col(metric).is_not_null())
+        .filter(pl.col("subscriber_count").is_not_null())
+        .select(["subscriber_count", metric, "run"])
+        .to_pandas()
+    )
+    if plot_df.empty:
+        return None
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.pointplot(
+        data=plot_df,
+        x="subscriber_count",
+        y=metric,
+        hue="run",
+        ax=ax,
+        hue_order=["baseline", "current"],
+        errorbar=("pi", 50),
+        marker="o",
+        linestyle="-",
+    )
+    ax.set_xlabel("Subscriber count")
+    ax.set_ylabel("Broadcast cost (us / emit)")
+    ax.set_title("Sync-broadcast cost: baseline vs current")
+    ax.legend(title="", loc="best")
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=_CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
+def _plot_compare_forest(rows: list[_CompareRow], out_path: Path) -> Path:
+    """Horizontal bar chart of % delta per (scenario, metric), sorted by |delta|.
+
+    Color encoding (interpretation: most metrics are 'lower is better' -
+    drift, memory, microseconds/op):
+      - Red:   significant regression  (delta > 0, p < 0.05)
+      - Green: significant improvement (delta < 0, p < 0.05)
+      - Gray:  not significant (p >= 0.05)
+    """
+    import matplotlib.pyplot as plt
+
+    plot_rows = [r for r in rows if r.delta_pct != float("inf")]
+    if not plot_rows:
+        _write_empty_chart(out_path, "No comparable (scenario, metric) pairs.")
+        return out_path
+
+    # Sort ascending by |delta| - largest delta lands at the TOP of the
+    # horizontal bar chart (which renders the first row at the bottom).
+    plot_rows = sorted(plot_rows, key=lambda r: abs(r.delta_pct))
+
+    labels = [f"{r.scenario} / {r.metric}" for r in plot_rows]
+    deltas = [r.delta_pct for r in plot_rows]
+    colors = [
+        "#c0392b"
+        if r.significant and r.delta_pct > 0
+        else "#27ae60"
+        if r.significant and r.delta_pct < 0
+        else "#bdc3c7"
+        for r in plot_rows
+    ]
+
+    # Height scales with row count - keeps bars readable from 5 rows to 50.
+    height = max(4.0, len(plot_rows) * 0.28)
+    fig, ax = plt.subplots(figsize=(10, height))
+    ax.barh(labels, deltas, color=colors, edgecolor="#555", linewidth=0.5)
+    ax.axvline(0, color="#333", linewidth=0.8)
+    ax.set_xlabel("Delta from baseline (%)")
+    ax.set_title("Per-(scenario, metric) delta - red=regression, green=improvement, gray=not sig")
+    ax.grid(True, axis="x", alpha=0.3)
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=_CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
+# ---- compare markdown -----------------------------------------------------
+
+
+def _render_compare_markdown(
+    rows: list[_CompareRow],
+    *,
+    chart_paths: list[Path],
+    baseline_records: list[ResultRecord],
+    current_records: list[ResultRecord],
+) -> str:
+    """Render COMPARE.md - forest + paired charts + Mann-Whitney table.
+
+    Same drop-into-README shape as SUMMARY.md, with both baseline and
+    current capture metadata in the header so the reader can verify the
+    comparison is apples-to-apples (same machine, same SDK).
+    """
+    base_meta = _summary_metadata(baseline_records)
+    curr_meta = _summary_metadata(current_records)
+    chart_names = {p.name for p in chart_paths}
+
+    parts: list[str] = [
+        "# Benchmark comparison\n",
+        f"- **Baseline**: `{base_meta['package_version']}` at "
+        f"`{base_meta['git_sha']}` (Dart SDK {base_meta['sdk_version']}) "
+        f"captured {base_meta['date']}, N={base_meta['iterations']} per scenario\n"
+        f"- **Current**:  `{curr_meta['package_version']}` at "
+        f"`{curr_meta['git_sha']}` (Dart SDK {curr_meta['sdk_version']}) "
+        f"captured {curr_meta['date']}, N={curr_meta['iterations']} per scenario\n",
+        "> Per-machine measurement. Both baseline and current must be "
+        "captured on the same machine, in the same thermal/power state, "
+        "with no competing workload - otherwise the delta is noise rather "
+        "than signal.\n",
+        "## Forest: all comparable (scenario, metric) deltas\n",
+        "Bars sorted by `|delta|` ascending (largest at top). Color encodes "
+        "direction + significance: red = significant regression "
+        "(p < 0.05, current > baseline), green = significant improvement, "
+        "gray = no significant difference detected.\n",
+    ]
+
+    if "compare_forest.png" in chart_names:
+        parts.append("\n![Forest plot](compare_forest.png)\n")
+
+    parts.append("## Headline: tick drift, baseline vs current\n")
+    parts.append(
+        "Paired box plot per scenario. The `slow_observer` box should "
+        "collapse from ~10^6 us to the noise floor (~10^4 us) post-refactor; "
+        "other scenarios should not move significantly.\n"
+    )
+    if "compare_headline_tick_drift.png" in chart_names:
+        parts.append("\n![Headline compare](compare_headline_tick_drift.png)\n")
+
+    parts.append("## Memory: peak RSS, baseline vs current\n")
+    parts.append(
+        "Steady-state memory footprint should not regress. A shift > "
+        "5-10 MB warrants investigation; below that is noise on most "
+        "machines.\n"
+    )
+    if "compare_memory_peak_rss.png" in chart_names:
+        parts.append("\n![Memory compare](compare_memory_peak_rss.png)\n")
+
+    parts.append("## Stability: noise floor, baseline vs current\n")
+    parts.append(
+        "`slow_observer` excluded so the y-axis stays linear. Box widths "
+        "tell you how stable the measurement is iteration-to-iteration; "
+        "the refactor should not destabilise the noise floor.\n"
+    )
+    if "compare_scenario_stability.png" in chart_names:
+        parts.append("\n![Stability compare](compare_scenario_stability.png)\n")
+
+    if "compare_subscriber_scaling.png" in chart_names:
+        parts.append("## Subscriber scaling, baseline vs current\n")
+        parts.append(
+            "From the `status_emission` micro. The per-listener broadcast "
+            "cost should stay essentially identical - the refactor changes "
+            "the producer-side dispatch, not the listener-side delivery.\n"
+        )
+        parts.append("\n![Scaling compare](compare_subscriber_scaling.png)\n")
+
+    parts.append("## Mann-Whitney U significance table\n")
+    parts.append(
+        "Each row is one `(scenario, metric)` pair where both runs emitted "
+        "samples. `Delta` is `(current_median - baseline_median) / "
+        "baseline_median * 100`. `Sig?` flags `p < 0.05`.\n"
+    )
+    parts.append(_render_compare_table_markdown(rows))
+
+    return "\n".join(parts)
+
+
+def _render_compare_table_markdown(rows: list[_CompareRow]) -> str:
+    """Render the per-(scenario, metric) Mann-Whitney table as markdown."""
+    header = "| Scenario | Metric | Baseline median | Current median | Delta | p-value | Sig? |"
+    sep = "|---|---|---:|---:|---:|---:|:---:|"
+    out = [header, sep]
+    fmt = _value_formatter("us")
+    for r in rows:
+        delta_str = f"{r.delta_pct:+.1f}%" if r.delta_pct != float("inf") else "inf"
+        sig_str = "**Yes**" if r.significant else ""
+        out.append(
+            f"| `{r.scenario}` | `{r.metric}` | "
+            f"{fmt(r.baseline_median)} | {fmt(r.current_median)} | "
+            f"{delta_str} | {r.p_value:.4f} | {sig_str} |"
+        )
+    return "\n".join(out) + "\n"
+
+
 # ---- summary markdown -----------------------------------------------------
 
 
@@ -646,28 +1107,23 @@ def _render_summary_markdown(
     metadata = _summary_metadata(records)
     chart_names = {p.name for p in chart_paths}
 
-    parts: list[str] = []
-    parts.append("# Benchmark results\n")
-    parts.append(
+    parts: list[str] = [
+        "# Benchmark results\n",
         f"Captured **{metadata['date']}** against "
         f"`{metadata['package_version']}` at `{metadata['git_sha']}` "
         f"on Dart SDK {metadata['sdk_version']}. N={metadata['iterations']} "
-        "iterations per scenario.\n"
-    )
-    parts.append(
+        "iterations per scenario.\n",
         "> Per-machine measurements. Numbers below reflect *this* machine "
         "(CPU, GC, OS scheduler, thermal state). Your numbers WILL differ - "
-        "capture your own local baseline before measuring a code delta.\n"
-    )
-
-    parts.append("## Headline: worst-case scheduler stall per scenario\n")
-    parts.append(
+        "capture your own local baseline before measuring a code delta.\n",
+        "## Headline: worst-case scheduler stall per scenario\n",
         "The `slow_observer` scenario simulates a heavy synchronous observer "
         "(50 ms per callback) running against a 100 ms tick. Pre-refactor, "
         "this blocks the scheduler - the box for `slow_observer` should "
-        "tower over the others on the log axis below.\n"
-    )
-    parts.append(_metric_table(dataframe, "max_drift_microseconds", units="us"))
+        "tower over the others on the log axis below.\n",
+        _metric_table(dataframe, "max_drift_microseconds", units="us"),
+    ]
+
     if "headline_tick_drift.png" in chart_names:
         parts.append("\n![Headline tick drift](headline_tick_drift.png)\n")
 
@@ -1036,10 +1492,15 @@ def main(argv: list[str] | None = None) -> int:
 
     parser_compare = sub.add_parser(
         "compare",
-        help="Mann-Whitney U diff of two aggregated.json files",
+        help="Mann-Whitney U diff of two aggregated.json files + paired charts",
     )
     parser_compare.add_argument("baseline", help="path to baseline aggregated.json")
     parser_compare.add_argument("current", help="path to current aggregated.json")
+    parser_compare.add_argument(
+        "--out",
+        default=None,
+        help=f"output dir for compare_*.png + COMPARE.md. Default: {REPORTS_DIR} (committed).",
+    )
     parser_compare.set_defaults(func=cmd_compare)
 
     parser_report = sub.add_parser(
@@ -1050,18 +1511,7 @@ def main(argv: list[str] | None = None) -> int:
     parser_report.add_argument(
         "--out",
         default=None,
-        help=(
-            "output dir for charts + SUMMARY.md. Default: "
-            "<aggregated.json parent>/charts/. Ignored when --reference is set."
-        ),
-    )
-    parser_report.add_argument(
-        "--reference",
-        action="store_true",
-        help=(
-            "write to benchmark/charts/reference/ (committed maintainer baseline). "
-            "Use after capturing the canonical reference run."
-        ),
+        help=f"output dir for charts + SUMMARY.md. Default: {REPORTS_DIR} (committed).",
     )
     parser_report.set_defaults(func=cmd_report)
 
