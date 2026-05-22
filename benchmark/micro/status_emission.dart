@@ -37,7 +37,7 @@ final class _StatusEmissionBenchmark extends BenchmarkBase {
   void setup() {
     _controller = StreamController<InternetStatus>.broadcast(sync: true);
     _subscriptions = [
-      for (var i = 0; i < subscriberCount; i++) _controller.stream.listen(_consume),
+      for (var i = 0; i < subscriberCount; i++) _controller.stream.listen(noopWithVal),
     ];
     _payload = const Reachable(
       responseTime: Duration(milliseconds: 10),
@@ -47,20 +47,15 @@ final class _StatusEmissionBenchmark extends BenchmarkBase {
 
   @override
   void teardown() {
+    // BenchmarkBase.teardown is sync — fire-and-forget the cancellations.
     for (final sub in _subscriptions) {
-      sub.cancel();
+      unawaited(sub.cancel());
     }
-    _controller.close();
+    unawaited(_controller.close());
   }
 
   @override
-  void run() {
-    _controller.add(_payload);
-  }
-
-  // No-op consumer — measure dispatch cost, not consumer-work cost.
-  // ignore: prefer_function_declarations_over_variables
-  static final void Function(InternetStatus) _consume = (_) {};
+  void run() => _controller.add(_payload);
 }
 
 Future<void> main(List<String> argv) async {
