@@ -46,6 +46,7 @@ dependencies = [
 dev = [
     "ruff>=0.6,<1.0",
     "pytest>=8.0,<9.0",
+    "pytest-cov>=7.1,<8.0",
 ]
 
 # ---- pytest ---------------------------------------------------------------
@@ -59,7 +60,28 @@ python_files = ["test_*.py"]
 # -ra: show short summary for everything except passes (failures, errors,
 #       skips, xfails). Makes a green run quiet and a red run informative.
 # --strict-markers: catch typos in @pytest.mark.<name> decorators.
-addopts = "-ra --strict-markers"
+# --cov / --cov-report: collect coverage for the bicc_bench package on every
+#       run; the threshold gate (--cov-fail-under) lives in CI to keep local
+#       runs frictionless, mirroring the Dart side (dart test collects,
+#       very_good_coverage enforces).
+addopts = "-ra --strict-markers --cov=bicc_bench --cov-report=term-missing"
+
+# ---- coverage -------------------------------------------------------------
+
+[tool.coverage.run]
+# Coverage scope = the unit-testable, deterministic surface. Per
+# `benchmark/python/AGENTS.md`:
+#   - `charts.py`  - PNG-rendering, smoke-only (chart byte comparison is
+#                    brittle; end-to-end smoke covers it).
+#   - `subcommands/*` - argparse-dispatch + I/O orchestration, smoke-only
+#                       (the pure helpers they call live in data/utils and
+#                       are unit-tested individually).
+# Omitted modules don't contribute to numerator OR denominator, so the
+# realised % reflects only the surface where unit tests are the right tool.
+omit = [
+    "bicc_bench/data/utils/charts.py",
+    "bicc_bench/subcommands/*",
+]
 
 # ---- ruff -----------------------------------------------------------------
 

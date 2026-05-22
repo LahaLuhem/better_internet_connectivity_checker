@@ -103,6 +103,16 @@ benchmark/python/
 - **Test the deterministic surface**: math, formatting, table rendering,
   CLI arg parsing. Skip chart PNG comparison (brittle); the end-to-end
   smoke run covers chart rendering.
+- **Coverage scope** is configured in [`pyproject.toml`](pyproject.toml)
+  under `[tool.coverage.run]`. `charts.py` and `subcommands/*` are
+  `omit`-ed because they are smoke-only by design — they don't appear in
+  either the numerator OR the denominator. Everything else (config,
+  data/dtos, data/utils minus charts) sits inside the scope and is
+  expected to be unit-tested. **CI gate is 95%** (`--cov-fail-under=95`
+  in [`.github/workflows/benchmark.yml`](../../.github/workflows/benchmark.yml)).
+  If you add a new module that is ALSO smoke-only, append it to the
+  `omit` list with a one-line rationale; do not lower the gate to
+  accommodate untested code.
 
 ## Before claiming done
 
@@ -120,6 +130,9 @@ Definition-of-done for any Python change in this directory:
 - [ ] **Tests for new logic** in `data/utils/` or `data/dtos/`. Subcommand
       modules are integration-tested via the end-to-end smoke; unit tests
       target the pure helpers.
+- [ ] **Coverage ≥ 95%** on the in-scope surface. `uv run pytest` prints
+      the table locally; CI gate enforces. Don't add new code to
+      `data/utils/` or `data/dtos/` without a matching `tests/test_<module>.py`.
 
 ## Hard rules
 

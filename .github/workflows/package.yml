@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-dart
-      - run: dart --no-version-check analyze lib test
+      - run: dart --no-version-check analyze lib test benchmark
 
   deps:
     name: Dependency validator

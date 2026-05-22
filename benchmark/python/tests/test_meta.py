@@ -1,16 +1,22 @@
 """Tests for `bicc_bench.data.utils.meta`.
 
-Focuses on the pure helpers (duration parsing, summary_metadata).
-`current_git_sha` and `current_package_version` touch the filesystem /
-subprocess - covered by the end-to-end smoke test in CI, not unit tests.
+Covers the pure helpers (duration parsing, summary_metadata, resolve)
+plus the environment readers (`current_git_sha`, `current_package_version`)
+- the latter use the real repo for happy-paths and monkeypatch subprocess /
+PROJECT_ROOT for the fallback branches.
 """
 
 from __future__ import annotations
+
+import subprocess
+from pathlib import Path
 
 import pytest
 
 from bicc_bench.data.dtos.result_record import ResultRecord
 from bicc_bench.data.utils.meta import (
+    current_git_sha,
+    current_package_version,
     parse_duration_overrides,
     resolve_duration,
     summary_metadata,
@@ -119,3 +125,84 @@ class TestSummaryMetadata:
         # Downstream uses these in f-strings - everything must be str.
         meta = summary_metadata(sample_records)
         assert all(isinstance(v, str) for v in meta.values())
+
+
+class TestCurrentGitSha:
+    def test_returns_short_sha_in_real_repo(self) -> None:
+        # Tests run inside the bicc repo - git rev-parse succeeds and
+        # returns a non-empty short SHA (7+ hex chars).
+        sha = current_git_sha()
+        assert sha != "unknown"
+        assert len(sha) >= 7
+        assert all(c in "0123456789abcdef" for c in sha)
+
+    def test_returns_unknown_when_git_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def raise_file_not_found(*_args: object, **_kwargs: object) -> object:
+            raise FileNotFoundError("mocked: git binary not on PATH")
+
+        monkeypatch.setattr(subprocess, "run", raise_file_not_found)
+        assert current_git_sha() == "unknown"
+
+    def test_returns_unknown_on_called_process_error(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def raise_called_process_error(*_args: object, **_kwargs: object) -> object:
+            raise subprocess.CalledProcessError(returncode=128, cmd=["git"])
+
+        monkeypatch.setattr(subprocess, "run", raise_called_process_error)
+        assert current_git_sha() == "unknown"
+
+    def test_returns_unknown_on_blank_stdout(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # git can in theory exit 0 with empty stdout - coerce to "unknown"
+        # rather than returning "" downstream.
+        class _Result:
+            stdout = "\n"
+
+        monkeypatch.setattr(subprocess, "run", lambda *_a, **_kw: _Result())
+        assert current_git_sha() == "unknown"
+
+
+class TestCurrentPackageVersion:
+    def test_returns_version_from_real_pubspec(self) -> None:
+        # Tests run inside the bicc repo - the root pubspec.yaml has a
+        # `version:` line. Should return a non-"unknown" semver-shaped string.
+        version = current_package_version()
+        assert version != "unknown"
+        # semver-ish: starts with a digit
+        assert version[0].isdigit()
+
+    def test_returns_unknown_when_pubspec_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        # Point PROJECT_ROOT at an empty tmp dir - no pubspec.yaml present.
+        monkeypatch.setattr("bicc_bench.data.utils.meta.PROJECT_ROOT", tmp_path)
+        assert current_package_version() == "unknown"
+
+    def test_returns_unknown_when_version_line_absent(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        # pubspec exists but has no `version:` line - line-prefix scan
+        # falls through to the trailing "unknown".
+        (tmp_path / "pubspec.yaml").write_text("name: fake_pkg\ndescription: no version here\n")
+        monkeypatch.setattr("bicc_bench.data.utils.meta.PROJECT_ROOT", tmp_path)
+        assert current_package_version() == "unknown"
+
+    def test_parses_version_from_synthetic_pubspec(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        (tmp_path / "pubspec.yaml").write_text("name: fake\nversion: 1.2.3\nother: 99\n")
+        monkeypatch.setattr("bicc_bench.data.utils.meta.PROJECT_ROOT", tmp_path)
+        assert current_package_version() == "1.2.3"
