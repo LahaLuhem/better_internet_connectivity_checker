@@ -299,3 +299,30 @@ anchor stable or grep-and-update every caller.
 - **If real-world demand materialises:** the shape is straightforward and non-breaking —
   keep one in-flight `Future` on `InternetConnection`, return it to concurrent callers,
   clear on completion. The API stays identical; the change is transparent.
+
+---
+
+<a id="why-benchmarks-gate-refactor"></a>
+## Why benchmark baselines gate refactor PRs
+
+- **Chosen:** any refactor that claims a performance, memory, or latency improvement
+  must ship its PR with before/after measurements from the
+  [`benchmark/`](./benchmark/) framework — JSON committed under
+  `benchmark/results/`, charts embedded in the PR description, Mann-Whitney U
+  p-values (via `benchmark/python/run.py compare`) for any "X improved" claim.
+  Refactors without an existing baseline must first land a baseline-capture commit
+  before the refactor commit.
+- **Why:** the package is published — every claim downstream users read is one
+  we have to defend. "Trust me, it's faster" is not enough when the audience is
+  every Dart developer who pulls the package. Numbers compared against a
+  committed baseline are reproducible by anyone with the repo; vibes are not.
+  The slow-observer scheduler-drift bug is the canonical example — the
+  scheduler stalls by hundreds of milliseconds when a slow observer is wired
+  in, which is invisible without the `tick_drift_meter` instrumentation but
+  obvious with it. We do not want to discover the next such bug after release.
+- **Methodology** (non-negotiable, lives in [`benchmark/README.md`](./benchmark/README.md)):
+  AOT compile (`dart compile exe`), pin the SDK via `.fvmrc`, N ≥ 10 iterations
+  per scenario, median + IQR (not mean — GC outliers skew means), Mann-Whitney U
+  for significance, warmup discarded, localhost-only HTTP. The Python orchestrator
+  (uv + ruff + polars + matplotlib + scipy) is maintainer-only — excluded from
+  the published tarball via `.pubignore`.

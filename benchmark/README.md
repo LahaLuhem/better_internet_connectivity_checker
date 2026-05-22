@@ -139,4 +139,21 @@ git SHA).
 
 ## Baselines
 
-_To be populated by Phase 2 of the benchmark plan._
+Each entry below references a JSON file under `results/`. Capture metadata
+(SDK version, machine identifier, git SHA, capture date) is embedded in each
+record so the file is self-describing.
+
+| File | Captured | SDK | Machine | Notes |
+|---|---|---|---|---|
+| `baseline-dart-3.11.5.json` | 2026-05-22 | 3.11.5 | (Apple Silicon, macOS) | First baseline. N=10. `long_running` at 30s (smoke); re-capture with 3600s for full hour bake. |
+
+### Headline numbers (current code, pre-refactor)
+
+These are the anchor values the upcoming event-bus refactor will be measured against.
+
+| Scenario | Metric | Median | Notes |
+|---|---|---|---|
+| `slow_observer` | `max_drift_microseconds` | **(populated post-capture)** | Headline. Sustained scheduler stall caused by slow synchronous observer. Post-refactor target: sub-millisecond. |
+| `quiet_app` | `max_drift_microseconds` | (populated post-capture) | Steady-state floor. Should not regress. |
+| `check_once_overhead` | `microseconds_per_check` | (populated post-capture) | Coordinator hot-path cost. Should not regress. |
+| `status_emission` (N=100) | `microseconds_per_emission` | (populated post-capture) | Public-stream broadcast cost. Should not regress (tier-1 stream stays unchanged). |

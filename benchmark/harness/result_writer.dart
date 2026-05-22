@@ -76,6 +76,7 @@ final class ResultWriter {
 
   Future<void> close() async {
     _sink.write('\n]\n');
+
     await _sink.flush();
     await _sink.close();
   }

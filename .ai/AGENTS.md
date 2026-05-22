@@ -62,6 +62,12 @@ better_internet_connectivity_checker/
 │           └── outcomes/                             Sealed cases via `part of`
 ├── test/                                             `dart test` units (mirrors lib/src/)
 ├── example/                                          Runnable usage samples (see example/AGENTS.md)
+├── benchmark/                                        Maintainer-only perf/memory framework
+│   ├── harness/                                      Shared Dart utilities (fake probe, etc.)
+│   ├── micro/                                        `benchmark_harness` micro-benches
+│   ├── scenarios/                                    Long-running stateful scenarios
+│   ├── python/                                       uv + ruff orchestrator (see python/AGENTS.md)
+│   └── results/                                      Checked-in baseline JSONs per SDK
 ├── analysis_options.yaml                             Strict-mode + opinionated lints
 ├── pubspec.yaml                                      Deps + cider config + topics
 ├── .pubignore                                        Files excluded from `pub publish`

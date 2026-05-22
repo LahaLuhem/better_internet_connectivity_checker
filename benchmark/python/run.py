@@ -60,6 +60,26 @@ WARMUP_ITERATIONS: Final[int] = 2
 # models for a tool with a stable internal schema. `Any` is justified.
 ResultRecord = dict[str, Any]
 
+# Per-scenario default durations (seconds). Tuned to capture meaningful
+# behaviour per scenario without wasting time. Micros ignore duration entirely
+# (`benchmark_harness` self-times). Override the whole row with
+# `--duration-seconds N` or one entry with `--duration scenario=N`.
+SCENARIO_DURATIONS: Final[dict[str, int]] = {
+    # Scenarios — wall-clock durations.
+    "quiet_app": 5,
+    "slow_observer": 5,
+    "flapping_network": 9,  # captures 3 toggles at 3s cadence
+    "trigger_storm": 5,  # 500 triggers at 100/sec
+    "many_subscribers": 3,  # x3 sub-Ns inside the binary = ~9s actual
+    "long_running": 30,  # smoke; raise to 3600 for a full hour bake
+    # Micros — value is irrelevant (ignored by the binary), but listed so
+    # the orchestrator passes _something_.
+    "check_once_overhead": 0,
+    "observer_dispatch": 0,
+    "status_emission": 0,
+}
+_FALLBACK_DURATION: Final[int] = 10
+
 
 # ---- subcommand: build ----------------------------------------------------
 
@@ -125,11 +145,17 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     git_sha = _current_git_sha()
     package_version = _current_package_version()
+    per_scenario_overrides = _parse_duration_overrides(args.duration)
 
     for exe in scenarios:
         scenario_outdir = outdir / exe.stem
         scenario_outdir.mkdir(parents=True, exist_ok=True)
-        print(f"\nrun    {exe.stem}  ({args.iterations} iterations)")
+        duration = _resolve_duration(
+            exe.stem,
+            global_override=args.duration_seconds,
+            per_scenario=per_scenario_overrides,
+        )
+        print(f"\nrun    {exe.stem}  ({args.iterations} iterations, {duration}s each)")
 
         for i in range(args.iterations):
             out_json = scenario_outdir / f"iter-{i:02d}.json"
@@ -145,7 +171,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                     "--package-version",
                     package_version,
                     "--duration-seconds",
-                    str(args.duration_seconds),
+                    str(duration),
                 ],
                 cwd=PROJECT_ROOT,
                 check=False,
@@ -391,6 +417,38 @@ def _group_samples(records: list[ResultRecord]) -> dict[tuple[str, str], list[fl
     return groups
 
 
+def _parse_duration_overrides(raw: list[str] | None) -> dict[str, int]:
+    """Parse `--duration scenario=N` flag values into a `{scenario: seconds}` map."""
+    if not raw:
+        return {}
+    out: dict[str, int] = {}
+    for entry in raw:
+        if "=" not in entry:
+            print(f"--duration expects scenario=N, got: {entry}", file=sys.stderr)
+            sys.exit(64)
+        scenario, value = entry.split("=", 1)
+        try:
+            out[scenario.strip()] = int(value)
+        except ValueError:
+            print(f"--duration value must be int, got: {value}", file=sys.stderr)
+            sys.exit(64)
+    return out
+
+
+def _resolve_duration(
+    scenario: str,
+    *,
+    global_override: int | None,
+    per_scenario: dict[str, int],
+) -> int:
+    """Per-scenario duration resolution: per-scenario > global > map default > fallback."""
+    if scenario in per_scenario:
+        return per_scenario[scenario]
+    if global_override is not None:
+        return global_override
+    return SCENARIO_DURATIONS.get(scenario, _FALLBACK_DURATION)
+
+
 def _current_git_sha() -> str:
     """Return the current git HEAD short SHA, or 'unknown' if git is unavailable."""
     try:
@@ -469,8 +527,21 @@ def main(argv: list[str] | None = None) -> int:
     parser_run.add_argument(
         "--duration-seconds",
         type=int,
-        default=10,
-        help="per-scenario wall-clock duration; micros ignore this (default 10)",
+        default=None,
+        help=(
+            "global wall-clock duration override applied to every scenario. "
+            "Default: use the per-scenario value from SCENARIO_DURATIONS."
+        ),
+    )
+    parser_run.add_argument(
+        "--duration",
+        action="append",
+        metavar="SCENARIO=SECONDS",
+        help=(
+            "per-scenario duration override (repeatable). "
+            "Example: --duration long_running=3600 --duration quiet_app=30. "
+            "Takes precedence over --duration-seconds."
+        ),
     )
     parser_run.set_defaults(func=cmd_run)
 
