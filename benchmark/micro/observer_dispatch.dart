@@ -70,10 +70,7 @@ Future<void> main(List<String> argv) async {
       samples: {
         'microseconds_per_dispatch': [microseconds],
       },
-      summary: {
-        'median_microseconds': microseconds,
-        'total_dispatches': observer.count.toDouble(),
-      },
+      summary: {'median_microseconds': microseconds, 'total_dispatches': observer.count.toDouble()},
     );
   }
 
