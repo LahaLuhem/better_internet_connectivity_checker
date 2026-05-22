@@ -24,6 +24,7 @@
     * [Wiring `connectivity_plus` (Flutter)](#wiring-connectivity_plus-flutter)
 - [When to reach for this](#when-to-reach-for-this)
 - [Performance & memory](#performance--memory)
+    * [Benchmarks](#benchmarks)
 - [Caveats](#caveats)
 - [Roadmap](#roadmap)
 - [Testing](#testing)
@@ -325,6 +326,8 @@ each answer a slightly different question — and the right pick depends on the 
 **Don't reach for this if** you only need "what network type am I on?" — use
 `connectivity_plus` directly and skip the per-check probe cost.
 
+## Performance & memory
+
 What the default configuration buys you, with no further configuration:
 
 - **Race-and-cancel probes** — `AnyReachablePolicy` returns on the first success and
@@ -350,6 +353,31 @@ What the default configuration buys you, with no further configuration:
   history buffer, rolling window, or per-probe cache is kept anywhere.
 
 Memory footprint per `InternetConnection` is well under 1 KB at steady state.
+
+### Benchmarks
+
+Empirical backing for the perf claims above lives in
+[`benchmark/`](https://github.com/LahaLuhem/better_internet_connectivity_checker/tree/main/benchmark)
+— a reproducible harness of AOT-compiled scenarios + micro-benches, orchestrated by a
+Python runner that aggregates with Mann-Whitney U significance tests over N ≥ 10
+iterations per scenario. The committed snapshot lives in
+[`benchmark/reports/SUMMARY.md`](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/benchmark/reports/SUMMARY.md);
+methodology and reproduction steps are in
+[`benchmark/README.md`](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/benchmark/README.md).
+
+Numbers and charts below are the maintainer's machine snapshot (Apple Silicon macOS,
+Dart SDK 3.11.5, N=10). They are sanity-check ballparks, not a performance contract —
+CPU, GC, OS scheduler, and thermal state vary across machines, so your absolute
+numbers WILL differ. Capture your own local baseline before claiming a regression
+or an improvement from a code change.
+
+![Worst-case scheduler stall per scenario, log y-axis](https://raw.githubusercontent.com/LahaLuhem/better_internet_connectivity_checker/main/benchmark/reports/headline_tick_drift.png)
+
+![Peak resident set size per scenario](https://raw.githubusercontent.com/LahaLuhem/better_internet_connectivity_checker/main/benchmark/reports/memory_peak_rss.png)
+
+![Noise floor across scenarios, slow_observer excluded](https://raw.githubusercontent.com/LahaLuhem/better_internet_connectivity_checker/main/benchmark/reports/scenario_stability.png)
+
+![Broadcast cost per emission vs subscriber count](https://raw.githubusercontent.com/LahaLuhem/better_internet_connectivity_checker/main/benchmark/reports/subscriber_scaling.png)
 
 ## Caveats
 
