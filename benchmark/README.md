@@ -30,25 +30,39 @@ The `benchmark/` directory is excluded from the published pub.dev tarball via
 ## Prerequisites
 
 - Dart SDK matching the project's [`.fvmrc`](../.fvmrc) pin. Different SDK = baseline JSON must be re-captured.
-- Python 3.10+ for the orchestrator/analyzer.
+- [`uv`](https://docs.astral.sh/uv/) for the Python orchestrator (`brew install uv` on macOS, or see upstream install docs). Pins Python via `python/.python-version` (3.12), creates `.venv`, manages deps from `python/pyproject.toml`, locks them in `python/uv.lock` (checked in for reproducibility).
 - `dart pub get` at the repo root (picks up `benchmark_harness` from `dev_dependencies`).
-- `pip install -r benchmark/python/requirements.txt`.
+- `cd benchmark/python && uv sync` (one-time — creates `.venv`, installs `numpy`, `scipy`, `polars`, `matplotlib`, `jinja2`, `ruff`).
 
 ## Running
 
+All commands below run from `benchmark/python/`. `uv run` automatically uses the project's `.venv`.
+
 ```bash
 # 1. Build all scenario .dart files to AOT exes
-python benchmark/python/run.py build
+uv run python run.py build
 
 # 2. Run all scenarios + micro-benches, default N=10 iterations
-python benchmark/python/run.py run --out=results/current.json
+uv run python run.py run --out=../results-local/current/
 
-# 3. Compare against baseline (Mann–Whitney U significance test)
-python benchmark/python/run.py compare benchmark/results/baseline-dart-<sdk>.json results/current.json
+# 3. Compare against baseline (Mann-Whitney U significance test)
+uv run python run.py compare ../results/baseline-dart-<sdk>.json ../results-local/current/aggregated.json
 
 # 4. Generate HTML report with matplotlib charts
-python benchmark/python/run.py report results/current.json --out=report.html
+uv run python run.py report ../results-local/current/aggregated.json --out=report.html
 ```
+
+### Linting the Python side
+
+The orchestrator is held to the same bar as the Dart side. Run before committing:
+
+```bash
+cd benchmark/python
+uv run ruff format .       # format
+uv run ruff check .        # lint
+```
+
+Config lives in [`python/pyproject.toml`](python/pyproject.toml) under `[tool.ruff]`.
 
 ## Methodology — non-negotiable
 
@@ -60,7 +74,7 @@ can't be defended.
 - **SDK pinned** via [`.fvmrc`](../.fvmrc). Any bump invalidates the baseline.
 - **N ≥ 10 iterations** per scenario. Report **median + IQR**, never mean —
   GC outliers skew means heavily on a single-threaded VM.
-- **Mann–Whitney U** (`scipy.stats.mannwhitneyu`) for significance claims.
+- **Mann-Whitney U** (`scipy.stats.mannwhitneyu`) for significance claims.
   Nonparametric, robust to GC outliers, doesn't assume normality. p < 0.05
   for "significant difference" claims.
 - **Warmup iterations discarded** — first 2 of every 10.

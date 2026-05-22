@@ -1,0 +1,61 @@
+# Project metadata + dependencies for the benchmark orchestrator / analyzer.
+#
+# Managed by `uv` (https://docs.astral.sh/uv/). Install + run:
+#
+#     cd benchmark/python
+#     uv sync                          # create .venv, install everything
+#     uv run python run.py build       # AOT-compile scenarios
+#     uv run python run.py run         # execute + capture JSON
+#     uv run ruff check .              # lint
+#     uv run ruff format .             # format
+#
+# `uv.lock` is checked into the repo for reproducible runs — perf claims are
+# only defensible if the analysis stack is pinned.
+
+[project]
+name = "bicc-benchmark"
+version = "0.1.0"
+description = "Benchmark orchestration + analysis for better_internet_connectivity_checker."
+requires-python = ">=3.10"
+
+# Runtime deps — used by run.py to orchestrate scenarios and analyse JSON.
+dependencies = [
+    "numpy>=1.26,<3.0",
+    "scipy>=1.11,<2.0",
+    # polars (Rust-backed) over pandas — faster on the result-set sizes we'll
+    # produce, cleaner expression API for aggregations, and the lazy frame
+    # model makes large-baseline diffs cheap.
+    "polars>=1.0,<2.0",
+    "matplotlib>=3.8,<4.0",
+    "jinja2>=3.1,<4.0",
+]
+
+[dependency-groups]
+# Maintainer-only: linter / formatter. ruff replaces black + flake8 + isort.
+dev = [
+    "ruff>=0.6,<1.0",
+]
+
+# ---- ruff -----------------------------------------------------------------
+
+[tool.ruff]
+# Matches the Dart `.editorconfig` / `analysis_options.yaml` line width.
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# Selection mirrors what's standard for a small typed Python utility:
+#   E   — pycodestyle errors (PEP 8 enforcement)
+#   F   — pyflakes (undefined names, unused imports, etc.)
+#   I   — isort (import ordering)
+#   B   — bugbear (likely bugs)
+#   UP  — pyupgrade (modern syntax for the pinned Python version)
+#   SIM — flake8-simplify (cleaner control flow)
+#   N   — pep8-naming
+#   RUF — ruff-specific rules
+select = ["E", "F", "I", "B", "UP", "SIM", "N", "RUF"]
+
+[tool.ruff.format]
+# Match ruff's own defaults — black-compatible. Explicit for readers.
+quote-style = "double"
+indent-style = "space"

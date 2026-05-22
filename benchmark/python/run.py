@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
 """Orchestrator for the `better_internet_connectivity_checker` benchmark suite.
 
-Workflow:
+Workflow (run from `benchmark/python/`):
 
-    python benchmark/python/run.py build              # AOT-compile all scenarios
-    python benchmark/python/run.py run --iterations 10 --out results/run-1/
-    python benchmark/python/run.py compare benchmark/results/baseline.json results/run-1/aggregated.json
-    python benchmark/python/run.py report results/run-1/aggregated.json --out report.html
+    uv sync                                      # one-time: create .venv + install deps
+    uv run python run.py build                   # AOT-compile all scenarios
+    uv run python run.py run --iterations 10 --out results/run-1/
+    uv run python run.py compare baseline.json results/run-1/aggregated.json
+    uv run python run.py report results/run-1/aggregated.json --out report.html
 
 Design notes:
 - Dart owns scenario *bodies* (must be in-process — instantiates the lib,
   observes streams). Each scenario is AOT-compiled for deterministic warmup.
 - This Python script owns *orchestration + analysis* — invokes the AOT
   scenarios via subprocess, aggregates per-iteration JSON, runs statistical
-  significance tests (Mann–Whitney U via scipy.stats), renders charts via
-  matplotlib, and generates HTML reports via Jinja2.
+  significance tests (Mann-Whitney U via scipy.stats), wrangles result sets
+  with polars, renders charts via matplotlib, and generates HTML reports
+  via Jinja2.
 
 Methodology rules (do not break — see ../README.md for rationale):
 - AOT compile, not JIT (`dart compile exe`).
 - N >= 10 iterations per scenario. Report median + IQR.
-- Mann–Whitney U for significance claims. p < 0.05.
+- Mann-Whitney U for significance claims. p < 0.05.
 - Warmup iterations discarded (first 2 of every 10).
 - AC power, no competing apps.
 - Localhost HTTP only — no real network.
@@ -29,29 +31,34 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Final
 
 # ---- paths ----------------------------------------------------------------
 
-THIS_FILE = Path(__file__).resolve()
-BENCHMARK_DIR = THIS_FILE.parent.parent
-PROJECT_ROOT = BENCHMARK_DIR.parent
-SCENARIOS_DIR = BENCHMARK_DIR / "scenarios"
-MICRO_DIR = BENCHMARK_DIR / "micro"
-BUILD_DIR = BENCHMARK_DIR / "build"
-RESULTS_DIR = BENCHMARK_DIR / "results"
+THIS_FILE: Final[Path] = Path(__file__).resolve()
+BENCHMARK_DIR: Final[Path] = THIS_FILE.parent.parent
+PROJECT_ROOT: Final[Path] = BENCHMARK_DIR.parent
+SCENARIOS_DIR: Final[Path] = BENCHMARK_DIR / "scenarios"
+MICRO_DIR: Final[Path] = BENCHMARK_DIR / "micro"
+BUILD_DIR: Final[Path] = BENCHMARK_DIR / "build"
+RESULTS_DIR: Final[Path] = BENCHMARK_DIR / "results"
 
 # Default number of iterations per scenario. Override with --iterations.
-DEFAULT_ITERATIONS = 10
+DEFAULT_ITERATIONS: Final[int] = 10
 
 # How many warmup iterations to discard from every run. Phase 1 doesn't
-# enforce this yet — the analyzer trims when computing aggregates.
-WARMUP_ITERATIONS = 2
+# enforce this yet - the analyzer trims when computing aggregates.
+WARMUP_ITERATIONS: Final[int] = 2
+
+# JSON-decoded scenario records have a fixed schema (see README §5), but the
+# Python json module returns `Any` for everything. We narrow to `dict[str, Any]`
+# here and validate-on-use rather than ceremony with TypedDict / pydantic
+# models for a tool with a stable internal schema. `Any` is justified.
+ResultRecord = dict[str, Any]
 
 
 # ---- subcommand: build ----------------------------------------------------
@@ -71,7 +78,7 @@ def cmd_build(args: argparse.Namespace) -> int:
         print("no scenario or micro sources to build (yet)", file=sys.stderr)
         return 0
 
-    failed = []
+    failed: list[Path] = []
     for src in sources:
         out = BUILD_DIR / src.stem
         if out.exists() and not args.force:
@@ -114,7 +121,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         return 1
 
     scenarios = _filter_by_name(exes, args.scenarios)
-    all_records: list[dict] = []
+    all_records: list[ResultRecord] = []
 
     for exe in scenarios:
         scenario_outdir = outdir / exe.stem
@@ -152,16 +159,18 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
-    """Diff two aggregated.json result sets with Mann–Whitney U.
+    """Diff two aggregated.json result sets with Mann-Whitney U.
 
     Output: table of (scenario, metric, baseline median, current median,
     delta %, p-value, significant?).
     """
     try:
-        import numpy as np  # noqa: F401 — import for side effect only here
         from scipy import stats as scipy_stats
     except ImportError:
-        print("scipy + numpy required: pip install -r benchmark/python/requirements.txt", file=sys.stderr)
+        print(
+            "scipy required — run `uv sync` from benchmark/python/",
+            file=sys.stderr,
+        )
         return 1
 
     baseline = _load_aggregated(args.baseline)
@@ -170,7 +179,11 @@ def cmd_compare(args: argparse.Namespace) -> int:
     base_groups = _group_samples(baseline)
     curr_groups = _group_samples(current)
 
-    print(f"{'scenario':<24} {'metric':<28} {'baseline':>12} {'current':>12} {'delta':>10} {'p-value':>10} {'sig?':<5}")
+    header = (
+        f"{'scenario':<24} {'metric':<28} "
+        f"{'baseline':>12} {'current':>12} {'delta':>10} {'p-value':>10} {'sig?':<5}"
+    )
+    print(header)
     print("-" * 105)
 
     any_significant = False
@@ -188,16 +201,16 @@ def cmd_compare(args: argparse.Namespace) -> int:
         )
 
         try:
-            u_stat, p_value = scipy_stats.mannwhitneyu(
+            _u_stat, p_value = scipy_stats.mannwhitneyu(
                 base_samples, curr_samples, alternative="two-sided"
             )
         except ValueError:
-            # All samples identical — Mann–Whitney undefined. Treat as not significant.
+            # All samples identical - Mann-Whitney undefined. Treat as not significant.
             p_value = 1.0
         significant = p_value < 0.05
         any_significant = any_significant or significant
 
-        sig_marker = "★" if significant else ""
+        sig_marker = "*" if significant else ""
         print(
             f"{scenario:<24} {metric:<28} "
             f"{base_median:>12.3f} {curr_median:>12.3f} "
@@ -206,7 +219,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
     print()
     if any_significant:
-        print("★ = statistically significant at p < 0.05 (Mann–Whitney U)")
+        print("* = statistically significant at p < 0.05 (Mann-Whitney U)")
     else:
         print("no significant differences detected")
 
@@ -246,26 +259,21 @@ def _filter_by_name(exes: list[Path], wanted: list[str] | None) -> list[Path]:
     return [e for e in exes if e.stem in wanted_set]
 
 
-def _load_aggregated(path: str | Path) -> list[dict]:
+def _load_aggregated(path: str | Path) -> list[ResultRecord]:
     return json.loads(Path(path).read_text())
 
 
-@dataclass
-class _SampleGroups:
-    by_scenario_metric: dict[tuple[str, str], list[float]] = field(default_factory=dict)
-
-
-def _group_samples(records: list[dict]) -> dict[tuple[str, str], list[float]]:
-    """Flatten records into {(scenario, metric): [all samples across iterations]}."""
+def _group_samples(records: list[ResultRecord]) -> dict[tuple[str, str], list[float]]:
+    """Flatten records into `{(scenario, metric): [all samples across iterations]}`."""
     groups: dict[tuple[str, str], list[float]] = {}
     for rec in records:
-        scenario = rec.get("scenario", "?")
-        samples = rec.get("samples", {})
+        scenario: str = rec.get("scenario", "?")
+        samples: dict[str, Any] = rec.get("samples", {})
         for metric, values in samples.items():
             if not isinstance(values, list):
                 continue
             key = (scenario, metric)
-            groups.setdefault(key, []).extend(v for v in values if isinstance(v, (int, float)))
+            groups.setdefault(key, []).extend(v for v in values if isinstance(v, int | float))
     return groups
 
 
@@ -283,41 +291,51 @@ def _median(values: list[float]) -> float:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_build = sub.add_parser("build", help="AOT-compile every scenario and micro source")
-    p_build.add_argument("--force", action="store_true", help="rebuild even if exe is up to date")
-    p_build.set_defaults(func=cmd_build)
+    parser_build = sub.add_parser("build", help="AOT-compile every scenario and micro source")
+    parser_build.add_argument(
+        "--force",
+        action="store_true",
+        help="rebuild even if exe is up to date",
+    )
+    parser_build.set_defaults(func=cmd_build)
 
-    p_run = sub.add_parser("run", help="execute compiled scenarios N times, write JSON")
-    p_run.add_argument(
+    parser_run = sub.add_parser("run", help="execute compiled scenarios N times, write JSON")
+    parser_run.add_argument(
         "--iterations",
         type=int,
         default=DEFAULT_ITERATIONS,
         help=f"iterations per scenario (default {DEFAULT_ITERATIONS})",
     )
-    p_run.add_argument(
+    parser_run.add_argument(
         "--out",
         default=str(BENCHMARK_DIR / "results-local" / "latest"),
         help="output directory for per-iteration JSON files",
     )
-    p_run.add_argument(
+    parser_run.add_argument(
         "--scenarios",
         nargs="*",
         help="restrict to named scenarios (default: all)",
     )
-    p_run.set_defaults(func=cmd_run)
+    parser_run.set_defaults(func=cmd_run)
 
-    p_cmp = sub.add_parser("compare", help="Mann–Whitney U diff of two aggregated.json files")
-    p_cmp.add_argument("baseline", help="path to baseline aggregated.json")
-    p_cmp.add_argument("current", help="path to current aggregated.json")
-    p_cmp.set_defaults(func=cmd_compare)
+    parser_compare = sub.add_parser(
+        "compare",
+        help="Mann-Whitney U diff of two aggregated.json files",
+    )
+    parser_compare.add_argument("baseline", help="path to baseline aggregated.json")
+    parser_compare.add_argument("current", help="path to current aggregated.json")
+    parser_compare.set_defaults(func=cmd_compare)
 
-    p_rep = sub.add_parser("report", help="render HTML report from aggregated.json")
-    p_rep.add_argument("results", help="path to aggregated.json")
-    p_rep.add_argument("--out", default="report.html", help="output HTML path")
-    p_rep.set_defaults(func=cmd_report)
+    parser_report = sub.add_parser("report", help="render HTML report from aggregated.json")
+    parser_report.add_argument("results", help="path to aggregated.json")
+    parser_report.add_argument("--out", default="report.html", help="output HTML path")
+    parser_report.set_defaults(func=cmd_report)
 
     args = parser.parse_args(argv)
     return args.func(args)
