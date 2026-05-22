@@ -13,12 +13,17 @@ benchmark/
 ├── micro/                     benchmark_harness-based micro-benches
 ├── scenarios/                 long-running stateful scenarios
 ├── python/                    orchestration + analysis + reporting
-├── results/                   checked-in baseline JSONs (one per SDK ver)
+├── charts/
+│   └── reference/             committed maintainer reference charts (PNG + SUMMARY.md)
+├── results-local/             contributor-local run outputs (gitignored)
+├── results/                   legacy run-output dir (gitignored; kept for older workflows)
 └── build/                     AOT-compiled scenario exes (gitignored)
 ```
 
 The `benchmark/` directory is excluded from the published pub.dev tarball via
-[`.pubignore`](../.pubignore) — none of these ship to downstream users.
+[`.pubignore`](../.pubignore) — none of the source ships to downstream users.
+The reference PNGs under `charts/reference/` are referenced from the package
+README via GitHub raw URLs (see [Reference charts](#reference-charts) below).
 
 ## Two layers
 
@@ -32,25 +37,43 @@ The `benchmark/` directory is excluded from the published pub.dev tarball via
 - Dart SDK matching the project's [`.fvmrc`](../.fvmrc) pin. Different SDK = baseline JSON must be re-captured.
 - [`uv`](https://docs.astral.sh/uv/) for the Python orchestrator (`brew install uv` on macOS, or see upstream install docs). Pins Python via `python/.python-version` (3.12), creates `.venv`, manages deps from `python/pyproject.toml`, locks them in `python/uv.lock` (checked in for reproducibility).
 - `dart pub get` at the repo root (picks up `benchmark_harness` from `dev_dependencies`).
-- `cd benchmark/python && uv sync` (one-time — creates `.venv`, installs `numpy`, `scipy`, `polars`, `matplotlib`, `jinja2`, `ruff`).
+- `cd benchmark/python && uv sync` (one-time — creates `.venv`, installs `numpy`, `scipy`, `polars`, `matplotlib`, `seaborn`, `jinja2`, `ruff`). Seaborn pulls `pandas` transitively — used only at the seaborn-API boundary in the chart helpers; everything else stays in polars.
 
 ## Running
 
 All commands below run from `benchmark/python/`. `uv run` automatically uses the project's `.venv`.
 
 ```bash
-# 1. Build all scenario .dart files to AOT exes
+# 1. Build all scenario .dart files to AOT exes.
+#    Parallelised across cores; cap with --workers if you're memory-bound.
 uv run python run.py build
 
-# 2. Run all scenarios + micro-benches, default N=10 iterations
-uv run python run.py run --out=../results-local/current/
+# 2. Run all scenarios + micro-benches, default N=10 iterations.
+#    Each scenario binary now accepts --iterations and emits N records from
+#    one subprocess invocation — saves N-1 process startups per scenario.
+uv run python run.py run --iterations 10 --out=../results-local/current/
 
-# 3. Compare against baseline (Mann-Whitney U significance test)
-uv run python run.py compare ../results/baseline-dart-<sdk>.json ../results-local/current/aggregated.json
+# 3. Compare two runs (Mann-Whitney U significance test).
+uv run python run.py compare ../results-local/baseline/aggregated.json \
+                              ../results-local/current/aggregated.json
 
-# 4. Generate HTML report with matplotlib charts
-uv run python run.py report ../results-local/current/aggregated.json --out=report.html
+# 4. Generate PNG charts + SUMMARY.md from aggregated.json.
+#    Default output: <aggregated parent>/charts/ (next to the JSON, gitignored).
+uv run python run.py report ../results-local/current/aggregated.json
 ```
+
+### Parallelism — what is and isn't parallel
+
+| Stage | Parallel? | Why |
+|---|---|---|
+| `build` (AOT compile) | Yes (threads) | Compilation does no measurement; speed up freely. |
+| `run` (measurement) | **No** | CPU contention destroys the signal. Iterations stay serial within a scenario; scenarios stay serial across each other. |
+| `compare` / `report` | N/A | I/O-bound; fast already. |
+
+Iteration *batching* (one subprocess per scenario instead of per iteration)
+is a different optimisation — it preserves measurement isolation because
+each iteration still runs alone in the process, with `forceGc` + a 100 ms
+settle between iterations.
 
 ### Linting the Python side
 
@@ -170,6 +193,40 @@ uv run python run.py compare \
 The output flags every (scenario, metric) where the after-run differs
 significantly (p < 0.05, Mann-Whitney U). Paste the relevant rows + a chart
 into the PR description as evidence.
+
+### Charts
+
+`report` renders four PNGs + a `SUMMARY.md` alongside the JSON:
+
+- `headline_tick_drift.png` — box plot of `max_drift_microseconds` per
+  scenario on a log y-axis. `slow_observer` should tower above the rest;
+  that gap is the bug the upcoming refactor fixes.
+- `memory_peak_rss.png` — peak RSS per scenario in MB.
+- `scenario_stability.png` — `max_drift_microseconds` per scenario with
+  `slow_observer` excluded so the noise floor is readable. Narrow boxes =
+  reproducible.
+- `subscriber_scaling.png` — broadcast cost per emission vs subscriber
+  count, from the `status_emission` micro.
+
+`SUMMARY.md` has a summary table above each chart, formatted so the
+maintainer can drop the relevant sections into the package README.
+
+## Reference charts
+
+`benchmark/charts/reference/` is the **committed** maintainer reference
+set. These PNGs are linked from the package README to give pub.dev viewers
+a visual sense of the package's perf shape without having to clone +
+build. Update them by passing `--reference` to `report`:
+
+```bash
+# (after capturing a clean baseline + producing aggregated.json)
+uv run python run.py report ../results-local/baseline/aggregated.json --reference
+```
+
+This writes to `benchmark/charts/reference/`. Treat the regeneration as
+an explicit step — only the maintainer should run it, only after a
+deliberate baseline capture. Contributor runs land in `results-local/`
+and never touch the reference set unless `--reference` is passed.
 
 <details>
 <summary><strong>Reference run — 2026-05-22, Apple Silicon macOS, Dart 3.11.5, N=10</strong> (maintainer's machine; your numbers WILL differ)</summary>

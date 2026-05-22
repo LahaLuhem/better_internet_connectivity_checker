@@ -24,9 +24,19 @@ dependencies = [
     "scipy>=1.11,<2.0",
     # polars (Rust-backed) over pandas — faster on the result-set sizes we'll
     # produce, cleaner expression API for aggregations, and the lazy frame
-    # model makes large-baseline diffs cheap.
+    # model makes large-baseline diffs cheap. Analysis stays in polars; the
+    # chart script converts to pandas only at the seaborn boundary.
     "polars>=1.0,<2.0",
     "matplotlib>=3.8,<4.0",
+    # seaborn gives publication-quality stats plots (box, violin, point with
+    # CI) for ~zero boilerplate vs raw matplotlib. Pulls pandas transitively
+    # — that's accepted only because seaborn requires it; do not use pandas
+    # outside the chart-rendering helpers in run.py.
+    "seaborn>=0.13,<1.0",
+    # pyarrow is needed for polars.DataFrame.to_pandas() — that conversion is
+    # the bridge between our polars-based analysis and seaborn's pandas-only
+    # plotting API. Without pyarrow, to_pandas() raises ModuleNotFoundError.
+    "pyarrow>=15.0,<22.0",
     "jinja2>=3.1,<4.0",
 ]
 
