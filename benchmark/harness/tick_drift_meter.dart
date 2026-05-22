@@ -45,7 +45,7 @@ final class TickDriftMeter {
   /// Median drift. Zero if no samples.
   Duration get medianDrift {
     if (_drifts.isEmpty) return Duration.zero;
-    final sorted = List<Duration>.from(_drifts)..sort();
+    final sorted = List<Duration>.of(_drifts)..sort();
 
     return sorted[sorted.length ~/ 2];
   }
@@ -53,7 +53,7 @@ final class TickDriftMeter {
   /// p95 drift. Zero if no samples.
   Duration get p95Drift {
     if (_drifts.isEmpty) return Duration.zero;
-    final sorted = List<Duration>.from(_drifts)..sort();
+    final sorted = List<Duration>.of(_drifts)..sort();
 
     return sorted[(sorted.length * 0.95).floor().clamp(0, sorted.length - 1)];
   }

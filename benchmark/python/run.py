@@ -123,6 +123,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     scenarios = _filter_by_name(exes, args.scenarios)
     all_records: list[ResultRecord] = []
 
+    git_sha = _current_git_sha()
+    package_version = _current_package_version()
+
     for exe in scenarios:
         scenario_outdir = outdir / exe.stem
         scenario_outdir.mkdir(parents=True, exist_ok=True)
@@ -131,8 +134,21 @@ def cmd_run(args: argparse.Namespace) -> int:
         for i in range(args.iterations):
             out_json = scenario_outdir / f"iter-{i:02d}.json"
             result = subprocess.run(
-                [str(exe), "--iteration", str(i), "--output", str(out_json)],
+                [
+                    str(exe),
+                    "--iteration",
+                    str(i),
+                    "--output",
+                    str(out_json),
+                    "--git-sha",
+                    git_sha,
+                    "--package-version",
+                    package_version,
+                    "--duration-seconds",
+                    str(args.duration_seconds),
+                ],
                 cwd=PROJECT_ROOT,
+                check=False,
             )
             if result.returncode != 0:
                 print(f"  iter {i:02d}  FAILED (exit {result.returncode})", file=sys.stderr)
@@ -230,16 +246,114 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
-    """Generate an HTML report with matplotlib charts from one or more result sets.
+    """Generate an HTML report from one aggregated.json file.
 
-    Phase 1 stub — full implementation lands when scenarios produce real data.
+    Phase 1 (now): per-scenario summary table with median over iterations of
+    every summary metric. polars handles the group-by; HTML is hand-rendered
+    (no pandas dep). Matplotlib charts land in Phase 2 once we have real
+    baseline data to plot.
     """
-    print(
-        "report subcommand: not yet implemented. Will land in Phase 1 step 7 of\n"
-        "~/Desktop/bicc-benchmark-plan-2026-05-21.md, after scenarios are running.\n"
-        f"input: {args.results}, output: {args.out}"
+    try:
+        import polars as pl
+    except ImportError:
+        print(
+            "polars required - run `uv sync` from benchmark/python/",
+            file=sys.stderr,
+        )
+        return 1
+
+    records = _load_aggregated(args.results)
+    if not records:
+        print("no records found in input", file=sys.stderr)
+        return 1
+
+    # Flatten each record's `summary` block into a single row. `samples`
+    # (the raw arrays) are deferred until Phase 2 charting.
+    rows: list[dict[str, Any]] = []
+    metadata_cols = {"scenario", "iteration", "git_sha", "package_version", "sdk_version"}
+    for rec in records:
+        flat: dict[str, Any] = {
+            "scenario": rec.get("scenario", "?"),
+            "iteration": rec.get("iteration", -1),
+            "git_sha": rec.get("git_sha", "?"),
+            "package_version": rec.get("package_version", "?"),
+            "sdk_version": rec.get("sdk_version", "?"),
+        }
+        summary: dict[str, Any] = rec.get("summary", {})
+        for metric, value in summary.items():
+            flat[metric] = value
+        rows.append(flat)
+
+    dataframe = pl.DataFrame(rows, infer_schema_length=None)
+    metric_cols = [c for c in dataframe.columns if c not in metadata_cols]
+    numeric_metrics = [
+        c
+        for c in metric_cols
+        if dataframe.schema[c].is_numeric()  # type: ignore[union-attr]
+    ]
+
+    # Median across iterations per scenario.
+    aggregated = dataframe.group_by("scenario").agg(
+        [pl.col(c).median().alias(c) for c in numeric_metrics],
     )
+
+    html = _render_summary_html(aggregated, scenarios=list(dataframe["scenario"].unique()))
+    Path(args.out).write_text(html)
+    print(f"wrote report: {args.out}")
+    print(f"  scenarios summarised: {dataframe['scenario'].n_unique()}")
+    print(f"  total records: {len(records)}")
+
     return 0
+
+
+def _render_summary_html(df: Any, *, scenarios: list[str]) -> str:
+    """Render a polars DataFrame as an HTML summary table. No pandas required."""
+    cols: list[str] = df.columns
+    rows_html: list[str] = []
+    for row in df.iter_rows(named=True):
+        cells = "".join(f"<td>{_format_cell(row[c])}</td>" for c in cols)
+        rows_html.append(f"<tr>{cells}</tr>")
+    header = "".join(f"<th>{c}</th>" for c in cols)
+
+    scenarios_label = ", ".join(scenarios) if scenarios else "(none)"
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>bicc benchmark report</title>
+<style>
+  body {{ font-family: -apple-system, system-ui, sans-serif; margin: 2em; }}
+  table {{ border-collapse: collapse; margin-top: 1em; }}
+  th, td {{ border: 1px solid #ccc; padding: 4px 8px; text-align: right; }}
+  th:first-child, td:first-child {{ text-align: left; font-weight: 600; }}
+  tr:nth-child(even) {{ background: #f7f7f7; }}
+  .meta {{ color: #666; font-size: 0.9em; }}
+</style>
+</head>
+<body>
+<h1>bicc benchmark report</h1>
+<p class="meta">scenarios: {scenarios_label}</p>
+<table>
+  <thead><tr>{header}</tr></thead>
+  <tbody>
+{chr(10).join("    " + r for r in rows_html)}
+  </tbody>
+</table>
+<p class="meta">Charts + Mann-Whitney comparisons land in Phase 2.</p>
+</body>
+</html>
+"""
+
+
+def _format_cell(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, float):
+        return f"{value:,.1f}"
+    if isinstance(value, int):
+        return f"{value:,}"
+    return str(value)
 
 
 # ---- helpers --------------------------------------------------------------
@@ -275,6 +389,36 @@ def _group_samples(records: list[ResultRecord]) -> dict[tuple[str, str], list[fl
             key = (scenario, metric)
             groups.setdefault(key, []).extend(v for v in values if isinstance(v, int | float))
     return groups
+
+
+def _current_git_sha() -> str:
+    """Return the current git HEAD short SHA, or 'unknown' if git is unavailable."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "unknown"
+    return result.stdout.strip() or "unknown"
+
+
+def _current_package_version() -> str:
+    """Read the `version:` field from the root `pubspec.yaml`.
+
+    Avoids pulling in `pyyaml` for one field — a line-prefix scan is enough.
+    Returns 'unknown' if not found.
+    """
+    pubspec = PROJECT_ROOT / "pubspec.yaml"
+    if not pubspec.exists():
+        return "unknown"
+    for line in pubspec.read_text().splitlines():
+        if line.startswith("version:"):
+            return line.split(":", 1)[1].strip()
+    return "unknown"
 
 
 def _median(values: list[float]) -> float:
@@ -321,6 +465,12 @@ def main(argv: list[str] | None = None) -> int:
         "--scenarios",
         nargs="*",
         help="restrict to named scenarios (default: all)",
+    )
+    parser_run.add_argument(
+        "--duration-seconds",
+        type=int,
+        default=10,
+        help="per-scenario wall-clock duration; micros ignore this (default 10)",
     )
     parser_run.set_defaults(func=cmd_run)
 

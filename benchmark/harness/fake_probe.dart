@@ -72,6 +72,7 @@ final class FakeProbe implements ConnectivityProbe {
   ProbeResult _nextScripted(ProbeTarget target) {
     final result = _script![_scriptIndex];
     _scriptIndex = (_scriptIndex + 1) % _script.length;
+
     // Rebind the target — the scripted result was likely built with a
     // placeholder target, but the scheduler passes its configured target in.
     return result.isSuccess
