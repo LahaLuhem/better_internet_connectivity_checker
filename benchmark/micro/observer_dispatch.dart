@@ -16,6 +16,17 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
+final class _ObserverDispatch extends BenchmarkBase {
+  _ObserverDispatch(this._observer, this._previous, this._next) : super('observer_dispatch');
+
+  final _NoopCountingObserver _observer;
+  final InternetStatus _previous;
+  final InternetStatus _next;
+
+  @override
+  void run() => _observer.onStatusChangeEmitted(_previous, _next);
+}
+
 /// Minimal subclass — counts calls but does no work. Mirrors what a
 /// PrintingConnectivityObserver-style consumer looks like in the steady
 /// state (no expensive side effect on the hot path).
@@ -26,17 +37,6 @@ final class _NoopCountingObserver extends ConnectivityObserver {
 
   @override
   void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) => count++;
-}
-
-final class _DispatchBenchmark extends BenchmarkBase {
-  _DispatchBenchmark(this._observer, this._previous, this._next) : super('observer_dispatch');
-
-  final _NoopCountingObserver _observer;
-  final InternetStatus _previous;
-  final InternetStatus _next;
-
-  @override
-  void run() => _observer.onStatusChangeEmitted(_previous, _next);
 }
 
 Future<void> main(List<String> argv) async {
@@ -63,7 +63,7 @@ Future<void> main(List<String> argv) async {
     final observer = _NoopCountingObserver();
 
     forceGc();
-    final microseconds = _DispatchBenchmark(observer, previous, next).measure();
+    final microseconds = _ObserverDispatch(observer, previous, next).measure();
 
     writer.writeRecord(
       iteration: i,

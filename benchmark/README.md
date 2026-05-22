@@ -130,9 +130,6 @@ can't be defended.
 
 ## Metrics tracked
 
-See [`~/Desktop/bicc-benchmark-plan-2026-05-21.md`](file:///Users/mehul/Desktop/bicc-benchmark-plan-2026-05-21.md)
-§3 for the finalised metrics list. Summary:
-
 - **Memory**: static footprint, active footprint, allocation rate per tick, RSS delta over long runs.
 - **Time**: coordinator overhead per tick, tier-1/tier-2 emission latency, per-event cost vs subscribers, dispose latency.
 - **Concurrency**: throughput ceiling, trigger storm response, subscriber-count scaling.

@@ -25,8 +25,8 @@ import '../harness/scenario_args.dart';
 
 const _subscriberCounts = <int>[1, 10, 100];
 
-final class _StatusEmissionBenchmark extends BenchmarkBase {
-  _StatusEmissionBenchmark(this.subscriberCount) : super('status_emission_n$subscriberCount');
+final class _StatusEmission extends BenchmarkBase {
+  _StatusEmission(this.subscriberCount) : super('status_emission_n$subscriberCount');
 
   final int subscriberCount;
   late StreamController<InternetStatus> _controller;
@@ -72,7 +72,7 @@ Future<void> main(List<String> argv) async {
   for (var i = 0; i < args.iterations; i++) {
     for (final subscriberCount in _subscriberCounts) {
       forceGc();
-      final microseconds = _StatusEmissionBenchmark(subscriberCount).measure();
+      final microseconds = _StatusEmission(subscriberCount).measure();
       writer.writeRecord(
         iteration: i,
         samples: {

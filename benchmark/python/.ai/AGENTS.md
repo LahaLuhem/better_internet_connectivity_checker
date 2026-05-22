@@ -7,15 +7,7 @@ maintainer-only tooling (excluded from `dart pub publish`).
 
 ## Style: Python as strongly typed
 
-House style mirrors the user's other repo
-[`LahaLuhem/mysql_distillery`](https://github.com/LahaLuhem/mysql_distillery)
-— specifically:
-
-- [`.ai/AGENTS.md` § "Style (Python-as-strongly-typed)"](https://github.com/LahaLuhem/mysql_distillery/blob/main/.ai/AGENTS.md#style-python-as-strongly-typed)
-- [`.ai/CLAUDE.md` § "Typing expectations (project-specific)"](https://github.com/LahaLuhem/mysql_distillery/blob/main/.ai/CLAUDE.md#typing-expectations-project-specific)
-
-Restated inline (so this brief is self-contained — don't make agents fetch the
-upstream every time):
+House rules — Python written closer to typed Dart than to dynamic-Python idiom:
 
 - **Annotate every function signature and every module-level constant.**
   No bare `def foo(x)`. No bare `FOO = 10`.
@@ -28,7 +20,7 @@ upstream every time):
   are the exception, not the default.
 - **Return concrete types, not `Any`.** If you reach for `Any`, justify it
   in a comment immediately above the annotation. (Example here: `ResultRecord
-  = dict[str, Any]` in [`bicc_bench/data/dtos/result_record.py`](bicc_bench/data/dtos/result_record.py)
+  = dict[str, Any]` in [`bicc_bench/data/dtos/result_record.py`](../bicc_bench/data/dtos/result_record.py)
   — JSON decoding is inherently dynamic, and we validate at boundaries rather
   than ceremony with TypedDict.)
 - **No Java patterns.** No getters/setters, no interface-per-class, no
@@ -46,17 +38,15 @@ upstream every time):
 - **`uv`** (https://docs.astral.sh/uv/) manages env + deps. `uv.lock` is
   checked into the repo for reproducibility.
 - **`ruff`** for both lint and format (replaces black + flake8 + isort).
-  Config in [`pyproject.toml`](pyproject.toml) under `[tool.ruff]`.
-- **`pytest`** for the test suite under [`tests/`](tests/). Config in
-  [`pyproject.toml`](pyproject.toml) under `[tool.pytest.ini_options]`.
-- **Python pinned to 3.12** via [`.python-version`](.python-version). Match
+  Config in [`pyproject.toml`](../pyproject.toml) under `[tool.ruff]`.
+- **`pytest`** for the test suite under [`tests/`](../tests/). Config in
+  [`pyproject.toml`](../pyproject.toml) under `[tool.pytest.ini_options]`.
+- **Python pinned to 3.12** via [`.python-version`](../.python-version). Match
   via `uv sync` (uv reads `.python-version` automatically).
 
 ## Package layout
 
-Structure mirrors `mysql_distillery` so a contributor familiar with one
-finds the other immediately. See [`bicc_bench/__init__.py`](bicc_bench/__init__.py)
-for the live tour.
+See [`bicc_bench/__init__.py`](../bicc_bench/__init__.py) for the live tour.
 
 ```
 benchmark/python/
@@ -86,8 +76,8 @@ benchmark/python/
   package. Functions stay underscore-prefixed only when they're purely
   module-local (e.g. `_print_compare_table` in `subcommands/compare.py`,
   `_compile_one` in `subcommands/build.py`, `_forest_colour` in `charts.py`).
-- **One value class per file under `data/dtos/`** — matches mysql_distillery's
-  `data/dtos/` and `data/models/` conventions.
+- **One value class per file under `data/dtos/`** — keeps the data-class
+  hierarchy flat and obvious to navigate.
 - **Subcommands import helpers from `data/utils/`**; helpers never import
   from `subcommands/`. Acyclic.
 - **`config.py` imports nothing from `bicc_bench`** — it's the leaf module
@@ -98,18 +88,18 @@ benchmark/python/
 - `uv run pytest` runs the whole suite. `uv run pytest -q` for quiet mode.
 - One test file per source module, mirroring the package layout (e.g.
   `tests/test_stats.py` ↔ `bicc_bench/data/utils/stats.py`).
-- Shared fixtures live in [`tests/conftest.py`](tests/conftest.py) -
+- Shared fixtures live in [`tests/conftest.py`](../tests/conftest.py) -
   synthetic `ResultRecord` lists, not on-disk fixture JSON files.
 - **Test the deterministic surface**: math, formatting, table rendering,
   CLI arg parsing. Skip chart PNG comparison (brittle); the end-to-end
   smoke run covers chart rendering.
-- **Coverage scope** is configured in [`pyproject.toml`](pyproject.toml)
+- **Coverage scope** is configured in [`pyproject.toml`](../pyproject.toml)
   under `[tool.coverage.run]`. `charts.py` and `subcommands/*` are
   `omit`-ed because they are smoke-only by design — they don't appear in
   either the numerator OR the denominator. Everything else (config,
   data/dtos, data/utils minus charts) sits inside the scope and is
   expected to be unit-tested. **CI gate is 95%** (`--cov-fail-under=95`
-  in [`.github/workflows/benchmark.yml`](../../.github/workflows/benchmark.yml)).
+  in [`.github/workflows/benchmark.yml`](../../../.github/workflows/benchmark.yml)).
   If you add a new module that is ALSO smoke-only, append it to the
   `omit` list with a one-line rationale; do not lower the gate to
   accommodate untested code.
@@ -138,10 +128,10 @@ Definition-of-done for any Python change in this directory:
 
 - **Never edit `uv.lock` by hand.** Run `uv sync` / `uv add` / `uv lock` to
   regenerate.
-- **Never commit `.venv/` or `__pycache__/`.** [`benchmark/.gitignore`](../.gitignore)
+- **Never commit `.venv/` or `__pycache__/`.** [`benchmark/.gitignore`](../../.gitignore)
   already excludes both.
 - **Never use `pip install` directly.** Always go through `uv`. Mixed
   `pip`/`uv` envs are subtly broken.
 - **Bash only for `uv`, `ruff`, `python`, `git`.** Use Read/Edit/Grep/Glob for
-  source-file work (matches the parent project's [CLAUDE.md](../../CLAUDE.md)
-  tool-preference rule).
+  source-file work (matches the parent project's
+  [`.ai/CLAUDE.md`](../../../.ai/CLAUDE.md) tool-preference rule).

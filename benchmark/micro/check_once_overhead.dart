@@ -18,8 +18,8 @@ import '../harness/fake_probe.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
-final class _CheckOnceBenchmark extends AsyncBenchmarkBase {
-  _CheckOnceBenchmark(this._checker) : super('check_once_overhead');
+final class _CheckOnceOverhead extends AsyncBenchmarkBase {
+  _CheckOnceOverhead(this._checker) : super('check_once_overhead');
 
   final InternetConnection _checker;
 
@@ -45,7 +45,7 @@ Future<void> main(List<String> argv) async {
     );
 
     forceGc();
-    final microseconds = await _CheckOnceBenchmark(checker).measure();
+    final microseconds = await _CheckOnceOverhead(checker).measure();
 
     writer.writeRecord(
       iteration: i,

@@ -53,7 +53,7 @@ final class ScenarioArgs {
       if (i + 1 >= argv.length) {
         _die('flag $arg missing value');
       }
-      flags[arg.substring(2)] = argv[++i];
+      flags[arg.replaceFirst('--', '')] = argv[++i];
     }
 
     final iterations = _requiredInt(flags, 'iterations');
