@@ -137,23 +137,65 @@ The baseline JSON in `results/baseline-dart-<sdk>.json` is the anchor for all
 Document each baseline capture in this README (date, machine, SDK version,
 git SHA).
 
-## Baselines
+## Baselines — per-machine, never committed
 
-Each entry below references a JSON file under `results/`. Capture metadata
-(SDK version, machine identifier, git SHA, capture date) is embedded in each
-record so the file is self-describing.
+There is no canonical baseline JSON in this repo. Perf numbers are sensitive
+to CPU, GC tuning, OS scheduler, thermal state, and other apps competing for
+the core — comparing across machines is misleading. Every contributor
+captures their own baseline locally before measuring the delta from a change.
 
-| File | Captured | SDK | Machine | Notes |
-|---|---|---|---|---|
-| `baseline-dart-3.11.5.json` | 2026-05-22 | 3.11.5 | (Apple Silicon, macOS) | First baseline. N=10. `long_running` at 30s (smoke); re-capture with 3600s for full hour bake. |
+`benchmark/results/` and `benchmark/results-local/` are both gitignored.
+Capture metadata (SDK version, git SHA, capture date) is embedded in every
+record so each file is self-describing on its own machine.
 
-### Headline numbers (current code, pre-refactor)
+### Per-contributor workflow
 
-These are the anchor values the upcoming event-bus refactor will be measured against.
+```bash
+cd benchmark/python
 
-| Scenario | Metric | Median | Notes |
-|---|---|---|---|
-| `slow_observer` | `max_drift_microseconds` | **(populated post-capture)** | Headline. Sustained scheduler stall caused by slow synchronous observer. Post-refactor target: sub-millisecond. |
-| `quiet_app` | `max_drift_microseconds` | (populated post-capture) | Steady-state floor. Should not regress. |
-| `check_once_overhead` | `microseconds_per_check` | (populated post-capture) | Coordinator hot-path cost. Should not regress. |
-| `status_emission` (N=100) | `microseconds_per_emission` | (populated post-capture) | Public-stream broadcast cost. Should not regress (tier-1 stream stays unchanged). |
+# 1. Capture YOUR baseline on a clean working tree.
+uv run python run.py run --iterations 10 --out ../results-local/baseline/
+
+# 2. Make your change. Commit it on a branch.
+
+# 3. Capture a new run with the change applied.
+uv run python run.py run --iterations 10 --out ../results-local/after/
+
+# 4. Compare YOUR baseline to YOUR after-run (same machine, same SDK).
+uv run python run.py compare \
+  ../results-local/baseline/aggregated.json \
+  ../results-local/after/aggregated.json
+```
+
+The output flags every (scenario, metric) where the after-run differs
+significantly (p < 0.05, Mann-Whitney U). Paste the relevant rows + a chart
+into the PR description as evidence.
+
+<details>
+<summary><strong>Reference run — 2026-05-22, Apple Silicon macOS, Dart 3.11.5, N=10</strong> (maintainer's machine; your numbers WILL differ)</summary>
+
+These figures are a sanity check, not a target. "Am I in the right ballpark?"
+not "did I beat the baseline?". Treat them as approximate.
+
+| Scenario / N | Metric | Median |
+|---|---|---|
+| **`slow_observer`** | **`max_drift_microseconds`** | **1,790,228 µs (~1.79 s)** |
+| `slow_observer` | `median_drift_microseconds` | 927,326 µs (~927 ms) |
+| `quiet_app` | `max_drift_microseconds` | 4,049 µs (~4 ms) |
+| `quiet_app` | `dispose_microseconds` | 7.5 µs |
+| `check_once_overhead` (micro) | `microseconds_per_check` | 0.40 µs |
+| `observer_dispatch` (micro) | `microseconds_per_dispatch` | 0.01 µs |
+| `status_emission` N=1 (micro) | `microseconds_per_emission` | 0.13 µs |
+| `status_emission` N=10 (micro) | `microseconds_per_emission` | 1.02 µs |
+| `status_emission` N=100 (micro) | `microseconds_per_emission` | 8.95 µs |
+| `trigger_storm` | `emissions_per_trigger` | 0.002 |
+| `many_subscribers` N=100 | `max_drift_microseconds` | 8,404 µs |
+| `flapping_network` (9 s) | `emission_count` | 3 (2 reachable + 1 unreachable) |
+| `long_running` (30 s smoke) | `rss_growth_bytes_per_minute` | ~35 MB/min (dominated by startup) |
+
+The `slow_observer.max_drift_microseconds` figure (~1.79 s of sustained
+scheduler stall) is the empirical proof of the bug the upcoming refactor
+fixes — on this machine, on this SDK. Your machine will see a comparable
+order of magnitude but a different exact number.
+
+</details>

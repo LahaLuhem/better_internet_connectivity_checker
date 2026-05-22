@@ -307,11 +307,13 @@ anchor stable or grep-and-update every caller.
 
 - **Chosen:** any refactor that claims a performance, memory, or latency improvement
   must ship its PR with before/after measurements from the
-  [`benchmark/`](./benchmark/) framework — JSON committed under
-  `benchmark/results/`, charts embedded in the PR description, Mann-Whitney U
-  p-values (via `benchmark/python/run.py compare`) for any "X improved" claim.
-  Refactors without an existing baseline must first land a baseline-capture commit
-  before the refactor commit.
+  [`benchmark/`](./benchmark/) framework — charts and a Mann-Whitney U
+  significance table (via `benchmark/python/run.py compare`) pasted into the
+  PR description for any "X improved" claim. The raw JSON files are **not**
+  committed — they're per-machine and per-clone, and cross-machine comparisons
+  are misleading. The contributor captures a local baseline on their own
+  machine, applies the change, captures a second run, and diffs the two
+  same-machine result sets locally.
 - **Why:** the package is published — every claim downstream users read is one
   we have to defend. "Trust me, it's faster" is not enough when the audience is
   every Dart developer who pulls the package. Numbers compared against a

@@ -1,0 +1,12 @@
+# AOT-compiled scenario executables — produced by `python run.py build`.
+# Reproducible from source; no need to track.
+build/
+
+# All run outputs are per-machine and per-clone. Cross-machine perf
+# comparisons are misleading (different CPU, GC tuning, OS scheduler), so
+# nothing under here is meant to be committed — contributors capture their
+# own baseline locally before measuring the delta from a change.
+# Both legacy directory names are ignored to keep older workflows working
+# during the cutover.
+results/
+results-local/
