@@ -45,6 +45,7 @@ final class LocalHttpServer {
 
   Future<void> start() async {
     if (_server != null) throw StateError('already started');
+    _requestCount = 0;
     _server = await HttpServer.bind('127.0.0.1', 0);
     unawaited(_serve());
   }
@@ -52,7 +53,9 @@ final class LocalHttpServer {
   Future<void> stop() async {
     await _server?.close(force: true);
     _server = null;
-    _requestCount = 0;
+    // Note: `_requestCount` is NOT reset here — callers commonly read it
+    // after stop() for end-of-scenario reporting. [start] resets if you
+    // reuse the same instance.
   }
 
   /// Server starts answering [statusCode] (default 200) again.

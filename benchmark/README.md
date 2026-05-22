@@ -18,7 +18,7 @@ benchmark/
 ```
 
 The `benchmark/` directory is excluded from the published pub.dev tarball via
-[`.pubignore`](../.pubignore) — none of this ships to downstream users.
+[`.pubignore`](../.pubignore) — none of these ship to downstream users.
 
 ## Two layers
 
