@@ -66,7 +66,7 @@ better_internet_connectivity_checker/
 │   ├── harness/                                      Shared Dart utilities (fake probe, etc.)
 │   ├── micro/                                        `benchmark_harness` micro-benches
 │   ├── scenarios/                                    Long-running stateful scenarios
-│   ├── python/                                       uv + ruff orchestrator (see python/AGENTS.md)
+│   ├── python/                                       uv + ruff orchestrator (see python/.ai/AGENTS.md)
 │   └── results/                                      Checked-in baseline JSONs per SDK
 ├── analysis_options.yaml                             Strict-mode + opinionated lints
 ├── pubspec.yaml                                      Deps + cider config + topics

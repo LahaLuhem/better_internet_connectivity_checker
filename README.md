@@ -443,7 +443,8 @@ guidelines, and [`APPENDIX.md`](./APPENDIX.md) for the design rationale.
 
 The canonical text for `AGENTS.md` and `CLAUDE.md` lives under `.ai/`. The repo root
 holds **gitignored symlinks** (`AGENTS.md → .ai/AGENTS.md`,
-`CLAUDE.md → .ai/CLAUDE.md`, `example/AGENTS.md → example/.ai/AGENTS.md`) so coding
+`CLAUDE.md → .ai/CLAUDE.md`, `example/AGENTS.md → example/.ai/AGENTS.md`,
+`benchmark/python/AGENTS.md → benchmark/python/.ai/AGENTS.md`) so coding
 agents that auto-discover root-level guidance files (Claude Code, Codex, Cursor,
 Copilot, …) find them without polluting the file tree with two extra Markdown files at
 each level. The arrangement is opt-in per contributor:
@@ -454,6 +455,7 @@ each level. The arrangement is opt-in per contributor:
   ln -s .ai/AGENTS.md AGENTS.md
   ln -s .ai/CLAUDE.md CLAUDE.md
   ln -s .ai/AGENTS.md example/AGENTS.md
+  ln -s .ai/AGENTS.md benchmark/python/AGENTS.md
   ```
 
 - **If you don't use one**, skip the step entirely. The canonical files under `.ai/`
