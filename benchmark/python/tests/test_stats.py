@@ -172,3 +172,40 @@ class TestComputeCompareRows:
         assert len(rows) == 1
         assert math.isinf(rows[0].delta_pct)
         assert not rows[0].delta_finite
+
+    def test_keys_only_in_one_run_are_skipped(self) -> None:
+        # Baseline has metric m1; current has metric m2. The union iteration
+        # visits both keys, but each side is missing the other - both rows
+        # short-circuit via the "no fair comparison possible" continue.
+        baseline: list[ResultRecord] = [
+            {"scenario": "a", "iteration": 0, "samples": {"m1": [1.0, 2.0, 3.0]}, "summary": {}},
+        ]
+        current: list[ResultRecord] = [
+            {"scenario": "a", "iteration": 0, "samples": {"m2": [4.0, 5.0, 6.0]}, "summary": {}},
+        ]
+        assert compute_compare_rows(baseline, current) == []
+
+    def test_mannwhitneyu_value_error_coerces_to_p_one(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # When scipy raises ValueError (e.g. on input shapes it refuses to
+        # rank), the helper must absorb it as "not significant" - p=1.0 -
+        # rather than blowing up the entire compare run.
+        import scipy.stats
+
+        def boom(*_args: object, **_kwargs: object) -> tuple[float, float]:
+            raise ValueError("mocked: mannwhitneyu refused these samples")
+
+        monkeypatch.setattr(scipy.stats, "mannwhitneyu", boom)
+
+        baseline: list[ResultRecord] = [
+            {"scenario": "x", "iteration": 0, "samples": {"m": [1.0, 2.0, 3.0]}, "summary": {}},
+        ]
+        current: list[ResultRecord] = [
+            {"scenario": "x", "iteration": 0, "samples": {"m": [4.0, 5.0, 6.0]}, "summary": {}},
+        ]
+        rows = compute_compare_rows(baseline, current)
+        assert len(rows) == 1
+        assert rows[0].p_value == 1.0
+        assert not rows[0].significant

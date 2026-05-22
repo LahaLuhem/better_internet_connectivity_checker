@@ -1,0 +1,57 @@
+name: Benchmark (Python) checks
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}-benchmark-python
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: benchmark/python
+
+jobs:
+  lint:
+    name: Ruff lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-uv
+        with:
+          working-directory: benchmark/python
+      - run: uv run ruff check .
+
+  format:
+    name: Ruff format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-uv
+        with:
+          working-directory: benchmark/python
+      - run: uv run ruff format --check .
+
+  test:
+    name: Pytest + coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-uv
+        with:
+          working-directory: benchmark/python
+      # `--cov` / `--cov-report` come from pyproject.toml addopts so local runs
+      # see coverage too; the gate lives here to keep local pytest invocations
+      # frictionless, matching the Dart side (dart test collects, the
+      # very_good_coverage step in package.yml enforces).
+      #
+      # 95% gate over the unit-testable surface only. Smoke-only modules
+      # (`charts.py`, `subcommands/*`) are excluded via `[tool.coverage.run]
+      # omit` in pyproject.toml, so this % reflects coverage of the deterministic
+      # helpers (config, data/dtos, data/utils minus charts) where unit tests are
+      # the right tool. Realised today: 100%; 5pt headroom for in-progress work.
+      - run: uv run pytest --cov-fail-under=95

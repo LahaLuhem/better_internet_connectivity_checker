@@ -1,14 +1,18 @@
 """Tests for `bicc_bench.data.utils.markdown`.
 
-Focuses on the precision-aware value_formatter and the table renderers
-(metric_table, render_compare_table_markdown). Chart embeds in the
-top-level render_*_markdown functions are integration-tested via the
-end-to-end smoke; here we hit the deterministic pieces.
+Covers the precision-aware value_formatter, the table renderers
+(metric_table, subscriber_scaling_table, render_compare_table_markdown),
+plus structural assertions on the top-level render_summary_markdown /
+render_compare_markdown that verify section headers, embed branches,
+and chart-name conditionals. Heading text is the maintainer's
+README-drop contract, so a section rename is the kind of regression
+worth catching here.
 """
 
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import polars as pl
 
@@ -16,7 +20,9 @@ from bicc_bench.data.dtos.compare_row import CompareRow
 from bicc_bench.data.dtos.result_record import ResultRecord, flatten_records
 from bicc_bench.data.utils.markdown import (
     metric_table,
+    render_compare_markdown,
     render_compare_table_markdown,
+    render_summary_markdown,
     subscriber_scaling_table,
     value_formatter,
 )
@@ -147,6 +153,19 @@ class TestSubscriberScalingTable:
         result = subscriber_scaling_table(df)
         assert "no status_emission data" in result
 
+    def test_all_null_values_returns_placeholder(self) -> None:
+        # Columns exist but every row has nulls -> filter empties the df
+        # before the agg, hitting the second placeholder branch.
+        df = pl.DataFrame(
+            {
+                "scenario": ["status_emission"],
+                "subscriber_count": [None],
+                "microseconds_per_emission": [None],
+            }
+        )
+        result = subscriber_scaling_table(df)
+        assert "no status_emission data" in result
+
 
 class TestRenderCompareTableMarkdown:
     def _row(
@@ -195,3 +214,142 @@ class TestRenderCompareTableMarkdown:
         assert "| inf |" in result
         # Should NOT crash on inf or render "+inf%"
         assert "+inf" not in result
+
+
+class TestRenderSummaryMarkdown:
+    def _df(self, records: list[ResultRecord]) -> pl.DataFrame:
+        return pl.DataFrame(flatten_records(records), infer_schema_length=None)
+
+    def test_renders_all_sections_when_all_charts_present(
+        self,
+        sample_records: list[ResultRecord],
+    ) -> None:
+        df = self._df(sample_records)
+        chart_paths = [
+            Path("headline_tick_drift.png"),
+            Path("memory_peak_rss.png"),
+            Path("scenario_stability.png"),
+            Path("subscriber_scaling.png"),
+        ]
+        result = render_summary_markdown(df, chart_paths=chart_paths, records=sample_records)
+
+        # Header block
+        assert "# Benchmark results\n" in result
+        # All four h2 sections rendered
+        assert "## Headline: worst-case scheduler stall per scenario" in result
+        assert "## Peak resident set size per scenario" in result
+        assert "## Stability: noise floor across scenarios" in result
+        assert "## Subscriber scaling: broadcast cost vs N listeners" in result
+        # All four chart embeds
+        assert "![Headline tick drift](headline_tick_drift.png)" in result
+        assert "![Memory peak RSS](memory_peak_rss.png)" in result
+        assert "![Scenario stability](scenario_stability.png)" in result
+        assert "![Subscriber scaling](subscriber_scaling.png)" in result
+        # Metadata bled into header
+        assert "abc1234" in result  # git_sha from sample_records
+        assert "0.2.0" in result  # package_version
+        assert "3.11.5" in result  # sdk_version
+
+    def test_renders_without_chart_embeds_when_chart_paths_empty(
+        self,
+        sample_records: list[ResultRecord],
+    ) -> None:
+        df = self._df(sample_records)
+        result = render_summary_markdown(df, chart_paths=[], records=sample_records)
+
+        # Three always-rendered h2 sections (subscriber_scaling is the only
+        # section gated entirely on chart presence; the other three render
+        # their tables even without the chart).
+        assert "## Headline: worst-case scheduler stall per scenario" in result
+        assert "## Peak resident set size per scenario" in result
+        assert "## Stability: noise floor across scenarios" in result
+        # Subscriber scaling section is wrapped in `if chart present`, so
+        # without the chart its h2 should NOT appear.
+        assert "## Subscriber scaling" not in result
+        # No image embeds anywhere
+        assert "![" not in result
+
+
+class TestRenderCompareMarkdown:
+    def _row(
+        self,
+        scenario: str = "x",
+        metric: str = "y",
+        baseline: float = 100.0,
+        current: float = 110.0,
+        delta: float = 10.0,
+        p: float = 0.5,
+    ) -> CompareRow:
+        return CompareRow(
+            scenario=scenario,
+            metric=metric,
+            baseline_median=baseline,
+            current_median=current,
+            delta_pct=delta,
+            p_value=p,
+        )
+
+    def test_renders_all_sections_when_all_charts_present(
+        self,
+        baseline_records: list[ResultRecord],
+        current_records: list[ResultRecord],
+    ) -> None:
+        rows = [self._row(scenario="quiet_app", metric="tick_drift_microseconds", p=0.5)]
+        chart_paths = [
+            Path("compare_forest.png"),
+            Path("compare_headline_tick_drift.png"),
+            Path("compare_memory_peak_rss.png"),
+            Path("compare_scenario_stability.png"),
+            Path("compare_subscriber_scaling.png"),
+        ]
+        result = render_compare_markdown(
+            rows,
+            chart_paths=chart_paths,
+            baseline_records=baseline_records,
+            current_records=current_records,
+        )
+
+        # Header + both run metadata blocks
+        assert "# Benchmark comparison\n" in result
+        assert "**Baseline**" in result
+        assert "**Current**" in result
+        # Section headers
+        assert "## Forest: all comparable" in result
+        assert "## Headline: tick drift" in result
+        assert "## Memory: peak RSS" in result
+        assert "## Stability: noise floor" in result
+        assert "## Subscriber scaling, baseline vs current" in result
+        assert "## Mann-Whitney U significance table" in result
+        # All five chart embeds
+        assert "![Forest plot](compare_forest.png)" in result
+        assert "![Headline compare](compare_headline_tick_drift.png)" in result
+        assert "![Memory compare](compare_memory_peak_rss.png)" in result
+        assert "![Stability compare](compare_scenario_stability.png)" in result
+        assert "![Scaling compare](compare_subscriber_scaling.png)" in result
+        # Significance table includes the row
+        assert "`quiet_app`" in result
+        assert "`tick_drift_microseconds`" in result
+
+    def test_renders_without_chart_embeds_when_chart_paths_empty(
+        self,
+        baseline_records: list[ResultRecord],
+        current_records: list[ResultRecord],
+    ) -> None:
+        result = render_compare_markdown(
+            [],
+            chart_paths=[],
+            baseline_records=baseline_records,
+            current_records=current_records,
+        )
+
+        # Sections present unconditionally
+        assert "## Forest: all comparable" in result
+        assert "## Headline: tick drift" in result
+        assert "## Memory: peak RSS" in result
+        assert "## Stability: noise floor" in result
+        # Subscriber scaling section is chart-gated - absent here
+        assert "## Subscriber scaling, baseline vs current" not in result
+        # Mann-Whitney always renders even with no rows
+        assert "## Mann-Whitney U significance table" in result
+        # No image embeds
+        assert "![" not in result
