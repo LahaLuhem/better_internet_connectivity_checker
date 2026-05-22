@@ -1,4 +1,23 @@
-# `benchmark/` — performance & memory measurement framework
+<!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
+
+- [Layout](#layout)
+- [Two layers](#two-layers)
+- [Prerequisites](#prerequisites)
+- [Running](#running)
+    * [Parallelism — what is and isn't parallel](#parallelism--what-is-and-isnt-parallel)
+    * [Linting the Python side](#linting-the-python-side)
+- [Methodology — non-negotiable](#methodology--non-negotiable)
+- [Metrics tracked](#metrics-tracked)
+- [Result JSON schema](#result-json-schema)
+- [When to re-baseline](#when-to-re-baseline)
+- [Baselines — per-machine, never committed](#baselines--per-machine-never-committed)
+    * [Per-contributor workflow](#per-contributor-workflow)
+- [Reports](#reports)
+    * [`report` outputs (single dataset)](#report-outputs-single-dataset)
+    * [`compare` outputs (two datasets)](#compare-outputs-two-datasets)
+    * [When to regenerate the committed set](#when-to-regenerate-the-committed-set)
+
+<!-- TOC end -->
 
 Reproducible benchmarks for `better_internet_connectivity_checker`. Used to
 empirically verify perf/memory claims before they ship in a release — no
@@ -13,8 +32,7 @@ benchmark/
 ├── micro/                     benchmark_harness-based micro-benches
 ├── scenarios/                 long-running stateful scenarios
 ├── python/                    orchestration + analysis + reporting
-├── charts/
-│   └── reference/             committed maintainer reference charts (PNG + SUMMARY.md)
+├── reports/                   committed report + compare output (PNGs + .md)
 ├── results-local/             contributor-local run outputs (gitignored)
 ├── results/                   legacy run-output dir (gitignored; kept for older workflows)
 └── build/                     AOT-compiled scenario exes (gitignored)
@@ -22,8 +40,8 @@ benchmark/
 
 The `benchmark/` directory is excluded from the published pub.dev tarball via
 [`.pubignore`](../.pubignore) — none of the source ships to downstream users.
-The reference PNGs under `charts/reference/` are referenced from the package
-README via GitHub raw URLs (see [Reference charts](#reference-charts) below).
+The committed PNGs under `reports/` are referenced from the package README
+via GitHub raw URLs (see [Reports](#reports) below).
 
 ## Two layers
 
@@ -49,17 +67,19 @@ All commands below run from `benchmark/python/`. `uv run` automatically uses the
 uv run python run.py build
 
 # 2. Run all scenarios + micro-benches, default N=10 iterations.
-#    Each scenario binary now accepts --iterations and emits N records from
-#    one subprocess invocation — saves N-1 process startups per scenario.
+#    Each scenario binary accepts --iterations and emits N records from one
+#    subprocess invocation — saves N-1 process startups per scenario.
 uv run python run.py run --iterations 10 --out=../results-local/current/
 
-# 3. Compare two runs (Mann-Whitney U significance test).
+# 3. Render report (PNGs + SUMMARY.md). Default output is ../reports/
+#    (committed). Pass --out for ad-hoc local snapshots.
+uv run python run.py report ../results-local/current/aggregated.json
+
+# 4. Compare two runs - Mann-Whitney significance + paired charts + forest.
+#    Same default output dir (../reports/) with compare_*.png + COMPARE.md
+#    filenames. Pass --out for ad-hoc local snapshots.
 uv run python run.py compare ../results-local/baseline/aggregated.json \
                               ../results-local/current/aggregated.json
-
-# 4. Generate PNG charts + SUMMARY.md from aggregated.json.
-#    Default output: <aggregated parent>/charts/ (next to the JSON, gitignored).
-uv run python run.py report ../results-local/current/aggregated.json
 ```
 
 ### Parallelism — what is and isn't parallel
@@ -129,18 +149,18 @@ Each scenario writes one JSON file per run, conforming to:
 
 ```json
 {
-  "scenario": "<name>",
-  "iteration": <int>,
-  "sdk_version": "<string>",
-  "package_version": "<string>",
-  "git_sha": "<string>",
-  "started_at": "<ISO-8601 UTC>",
-  "samples": {
-    "<metric>": [<numbers>, ...]
-  },
-  "summary": {
-    "<aggregate>": <number>
-  }
+    "scenario": "<name>",
+    "iteration": <int>,
+    "sdk_version": "<string>",
+    "package_version": "<string>",
+    "git_sha": "<string>",
+    "started_at": "<ISO-8601 UTC>",
+    "samples": {
+        "<metric>": [<numbers>, ...]
+    },
+    "summary": {
+        "<aggregate>": <number>
+    }
 }
 ```
 
@@ -190,13 +210,20 @@ uv run python run.py compare \
   ../results-local/after/aggregated.json
 ```
 
-The output flags every (scenario, metric) where the after-run differs
-significantly (p < 0.05, Mann-Whitney U). Paste the relevant rows + a chart
-into the PR description as evidence.
+The terminal output flags every (scenario, metric) where the after-run
+differs significantly (p < 0.05, Mann-Whitney U). The same data plus paired
+charts and a forest plot land in `benchmark/reports/COMPARE.md`. Paste the
+relevant sections + the forest PNG into the PR description as evidence.
 
-### Charts
+## Reports
 
-`report` renders four PNGs + a `SUMMARY.md` alongside the JSON:
+`benchmark/reports/` is the **committed** output directory for both
+`report` and `compare`. The PNGs are linked from the package README so
+pub.dev viewers can see the package's perf shape without cloning. Pass
+`--out` for ad-hoc local snapshots that shouldn't overwrite the committed
+set.
+
+### `report` outputs (single dataset)
 
 - `headline_tick_drift.png` — box plot of `max_drift_microseconds` per
   scenario on a log y-axis. `slow_observer` should tower above the rest;
@@ -207,26 +234,33 @@ into the PR description as evidence.
   reproducible.
 - `subscriber_scaling.png` — broadcast cost per emission vs subscriber
   count, from the `status_emission` micro.
+- `SUMMARY.md` — summary table above each chart, formatted so the
+  maintainer can drop the relevant sections into the package README.
 
-`SUMMARY.md` has a summary table above each chart, formatted so the
-maintainer can drop the relevant sections into the package README.
+### `compare` outputs (two datasets)
 
-## Reference charts
+- `compare_headline_tick_drift.png` — same shape as the headline chart
+  but with two boxes per scenario (baseline vs current). The
+  `slow_observer` box should collapse post-refactor.
+- `compare_memory_peak_rss.png` — paired memory boxes per scenario.
+- `compare_scenario_stability.png` — paired noise floor, `slow_observer`
+  excluded so the y-axis stays readable.
+- `compare_subscriber_scaling.png` — two lines (baseline + current) of
+  per-listener delivery cost.
+- `compare_forest.png` — horizontal bar chart of % delta per
+  `(scenario, metric)`. Color encodes direction + significance: red =
+  significant regression, green = significant improvement, gray = no
+  significant difference detected.
+- `COMPARE.md` — paired-chart sections + the Mann-Whitney significance
+  table. Same drop-into-README shape as `SUMMARY.md`.
 
-`benchmark/charts/reference/` is the **committed** maintainer reference
-set. These PNGs are linked from the package README to give pub.dev viewers
-a visual sense of the package's perf shape without having to clone +
-build. Update them by passing `--reference` to `report`:
+### When to regenerate the committed set
 
-```bash
-# (after capturing a clean baseline + producing aggregated.json)
-uv run python run.py report ../results-local/baseline/aggregated.json --reference
-```
-
-This writes to `benchmark/charts/reference/`. Treat the regeneration as
-an explicit step — only the maintainer should run it, only after a
-deliberate baseline capture. Contributor runs land in `results-local/`
-and never touch the reference set unless `--reference` is passed.
+Treat `benchmark/reports/` as a deliberate refresh — only the maintainer
+should commit changes to it, only after capturing a clean baseline /
+post-change pair on a quiet machine. Contributor runs should pass `--out`
+to a local path (e.g. `../results-local/my-run/charts/`) and leave the
+committed set alone.
 
 <details>
 <summary><strong>Reference run — 2026-05-22, Apple Silicon macOS, Dart 3.11.5, N=10</strong> (maintainer's machine; your numbers WILL differ)</summary>
