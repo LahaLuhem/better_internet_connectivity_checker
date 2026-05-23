@@ -1,3 +1,14 @@
+// Omitted from coverage via `lcov --remove '*/printing_connectivity_observer.dart'`
+// in `.github/workflows/package.yml`. Pure delegation to `dart:developer`'s
+// `log()` sink — every method is a single-line forwarder with no branching,
+// no state, and no side effect we own. `developer.log` has no first-class
+// test seam (no Stream of records to assert against), so unit-testing would
+// either capture VM-service events (heavy, brittle) or assert "didn't throw"
+// (no signal). Matches the principle applied in `benchmark/python/`'s
+// `[tool.coverage.run] omit`: smoke-only files don't contribute to either
+// side of the ratio. When adding another smoke-only file, append a matching
+// `--remove` glob to the workflow step.
+
 import 'dart:developer' as developer;
 
 import '../../status/internet_status.dart';

@@ -50,6 +50,19 @@ jobs:
             --report-on=lib \
             --packages=.dart_tool/package_config.json \
             -o coverage/lcov.info
+      # Strip smoke-only files from the report BEFORE upload + gate, so both
+      # Coveralls and the threshold see the same in-scope surface. Mirrors the
+      # principle in `benchmark/python/pyproject.toml`'s `[tool.coverage.run]
+      # omit`: a file that can't be unit-tested cleanly (`printing_connectivity_observer`
+      # is a pure `dart:developer.log` delegation with no test seam) shouldn't
+      # contribute to either side of the ratio. Each file omitted carries a
+      # block comment at the top of the file explaining why. Append new globs
+      # here when adding another smoke-only file.
+      - name: Strip smoke-only files from coverage
+        run: |
+          lcov --remove coverage/lcov.info \
+            '*/printing_connectivity_observer.dart' \
+            --output-file coverage/lcov.info
       # Upload BEFORE the gate so the coverage badge updates and PR comments
       # land even when the gate would fail. Coveralls auto-routes based on
       # event context (PR vs. push to main).
@@ -59,8 +72,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file: coverage/lcov.info
           format: lcov
-      - name: Enforce min coverage (80%)
+      - name: Enforce min coverage (95%)
         uses: VeryGoodOpenSource/very_good_coverage@v3
         with:
           path: coverage/lcov.info
-          min_coverage: 80
+          min_coverage: 95

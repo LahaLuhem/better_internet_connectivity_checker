@@ -63,4 +63,36 @@ void main() {
       check(label).equals('unreachable');
     });
   });
+
+  group('Reachable.toString', () {
+    test('renders responseTime and quality in stable diagnostic form', () {
+      const status = Reachable(
+        responseTime: Duration(milliseconds: 250),
+        quality: ConnectionQuality.good,
+      );
+
+      check(status.toString()).equals(
+        'Reachable('
+        'responseTime: 0:00:00.250000, '
+        'quality: ConnectionQuality.good)',
+      );
+    });
+  });
+
+  group('Unreachable.toString', () {
+    test('renders failedProbes in stable diagnostic form', () {
+      const status = Unreachable(failedProbes: []);
+
+      check(status.toString()).equals('Unreachable(failedProbes: [])');
+    });
+
+    test('includes each failed probe by its own toString', () {
+      final target = ProbeTarget(uri: Uri.https('example.com'));
+      final probe = ProbeResult.failure(target: target, responseTime: const Duration(seconds: 1));
+      final status = Unreachable(failedProbes: [probe]);
+
+      check(status.toString()).startsWith('Unreachable(failedProbes: [');
+      check(status.toString()).contains('ProbeResult(');
+    });
+  });
 }

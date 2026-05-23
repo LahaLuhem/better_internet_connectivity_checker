@@ -5,6 +5,8 @@
 # (which is correct for the library itself but cascades into this subdir).
 !pubspec.lock
 
+/AGENTS.md
+
 # Created by https://www.toptal.com/developers/gitignore/api/linux,macos,windows,androidstudio,visualstudiocode,flutter
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,macos,windows,androidstudio,visualstudiocode,flutter
 

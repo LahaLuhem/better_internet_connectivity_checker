@@ -48,4 +48,22 @@ void main() {
       check(target.headers).deepEquals(customHeaders);
     });
   });
+
+  group('ProbeTarget.toString', () {
+    test('renders uri, timeout, and headers in stable diagnostic form', () {
+      const customHeaders = {'X-Custom': 'value'};
+      final target = ProbeTarget(
+        uri: Uri.https('example.com', '/healthz'),
+        timeout: const Duration(seconds: 2),
+        headers: customHeaders,
+      );
+
+      check(target.toString()).equals(
+        'ProbeTarget('
+        'uri: https://example.com/healthz, '
+        'timeout: 0:00:02.000000, '
+        'headers: {X-Custom: value})',
+      );
+    });
+  });
 }
