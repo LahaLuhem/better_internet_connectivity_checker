@@ -13,16 +13,63 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Final
 
-from bicc_bench.config import BUILD_DIR, PROJECT_ROOT
+from bicc_bench.config import BENCHMARK_DIR, BUILD_DIR, PROJECT_ROOT
 from bicc_bench.data.utils.io import discover_sources
+
+# Roots scanned to decide whether a compiled exe is stale. Conservative -
+# any .dart change anywhere under these dirs triggers a rebuild. We do not
+# track per-scenario dependency graphs because Dart does not expose them
+# cheaply, and the cost of an over-rebuild is bounded (8 binaries, ~30 s).
+_SOURCE_ROOTS: Final[list[Path]] = [
+    PROJECT_ROOT / "lib",
+    BENCHMARK_DIR / "scenarios",
+    BENCHMARK_DIR / "micro",
+    BENCHMARK_DIR / "harness",
+]
+
+
+def _max_source_mtime() -> float:
+    """Latest mtime over every .dart file that could affect a compiled benchmark.
+
+    Returns 0.0 if none of the source roots exist or contain .dart files -
+    callers treat that as "any existing exe is fresh", same as the pre-sweep
+    behaviour. Missing roots are silently skipped so the helper stays usable
+    when scenarios/ or micro/ haven't been scaffolded yet.
+    """
+    latest = 0.0
+    for root in _SOURCE_ROOTS:
+        if not root.is_dir():
+            continue
+
+        for dart_file in root.rglob("*.dart"):
+            mtime = dart_file.stat().st_mtime
+            if mtime > latest:
+                latest = mtime
+    return latest
+
+
+def _is_exe_fresh(out: Path, max_src_mtime: float) -> bool:
+    """Whether `out` is at least as new as the latest source file.
+
+    Returns False when `out` does not exist - a missing exe is always
+    stale. Equal-mtime is treated as fresh; the only way to land on this
+    edge case is touching a file within the same second a compile finishes,
+    which is harmless because the user can re-run with `--force`.
+    """
+    if not out.exists():
+        return False
+
+    return out.stat().st_mtime >= max_src_mtime
 
 
 def cmd_build(args: argparse.Namespace) -> int:
     """AOT-compile every .dart file under scenarios/ and micro/ to BUILD_DIR.
 
     Uses `dart compile exe`. Skips files that compile cleanly already unless
-    --force is given. AOT compilation is required for deterministic warmup
+    --force is given, or unless any input .dart file is newer than the
+    compiled exe. AOT compilation is required for deterministic warmup
     characteristics - JIT introduces too much variance.
     """
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
@@ -32,10 +79,12 @@ def cmd_build(args: argparse.Namespace) -> int:
         print("no scenario or micro sources to build (yet)", file=sys.stderr)
         return 0
 
+    max_src_mtime = _max_source_mtime()
+
     targets: list[tuple[Path, Path]] = []
     for src in sources:
         out = BUILD_DIR / src.stem
-        if out.exists() and not args.force:
+        if not args.force and _is_exe_fresh(out, max_src_mtime):
             print(f"skip   {src.relative_to(PROJECT_ROOT)} (exe up to date; --force to rebuild)")
             continue
         targets.append((src, out))
