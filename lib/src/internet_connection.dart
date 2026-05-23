@@ -12,6 +12,7 @@ import 'status/internet_status.dart';
 import 'status/models/connection_quality.dart';
 
 part 'internal/event_sink.dart';
+part 'internal/external_trigger_link.dart';
 part 'internal/periodic_scheduler.dart';
 part 'observer/sinks/silent_connectivity_observer.dart';
 
@@ -49,7 +50,18 @@ final class InternetConnection {
   );
   final _eventSink = _EventSink();
   late final _scheduler = _PeriodicScheduler(interval: _checkInterval, onTick: _runScheduledCheck);
-  StreamSubscription<void>? _triggerSubscription;
+  late final _triggerLink = _ExternalTriggerLink(
+    trigger: _externalTrigger,
+    onTrigger: () {
+      _observer.onExternalTriggerFired();
+      _eventSink.emit(const ExternalTriggerFiredEvent());
+      _scheduler.start();
+    },
+    onError: (error, stackTrace) {
+      _observer.onExternalTriggerError(error, stackTrace);
+      _eventSink.emit(ExternalTriggerErrorEvent(error, stackTrace));
+    },
+  );
   InternetStatus? _lastStatus;
   var _disposed = false;
 
@@ -192,8 +204,7 @@ final class InternetConnection {
 
     _scheduler.dispose();
 
-    await _triggerSubscription?.cancel();
-    _triggerSubscription = null;
+    await _triggerLink.stop();
 
     await _statusController.close();
     _observer.onDispose();
@@ -201,22 +212,7 @@ final class InternetConnection {
   }
 
   void _handleFirstListener() {
-    _triggerSubscription ??= _externalTrigger?.listen(
-      (_) {
-        _observer.onExternalTriggerFired();
-        _eventSink.emit(const ExternalTriggerFiredEvent());
-        _scheduler.start();
-      },
-      // Trigger errors are surfaced via the observer seam and the
-      // diagnostic stream, then swallowed — the trigger is best-effort
-      // and its errors must not propagate to the status stream's
-      // listeners.
-      onError: (Object error, StackTrace stackTrace) {
-        _observer.onExternalTriggerError(error, stackTrace);
-        _eventSink.emit(ExternalTriggerErrorEvent(error, stackTrace));
-      },
-    );
-
+    _triggerLink.start();
     _scheduler.start();
   }
 
@@ -224,9 +220,7 @@ final class InternetConnection {
     if (_statusController.hasListener) return;
 
     _scheduler.stop();
-
-    unawaited(_triggerSubscription?.cancel());
-    _triggerSubscription = null;
+    unawaited(_triggerLink.stop());
 
     _lastStatus = null;
   }
