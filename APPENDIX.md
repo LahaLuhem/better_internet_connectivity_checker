@@ -448,7 +448,82 @@ anchor stable or grep-and-update every caller.
   persists with significance, apply the appropriate fix: guard each emit
   at the call site (`if (_eventSink.hasListener) _eventSink.emit(...)`)
   to skip the event allocation; switch the scheduler's reschedule to a
-  `.then()` continuation that avoids the extra `await` hop. The headline
-  win at Step 6 (~1.79 s drift → sub-millisecond on the `slow_observer`
-  scenario) is expected to dominate either way; this follow-up is purely
-  about not leaking a ~µs/sec drift cost into the noise-floor scenarios.
+  `.then()` continuation that avoids the extra `await` hop.
+
+---
+
+<a id="why-event-bus-refactor"></a>
+## Why the event-bus refactor is worth a major version bump
+
+- **Chosen:** version 0.3.0 (semver major) introduces a sealed
+  [`ConnectivityEvent`](./lib/src/observer/events/connectivity_event.dart)
+  hierarchy + a public `Stream<ConnectivityEvent>` on
+  [`InternetConnection`](./lib/src/internet_connection.dart) + a top-level
+  [`attachObserver(events, observer)`](./lib/src/observer/connectivity_observer.dart)
+  helper. The `observer:` constructor parameter is removed in the same
+  release; consumers who used it migrate to `attachObserver` on the
+  events stream.
+- **Why the architectural change:** the user-facing complaint that drove
+  the refactor was *"adding a logging module meant that an `_observer.`
+  call was added to multiple sites — every new feature compounds that
+  complexity"*. The event-bus design replaces the seven-site fan-out
+  (`_observer.onXyz(...)` at every check completion / status emission /
+  external trigger / config change / dispose) with a single
+  `_eventSink.emit(...)` per site. Adding a future lifecycle event is now
+  one new sealed `final class` extending `ConnectivityEvent` + one
+  `_eventSink.emit(NewEvent(...))` line; previously it required threading
+  a new abstract method onto `ConnectivityObserver` (a `base` class — a
+  contract change for every subclass) and wiring it into every call site.
+- **Why the breaking change (drop `observer:`):** keeping the constructor
+  param as a deprecated escape hatch was considered (see also the closed
+  discussion in this file under
+  [`why-events-microtask-deferred`](#why-events-microtask-deferred)).
+  Rejected because the two paths would have published two ways to do the
+  same thing — one synchronous, one microtask-deferred — with subtly
+  different failure semantics (sync observers propagate exceptions back
+  into `_runScheduledCheck`; stream-dispatched observers don't). API
+  surface that lets consumers pick the worse-behaved path on accident is
+  worth retiring outright.
+- **What this refactor does NOT claim:** *not* a perf fix. The dartdoc
+  warning on `ConnectivityObserver` — *"heavy work or blocking IO inside
+  an override will stall the checker's scheduling loop"* — still applies
+  word-for-word post-refactor. Microtasks run synchronously inside the
+  isolate; a `sleep` or sync IO call inside a stream subscriber blocks
+  the event loop just as it would inside a direct method call. The only
+  thing the microtask boundary buys is **failure isolation**: a thrown
+  exception from a subscriber surfaces as an unhandled async error
+  rather than propagating back into `_runScheduledCheck` and resetting
+  the tick scheduler. See `why-events-microtask-deferred` above for the
+  honest perf accounting (the `slow_observer` benchmark scenario
+  regresses ~60 % under the refactor because synchronous blocking now
+  happens *between* ticks rather than *during* them).
+- **Rejected dependency alternatives** (researched 2026-05-21 — see also
+  the table in `~/Desktop/bicc-event-bus-refactor-plan-2026-05-21.md`):
+  - [`event_bus`](https://pub.dev/packages/event_bus) — ~150 LoC wrapper
+    over `Stream`. Mature, lean, but adds a transitive dep for what's
+    ~50 LoC of stream + sealed-event-types we can roll ourselves. Every
+    pub.dev consumer would pull `event_bus`'s transitive closure.
+  - [`event_bus_plus`](https://pub.dev/packages/event_bus_plus) — pulls
+    `rxdart` + `logger` + `equatable` + `clock`. Disqualified on
+    transitive-dep weight alone for a pure-Dart utility package.
+  - [`global_event_bus`](https://pub.dev/packages/global_event_bus) —
+    depends on the Flutter SDK. We're pure-Dart; disqualified outright.
+  - [`messaging`](https://pub.dev/packages/messaging) — pulls `uuid` as
+    a transitive (dead weight for our event-correlation needs, which
+    are nil). Underused (~8 likes, 47 weekly downloads); risk of
+    abandonment.
+  - **`collection`'s `HeapPriorityQueue`** would be the right primitive
+    *if* we needed a real priority queue. We don't — see
+    `why-events-microtask-deferred` for the rejected N-tier-priority
+    design.
+- **Rejected priority-queue design:** the user's original framing
+  asked about *"some events firing ASAP compared to others (like logging
+  has a lower priority)"*. The first-cut response of a heap-based
+  priority queue (à la `global_event_bus`'s `critical | high | normal |
+  low`) was rejected in favour of the two-tier shape that already exists:
+  status changes flow through the synchronous `onStatusChange` stream
+  (no deferral, the user-perceived contract); diagnostics flow through
+  the microtask-deferred events stream. We have two effective tiers,
+  not N, and packing them onto two streams keeps subscribers' filter
+  code obvious (`whereType<X>()`) rather than requiring them to learn a
+  priority enum.

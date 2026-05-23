@@ -245,24 +245,40 @@ final checker = InternetConnection(
 
 ### Logging and observability
 
-Pass a `ConnectivityObserver` to receive lifecycle callbacks for every check completion,
-status emission, external-trigger event, interval change, and dispose — without having to
-add stream listeners and format domain objects in your own code. Methods on the observer
-default to no-ops, so subclasses override only the events they care about; events left
-alone cost essentially nothing.
+`InternetConnection.events` is a `Stream<ConnectivityEvent>` that fans out every
+lifecycle moment — check completions, status emissions, external triggers, configuration
+changes, and dispose — as typed, pattern-matchable values. Subscribe directly for
+reactive pipelines, or adapt a `ConnectivityObserver` onto it via the top-level
+`attachObserver` for the classic per-method-callback style.
 
 `PrintingConnectivityObserver` is a ready-to-use default that forwards each event through
 `dart:developer`'s `log()` (integrates with Flutter DevTools' logging view; in plain Dart
 it surfaces via stdout):
 
 ```dart
-final checker = InternetConnection(
-  observer: const PrintingConnectivityObserver(),
+final checker = InternetConnection();
+final subscription = attachObserver(
+  checker.events,
+  const PrintingConnectivityObserver(),
 );
+// ... later, when shutting down:
+await subscription.cancel();          // explicit cleanup, OR
+await checker.dispose();              // closes events; the subscription cancels automatically
+```
+
+For reactive callers that prefer streams over per-method callbacks, subscribe directly
+and filter by type:
+
+```dart
+final checker = InternetConnection();
+checker.events
+    .whereType<CheckCompletedEvent>()
+    .listen((e) => log('check completed: ${e.result}'));
 ```
 
 For custom integration with an app's existing logging service, subclass
-`ConnectivityObserver` and override only the events that matter:
+`ConnectivityObserver` and override only the events that matter, then wire it with
+`attachObserver`:
 
 ```dart
 final class _AppConnectivityObserver extends ConnectivityObserver {
@@ -277,11 +293,15 @@ final class _AppConnectivityObserver extends ConnectivityObserver {
   void onExternalTriggerError(Object error, StackTrace stackTrace) =>
       _logger.error('connectivity trigger failed', error, stackTrace);
 }
+
+attachObserver(checker.events, _AppConnectivityObserver(appLogger));
 ```
 
-Observer methods are invoked **synchronously** on the same zone as the underlying event.
-Heavy work or blocking IO inside an override will stall the checker's scheduling loop;
-buffer or defer to a queue/stream from within the override if that is a concern.
+Events are dispatched microtask-deferred from the frame that produced them — a thrown
+exception inside an override does **not** propagate back into the scheduler. Synchronous
+blocking work inside the override (e.g. `sleep`, sync IO, busy loops) **does** still
+stall the event loop and will stall the scheduler with it; prefer Future-returning
+operations for any expensive sink.
 
 Runnable examples live in [`example/`](./example/) — a Flutter demo app exercising
 one-shot checks, status streaming, both aggregation policies, slow-connection detection,
