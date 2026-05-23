@@ -366,6 +366,40 @@ anchor stable or grep-and-update every caller.
   at the time `dispose()` is called observe `DisposedEvent` before the stream
   completes. Any `DisposedEvent` emitted while nobody is attached is dropped
   by the same early-out, which is fine: there's nobody around to care.
+
+---
+
+<a id="why-status-deduper-stays-inline"></a>
+## Why the status deduper stays inline
+
+- **Chosen:** the kind-deduplication logic (`_isDistinctKind`) and its
+  state (`_lastStatus`) live inline in
+  [`lib/src/internet_connection.dart`](./lib/src/internet_connection.dart),
+  alongside the rest of `_runScheduledCheck`'s logic. The event-bus refactor
+  explicitly considered (and rejected) extracting them into a
+  `_StatusDeduper` collaborator under `lib/src/internal/`.
+- **Why:** `_isDistinctKind` is a 7-line `static` pure function with one
+  caller and no other state to coordinate. `_lastStatus` is also read by
+  the public [`InternetConnection.lastStatus`](./lib/src/internet_connection.dart)
+  getter and reset by `_handleLastCancel` — extracting it would force the
+  collaborator to expose a getter and a reset method just so the facade
+  can keep its own contract, trading one inline field for one delegated
+  field and two extra methods. The package's CODESTYLE / `CLAUDE.md`
+  guidance is explicit: *"three similar lines is better than a premature
+  abstraction"*, and *"don't add features, refactor, or introduce
+  abstractions beyond what the task requires."*
+- **Why not for tests:** the original refactor plan considered the case
+  where extraction would let the deduper be tested in isolation. With the
+  package's `_`-prefix-private + `part of` convention for internal
+  collaborators (`_EventSink`, `_PeriodicScheduler`, `_ExternalTriggerLink`
+  all follow it), a hypothetical `_StatusDeduper` could not be tested
+  directly either — its tests would still have to drive it through
+  `InternetConnection`. So the testing argument that would have justified
+  the extraction collapses.
+- **If real-world demand materialises:** the existing inline shape is
+  refactor-friendly. Extraction is a mechanical lift-and-shift if a
+  future feature (hysteresis, kind-aware backoff, custom equality) starts
+  needing per-checker dedup state with its own behaviour.
 - **Known follow-up (unverified):** N=10 comparison runs across the
   event-bus + collaborator-extraction refactor showed a recurring
   `many_subscribers` `tick_drift` regression that swung wildly between
