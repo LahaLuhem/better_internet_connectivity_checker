@@ -29,7 +29,17 @@ library;
 export 'src/data/typedefs.dart' show ResponseAcceptor;
 export 'src/data/values.dart' show noopWithVal;
 export 'src/internet_connection.dart' show InternetConnection;
-export 'src/observer/connectivity_observer.dart' show ConnectivityObserver;
+export 'src/observer/connectivity_observer.dart' show ConnectivityObserver, attachObserver;
+export 'src/observer/events/connectivity_event.dart'
+    show
+        CheckCompletedEvent,
+        CheckIntervalChangedEvent,
+        ConnectivityEvent,
+        DisposedEvent,
+        ExternalTriggerErrorEvent,
+        ExternalTriggerFiredEvent,
+        SlowThresholdChangedEvent,
+        StatusEmittedEvent;
 export 'src/observer/sinks/printing_connectivity_observer.dart' show PrintingConnectivityObserver;
 export 'src/policy/reachability_policy.dart' show ReachabilityPolicy;
 export 'src/policy/strategies/all_reachable_policy.dart' show AllReachablePolicy;

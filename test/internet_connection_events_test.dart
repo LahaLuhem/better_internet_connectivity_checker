@@ -1,10 +1,6 @@
 import 'dart:async';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
-// Event types are not re-exported from the package's top-level library yet
-// (Step 7 of the event-bus refactor adds the re-exports). Tests reach into
-// the internal path until then.
-import 'package:better_internet_connectivity_checker/src/observer/events/connectivity_event.dart';
 import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';

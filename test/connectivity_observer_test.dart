@@ -56,8 +56,8 @@ void main() {
           targets: [target],
           probe: probe,
           checkInterval: const Duration(seconds: 5),
-          observer: observer,
         );
+        attachObserver(connection.events, observer);
         connection.onStatusChange.listen(noopWithVal);
 
         async
@@ -76,7 +76,8 @@ void main() {
     test('checkOnce does not fire onCheckCompleted', () async {
       final probe = StubProbe((t) async => successResult(t));
       final observer = RecordingObserver();
-      final connection = InternetConnection(targets: [target], probe: probe, observer: observer);
+      final connection = InternetConnection(targets: [target], probe: probe);
+      attachObserver(connection.events, observer);
       addTearDown(connection.dispose);
 
       await connection.checkOnce();
@@ -94,8 +95,8 @@ void main() {
           targets: [target],
           probe: probe,
           checkInterval: const Duration(seconds: 5),
-          observer: observer,
         );
+        attachObserver(connection.events, observer);
         connection.onStatusChange.listen(noopWithVal);
 
         async
@@ -131,8 +132,8 @@ void main() {
           probe: probe,
           externalRecheckTrigger: trigger.stream,
           checkInterval: const Duration(seconds: 60),
-          observer: observer,
         );
+        attachObserver(connection.events, observer);
         connection.onStatusChange.listen(noopWithVal);
         async.flushMicrotasks();
 
@@ -157,8 +158,8 @@ void main() {
           probe: probe,
           externalRecheckTrigger: trigger.stream,
           checkInterval: const Duration(seconds: 60),
-          observer: observer,
         );
+        attachObserver(connection.events, observer);
         connection.onStatusChange.listen(noopWithVal);
         async.flushMicrotasks();
 
@@ -175,50 +176,61 @@ void main() {
 
     test('onCheckIntervalChanged carries previous and next intervals', () {
       final probe = StubProbe((t) async => successResult(t));
-      final observer = RecordingObserver();
-      final connection = InternetConnection(
-        targets: [target],
-        probe: probe,
-        checkInterval: const Duration(seconds: 5),
-        observer: observer,
-      );
-      addTearDown(connection.dispose);
 
-      connection.checkInterval = const Duration(seconds: 3);
+      fakeAsync((async) {
+        final observer = RecordingObserver();
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          checkInterval: const Duration(seconds: 5),
+        );
+        attachObserver(connection.events, observer);
 
-      final changes = observer.events.whereType<CheckIntervalChanged>().toList();
-      check(changes).length.equals(1);
-      check(changes.single.previous).equals(const Duration(seconds: 5));
-      check(changes.single.next).equals(const Duration(seconds: 3));
+        connection.checkInterval = const Duration(seconds: 3);
+        async.flushMicrotasks();
+
+        final changes = observer.events.whereType<CheckIntervalChanged>().toList();
+        check(changes).length.equals(1);
+        check(changes.single.previous).equals(const Duration(seconds: 5));
+        check(changes.single.next).equals(const Duration(seconds: 3));
+
+        unawaited(connection.dispose());
+      });
     });
 
     test('onSlowThresholdChanged carries previous and next thresholds', () {
       final probe = StubProbe((t) async => successResult(t));
-      final observer = RecordingObserver();
-      final connection = InternetConnection(
-        targets: [target],
-        probe: probe,
-        slowThreshold: const Duration(milliseconds: 200),
-        observer: observer,
-      );
-      addTearDown(connection.dispose);
 
-      connection
-        ..slowThreshold = const Duration(milliseconds: 50)
-        ..slowThreshold = null;
+      fakeAsync((async) {
+        final observer = RecordingObserver();
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          slowThreshold: const Duration(milliseconds: 200),
+        );
+        attachObserver(connection.events, observer);
 
-      final changes = observer.events.whereType<SlowThresholdChanged>().toList();
-      check(changes).length.equals(2);
-      check(changes.first.previous).equals(const Duration(milliseconds: 200));
-      check(changes.first.next).equals(const Duration(milliseconds: 50));
-      check(changes.last.previous).equals(const Duration(milliseconds: 50));
-      check(changes.last.next).isNull();
+        connection
+          ..slowThreshold = const Duration(milliseconds: 50)
+          ..slowThreshold = null;
+        async.flushMicrotasks();
+
+        final changes = observer.events.whereType<SlowThresholdChanged>().toList();
+        check(changes).length.equals(2);
+        check(changes.first.previous).equals(const Duration(milliseconds: 200));
+        check(changes.first.next).equals(const Duration(milliseconds: 50));
+        check(changes.last.previous).equals(const Duration(milliseconds: 50));
+        check(changes.last.next).isNull();
+
+        unawaited(connection.dispose());
+      });
     });
 
     test('onDispose fires exactly once across multiple dispose calls', () async {
       final probe = StubProbe((t) async => successResult(t));
       final observer = RecordingObserver();
-      final connection = InternetConnection(targets: [target], probe: probe, observer: observer);
+      final connection = InternetConnection(targets: [target], probe: probe);
+      attachObserver(connection.events, observer);
 
       await connection.dispose();
       await connection.dispose();

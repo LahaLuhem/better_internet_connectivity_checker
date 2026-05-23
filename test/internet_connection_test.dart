@@ -240,8 +240,8 @@ void main() {
           probe: probe,
           checkInterval: const Duration(seconds: 5),
           slowThreshold: const Duration(milliseconds: 500),
-          observer: observer,
         );
+        attachObserver(connection.events, observer);
         connection.onStatusChange.listen(noopWithVal);
 
         async.flushMicrotasks();
