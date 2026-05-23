@@ -14,9 +14,19 @@ final class _EventSink {
 
   /// Queues [event] for microtask-deferred dispatch.
   ///
-  /// Silently drops the event if the controller has already been closed —
-  /// emissions raced against [dispose] are best-effort by design.
+  /// Fast-paths the no-subscriber case — when nothing is attached to the
+  /// broadcast stream, the event would land in an empty broadcast and the
+  /// microtask hop is pure overhead, so we skip queuing it entirely. A
+  /// subscriber attaching in the window between [emit] returning and the
+  /// would-be microtask firing therefore misses the event; this matches
+  /// the broadcast-stream contract that late subscribers never see past
+  /// events.
+  ///
+  /// Also silently drops the event if the controller has already been
+  /// closed — emissions raced against [dispose] are best-effort by design.
   void emit(ConnectivityEvent event) {
+    if (!_controller.hasListener) return;
+
     scheduleMicrotask(() {
       if (_controller.isClosed) return;
 
