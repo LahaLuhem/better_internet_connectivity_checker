@@ -58,6 +58,12 @@ jobs:
       # contribute to either side of the ratio. Each file omitted carries a
       # block comment at the top of the file explaining why. Append new globs
       # here when adding another smoke-only file.
+      #
+      # `lcov` is not pre-installed on the `ubuntu-latest` runner image as of
+      # ubuntu-24.04 — install it explicitly. `apt-get update` keeps the package
+      # index fresh enough that a stale mirror cache doesn't break the install.
+      - name: Install lcov
+        run: sudo apt-get update -qq && sudo apt-get install -y lcov
       - name: Strip smoke-only files from coverage
         run: |
           lcov --remove coverage/lcov.info \
@@ -66,8 +72,17 @@ jobs:
       # Upload BEFORE the gate so the coverage badge updates and PR comments
       # land even when the gate would fail. Coveralls auto-routes based on
       # event context (PR vs. push to main).
+      #
+      # `continue-on-error: true` keeps a Coveralls outage from failing the
+      # whole job — they have occasional 500s from their /api/v1/jobs endpoint
+      # ("Internal server error. Please contact Coveralls team.") that have
+      # nothing to do with our coverage data. Coveralls is observability, not
+      # a correctness gate; the actual threshold check is the next step. The
+      # step will still show RED in the CI UI on failure so broken uploads
+      # don't go unnoticed for long.
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
+        continue-on-error: true
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file: coverage/lcov.info
