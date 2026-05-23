@@ -75,8 +75,8 @@ final class LiveStreamViewModel extends ViewModel {
       slowThreshold: _slowThreshold,
       checkInterval: const Duration(seconds: 2),
       externalRecheckTrigger: _externalTrigger,
-      observer: const PrintingConnectivityObserver(name: 'live_stream'),
     );
+    attachObserver(connection.events, const PrintingConnectivityObserver(name: 'live_stream'));
     _connection = connection;
     _subscription = connection.onStatusChange.listen((status) {
       _streamStateNotifier.value = (

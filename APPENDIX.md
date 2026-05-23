@@ -338,16 +338,37 @@ anchor stable or grep-and-update every caller.
   the diagnostic event stream introduced by the event-bus refactor — delivers
   events microtask-deferred from the caller's frame, and skips queuing the
   microtask entirely when no subscriber is attached. The public status stream
-  (`onStatusChange`) is unaffected and remains synchronous on the caller's frame
-  because status emission must not be delayed by diagnostic work.
-- **Why:** the synchronous observer fan-out documented at
-  [`lib/src/observer/connectivity_observer.dart:37`](./lib/src/observer/connectivity_observer.dart#L37)
-  was the latent perf bug the refactor was built to fix — a slow observer
-  subscribed to any of the seven lifecycle callbacks would stall the entire
-  check scheduler (baseline `slow_observer.max_drift ≈ 1.8 s`). Microtask
-  deferral guarantees that no diagnostic subscriber can delay the next
-  scheduled tick: the microtask runs *after* the current synchronous chunk,
-  then the event loop is free to fire the next timer.
+  (`onStatusChange`) is unaffected and remains synchronous on the caller's frame.
+- **Why (architectural):** dispatch from a single
+  `_eventSink.emit(...)` call site replaces the prior `_observer.onXyz(...)`
+  fan-out across seven lifecycle locations. Adding a future lifecycle event
+  is now a one-line emit + one new sealed `final class` extending
+  `ConnectivityEvent`; no need to thread a new `_observer.onSomething()`
+  call into every affected method.
+- **What microtask deferral does NOT do:** it does *not* shield the
+  scheduler from synchronous blocking work performed inside an override
+  or stream listener. A `sleep`, sync IO call, or CPU-bound loop inside
+  the override still blocks the event loop just as it does for a
+  directly-called observer — microtasks run synchronously inside the
+  same isolate, so the only thing the deferral moves is *when* the
+  blocking happens, not *whether* it happens. Benchmark evidence on the
+  `slow_observer` scenario (which uses `dart:io`'s synchronous `sleep`)
+  confirms this: the post-refactor median `tick_drift_microseconds` was
+  ~60 % higher than the pre-refactor baseline because the blocking
+  shifted from "inside the tick" (33 % duty cycle) to "during the wait
+  between ticks" (50 % duty cycle). The doc warning on
+  [`ConnectivityObserver`](./lib/src/observer/connectivity_observer.dart#L37)
+  — *"heavy work or blocking IO inside an override will stall the
+  checker's scheduling loop"* — is preserved by the refactor, not
+  resolved by it.
+- **What microtask deferral DOES do:** it decouples the observer's
+  failure mode from the scheduler. An exception inside a microtask is
+  raised as an uncaught error on the isolate's error handler and does
+  not propagate back into `_runScheduledCheck`'s stack frame. The
+  scheduler's tick loop continues even if a subscriber throws — pre-
+  refactor a thrown exception from `_observer.onCheckCompleted(...)`
+  would propagate out of `_runScheduledCheck` and reset the tick
+  scheduler.
 - **Trade-off — late subscribers miss past events.** A subscriber attaching in
   the narrow window between an event's emission and its microtask firing will
   miss that event. This matches the existing broadcast-stream contract that

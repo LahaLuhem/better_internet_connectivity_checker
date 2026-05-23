@@ -51,8 +51,8 @@ Future<void> _runIteration(
     targets: [ProbeTarget(uri: Uri.parse('http://127.0.0.1/fake'))],
     probe: FakeProbe.alwaysSuccess(responseTime: Duration.zero),
     checkInterval: const Duration(milliseconds: 100),
-    observer: observer,
   );
+  attachObserver(checker.events, observer);
 
   final memorySampler = MemorySampler()..start();
   final driftMeter = TickDriftMeter()..start();
