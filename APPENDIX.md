@@ -366,17 +366,28 @@ anchor stable or grep-and-update every caller.
   at the time `dispose()` is called observe `DisposedEvent` before the stream
   completes. Any `DisposedEvent` emitted while nobody is attached is dropped
   by the same early-out, which is fine: there's nobody around to care.
-- **Known follow-up (unverified):** N=10 comparison runs showed a +20 %
-  `many_subscribers` `tick_drift` regression that the early-out narrowed but
-  did not eliminate. The residual cost is from event-object *allocation* at
-  each call site (e.g. `CheckCompletedEvent(status)` is built before `emit`
-  can consult `hasListener`). Whether the regression is real or run-to-run
-  noise is not yet established — the absolute drift differences (~µs scale)
-  sit close to the iteration-to-iteration variance, and several of the other
-  scenarios' wins reversed direction between runs. **To resolve:** re-run
-  baseline + post-Step-2 at N=30 (tighter IQRs, narrower confidence
-  intervals), and *only if* the regression persists with significance, guard
-  each emit at the call site (`if (_eventSink.hasListener) _eventSink.emit(...)`)
-  to skip the event allocation too. The headline win at Step 6 (~1.79 s drift
-  → sub-millisecond) is expected to dominate either way; this follow-up is
-  purely about not leaking a ~µs/sec drift cost into the noise-floor scenarios.
+- **Known follow-up (unverified):** N=10 comparison runs across the
+  event-bus + scheduler-extraction refactor showed a recurring
+  `many_subscribers` `tick_drift` regression that grew across the
+  intermediate refactor steps (Step 2: +95 %; Step 2.1 with early-out:
+  +72 %; Step 3 with scheduler extracted: +143 %). Two suspected sources:
+  (a) event-object *allocation* at each emit call site —
+  `CheckCompletedEvent(status)` is built before `emit` can consult
+  `hasListener`, so the early-out only avoids the microtask hop, not the
+  allocation; (b) the periodic scheduler's `_runTickAndReschedule` wraps
+  the `onTick` callback in an additional `async`/`await` hop per tick,
+  adding one microtask of latency between the timer firing and the work
+  starting. Whether either cost is real-vs-noise is not yet established —
+  the absolute drift differences (~µs scale) sit close to
+  iteration-to-iteration variance, and several other scenarios' wins
+  reversed direction between runs (`long_running` swung from -49 % to
+  +14 % to -75 % across three N=10 captures of essentially the same
+  intermediate code). **To resolve:** re-run baseline + post-refactor at
+  N=30 (tighter IQRs, narrower confidence intervals). Only if a regression
+  persists with significance, apply the appropriate fix: guard each emit
+  at the call site (`if (_eventSink.hasListener) _eventSink.emit(...)`)
+  to skip the event allocation; switch the scheduler's reschedule to a
+  `.then()` continuation that avoids the extra `await` hop. The headline
+  win at Step 6 (~1.79 s drift → sub-millisecond on the `slow_observer`
+  scenario) is expected to dominate either way; this follow-up is purely
+  about not leaking a ~µs/sec drift cost into the noise-floor scenarios.

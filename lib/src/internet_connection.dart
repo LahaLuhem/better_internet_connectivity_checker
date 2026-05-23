@@ -12,6 +12,7 @@ import 'status/internet_status.dart';
 import 'status/models/connection_quality.dart';
 
 part 'internal/event_sink.dart';
+part 'internal/periodic_scheduler.dart';
 part 'observer/sinks/silent_connectivity_observer.dart';
 
 /// Coordinates internet-connectivity checks.
@@ -47,7 +48,7 @@ final class InternetConnection {
     onCancel: _handleLastCancel,
   );
   final _eventSink = _EventSink();
-  Timer? _timer;
+  late final _scheduler = _PeriodicScheduler(interval: _checkInterval, onTick: _runScheduledCheck);
   StreamSubscription<void>? _triggerSubscription;
   InternetStatus? _lastStatus;
   var _disposed = false;
@@ -156,10 +157,7 @@ final class InternetConnection {
     _checkInterval = interval;
     _observer.onCheckIntervalChanged(previous, interval);
     _eventSink.emit(CheckIntervalChangedEvent(previous: previous, next: interval));
-
-    if (_timer == null) return;
-    _timer!.cancel();
-    _timer = Timer(_checkInterval, () => unawaited(_runScheduledCheck()));
+    _scheduler.updateInterval(interval);
   }
 
   /// Updates the slow-classification cutoff.
@@ -192,8 +190,7 @@ final class InternetConnection {
     if (_disposed) return;
     _disposed = true;
 
-    _timer?.cancel();
-    _timer = null;
+    _scheduler.dispose();
 
     await _triggerSubscription?.cancel();
     _triggerSubscription = null;
@@ -208,7 +205,7 @@ final class InternetConnection {
       (_) {
         _observer.onExternalTriggerFired();
         _eventSink.emit(const ExternalTriggerFiredEvent());
-        unawaited(_runScheduledCheck());
+        _scheduler.start();
       },
       // Trigger errors are surfaced via the observer seam and the
       // diagnostic stream, then swallowed — the trigger is best-effort
@@ -220,14 +217,13 @@ final class InternetConnection {
       },
     );
 
-    unawaited(_runScheduledCheck());
+    _scheduler.start();
   }
 
   void _handleLastCancel() {
     if (_statusController.hasListener) return;
 
-    _timer?.cancel();
-    _timer = null;
+    _scheduler.stop();
 
     unawaited(_triggerSubscription?.cancel());
     _triggerSubscription = null;
@@ -237,7 +233,6 @@ final class InternetConnection {
 
   Future<void> _runScheduledCheck() async {
     if (_disposed || !_statusController.hasListener) return;
-    _timer?.cancel();
 
     final status = await checkOnce();
     if (_disposed || !_statusController.hasListener) return;
@@ -251,8 +246,6 @@ final class InternetConnection {
       _statusController.add(status);
     }
     _lastStatus = status;
-
-    _timer = Timer(_checkInterval, () => unawaited(_runScheduledCheck()));
   }
 
   static bool _isDistinctKind(InternetStatus? previous, InternetStatus current) {
