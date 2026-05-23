@@ -32,12 +32,10 @@ final class PolicyComparisonViewModel extends ViewModel {
     final targets = [..._baseTargets, if (_shouldIncludeBogusTargetNotifier.value) _bogusTarget];
     const observer = PrintingConnectivityObserver(name: 'policy_comparison');
 
-    final anyConnection = InternetConnection(targets: targets, observer: observer);
-    final allConnection = InternetConnection(
-      targets: targets,
-      observer: observer,
-      policy: const AllReachablePolicy(),
-    );
+    final anyConnection = InternetConnection(targets: targets);
+    attachObserver(anyConnection.events, observer);
+    final allConnection = InternetConnection(targets: targets, policy: const AllReachablePolicy());
+    attachObserver(allConnection.events, observer);
 
     try {
       final (anyStatus, allStatus) = await (

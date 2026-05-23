@@ -38,10 +38,16 @@ import 'events/connectivity_event.dart';
 /// ```
 ///
 /// {@template connectivity_observer_threading}
-/// Methods are invoked **synchronously** on the same zone as the underlying
-/// [InternetConnection] event. Heavy work or blocking IO inside an override
-/// will stall the checker's scheduling loop — buffer or defer to a stream /
-/// queue from within the override if that is a risk.
+/// When wired through [attachObserver], methods are dispatched from the
+/// underlying [ConnectivityEvent] stream — microtask-deferred from the
+/// frame that produced the event. The microtask boundary moves dispatch
+/// to a separate execution slot but does **not** insulate the scheduler
+/// from synchronous blocking work performed inside an override.
+/// Synchronous IO, `sleep`, busy loops, or any other event-loop-blocking
+/// work in the override will still stall the underlying check scheduler
+/// — the doc warning is preserved, not removed. Prefer async work
+/// (return-a-Future operations) for any expensive sink so the scheduler
+/// stays on cadence.
 /// {@endtemplate}
 abstract base class ConnectivityObserver {
   /// Const default constructor — subclasses are encouraged to be const.

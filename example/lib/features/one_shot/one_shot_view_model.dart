@@ -5,10 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:pmvvm/pmvvm.dart';
 
 final class OneShotViewModel extends ViewModel {
-  final _connection = InternetConnection(
-    observer: const PrintingConnectivityObserver(name: 'one_shot'),
-  );
+  final _connection = InternetConnection();
   final _lastResultNotifier = ValueNotifier<InternetStatus?>(null);
+
+  @override
+  void init() {
+    attachObserver(_connection.events, const PrintingConnectivityObserver(name: 'one_shot'));
+  }
 
   ValueListenable<InternetStatus?> get lastResultListenable => _lastResultNotifier;
 

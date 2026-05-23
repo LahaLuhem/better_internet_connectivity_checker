@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'data/values.dart';
-import 'observer/connectivity_observer.dart';
 import 'observer/events/connectivity_event.dart';
 import 'policy/reachability_policy.dart';
 import 'policy/strategies/any_reachable_policy.dart';
@@ -14,7 +13,6 @@ import 'status/models/connection_quality.dart';
 part 'internal/event_sink.dart';
 part 'internal/external_trigger_link.dart';
 part 'internal/periodic_scheduler.dart';
-part 'observer/sinks/silent_connectivity_observer.dart';
 
 /// Coordinates internet-connectivity checks.
 ///
@@ -42,7 +40,6 @@ final class InternetConnection {
   final ReachabilityPolicy _policy;
   final ConnectivityProbe _probe;
   final Stream<void>? _externalTrigger;
-  final ConnectivityObserver _observer;
 
   late final _statusController = StreamController<InternetStatus>.broadcast(
     onListen: _handleFirstListener,
@@ -53,12 +50,10 @@ final class InternetConnection {
   late final _triggerLink = _ExternalTriggerLink(
     trigger: _externalTrigger,
     onTrigger: () {
-      _observer.onExternalTriggerFired();
       _eventSink.emit(const ExternalTriggerFiredEvent());
       _scheduler.start();
     },
     onError: (error, stackTrace) {
-      _observer.onExternalTriggerError(error, stackTrace);
       _eventSink.emit(ExternalTriggerErrorEvent(error, stackTrace));
     },
   );
@@ -97,17 +92,14 @@ final class InternetConnection {
   /// immediate recheck regardless of the timer. Typical Flutter wiring:
   /// `Connectivity().onConnectivityChanged.map(noopWithVal)`.
   ///
-  /// `observer` is an optional [ConnectivityObserver] that receives
-  /// lifecycle callbacks for every status emission, check completion,
-  /// external-trigger event, interval change, and dispose. Defaults to a
-  /// silent observer — no events are surfaced unless one is supplied. Pass
-  /// `PrintingConnectivityObserver()` for a ready-to-use default that
-  /// writes each event through `dart:developer`.
+  /// To observe lifecycle events (status emissions, check completions,
+  /// external triggers, configuration changes, dispose), subscribe to
+  /// [events] directly or wire a `ConnectivityObserver` via the
+  /// `attachObserver` top-level function.
   InternetConnection({
     List<ProbeTarget>? targets,
     Duration checkInterval = Values.defaultCheckInterval,
     ReachabilityPolicy policy = const AnyReachablePolicy(),
-    ConnectivityObserver observer = const _SilentConnectivityObserver(),
     Duration? slowThreshold,
     ConnectivityProbe? probe,
     Stream<void>? externalRecheckTrigger,
@@ -117,7 +109,6 @@ final class InternetConnection {
        _slowThreshold = slowThreshold,
        _policy = policy,
        _externalTrigger = externalRecheckTrigger,
-       _observer = observer,
        _probe = probe ?? HttpProbe.head();
 
   /// The current periodic check interval.
@@ -167,7 +158,6 @@ final class InternetConnection {
   set checkInterval(Duration interval) {
     final previous = _checkInterval;
     _checkInterval = interval;
-    _observer.onCheckIntervalChanged(previous, interval);
     _eventSink.emit(CheckIntervalChangedEvent(previous: previous, next: interval));
     _scheduler.updateInterval(interval);
   }
@@ -183,12 +173,11 @@ final class InternetConnection {
   ///
   /// Prefer this over reconstructing the [InternetConnection] when only
   /// the threshold changes: rebuilding loses the in-memory [lastStatus],
-  /// so the next emission's `previous` value (surfaced via
-  /// [ConnectivityObserver.onStatusChangeEmitted]) resets to null.
+  /// so the next emission's `previous` field on [StatusEmittedEvent]
+  /// resets to null.
   set slowThreshold(Duration? threshold) {
     final previous = _slowThreshold;
     _slowThreshold = threshold;
-    _observer.onSlowThresholdChanged(previous, threshold);
     _eventSink.emit(SlowThresholdChangedEvent(previous: previous, next: threshold));
   }
 
@@ -207,7 +196,6 @@ final class InternetConnection {
     await _triggerLink.stop();
 
     await _statusController.close();
-    _observer.onDispose();
     await _eventSink.dispose();
   }
 
@@ -231,11 +219,9 @@ final class InternetConnection {
     final status = await checkOnce();
     if (_disposed || !_statusController.hasListener) return;
 
-    _observer.onCheckCompleted(status);
     _eventSink.emit(CheckCompletedEvent(status));
 
     if (_isDistinctKind(_lastStatus, status)) {
-      _observer.onStatusChangeEmitted(_lastStatus, status);
       _eventSink.emit(StatusEmittedEvent(previous: _lastStatus, next: status));
       _statusController.add(status);
     }
