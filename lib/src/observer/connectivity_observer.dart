@@ -5,7 +5,10 @@
 /// @docImport '../internet_connection.dart';
 library;
 
+import 'dart:async';
+
 import '../status/internet_status.dart';
+import 'events/connectivity_event.dart';
 
 /// Lifecycle observer for [InternetConnection].
 ///
@@ -117,3 +120,54 @@ abstract base class ConnectivityObserver {
     // No-op default; override to observe checker teardown.
   }
 }
+
+/// Bridges a stream of [ConnectivityEvent]s to a [ConnectivityObserver].
+///
+/// Subscribes [observer] to [events] and dispatches each typed event to the
+/// matching `onXyz` callback. Returns the underlying [StreamSubscription] so
+/// the caller can cancel it explicitly — or rely on the source stream
+/// closing (e.g. [InternetConnection.dispose] closes
+/// [InternetConnection.events]) to auto-cancel.
+///
+/// ```dart
+/// final connection = InternetConnection(...);
+/// final subscription = attachObserver(
+///   connection.events,
+///   PrintingConnectivityObserver(),
+/// );
+/// // Either: explicit cleanup
+/// await subscription.cancel();
+/// // Or: implicit cleanup via dispose
+/// await connection.dispose();
+/// ```
+///
+/// Multiple observers may be attached to the same [events] stream — each
+/// call to [attachObserver] creates an independent broadcast subscription
+/// that receives every event.
+///
+/// The dispatch switch is exhaustive against the sealed
+/// [ConnectivityEvent] hierarchy: adding a new event class without a new
+/// `onXyz` callback on [ConnectivityObserver] is a compile-time error
+/// here, which intentionally surfaces the change at refactor time rather
+/// than letting it silently no-op.
+StreamSubscription<ConnectivityEvent> attachObserver(
+  Stream<ConnectivityEvent> events,
+  ConnectivityObserver observer,
+) => events.listen((event) {
+  switch (event) {
+    case StatusEmittedEvent(:final previous, :final next):
+      observer.onStatusChangeEmitted(previous, next);
+    case CheckCompletedEvent(:final result):
+      observer.onCheckCompleted(result);
+    case ExternalTriggerFiredEvent():
+      observer.onExternalTriggerFired();
+    case ExternalTriggerErrorEvent(:final error, :final stackTrace):
+      observer.onExternalTriggerError(error, stackTrace);
+    case CheckIntervalChangedEvent(:final previous, :final next):
+      observer.onCheckIntervalChanged(previous, next);
+    case SlowThresholdChangedEvent(:final previous, :final next):
+      observer.onSlowThresholdChanged(previous, next);
+    case DisposedEvent():
+      observer.onDispose();
+  }
+});
