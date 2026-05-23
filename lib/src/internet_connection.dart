@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'data/values.dart';
 import 'observer/connectivity_observer.dart';
+import 'observer/events/connectivity_event.dart';
 import 'policy/reachability_policy.dart';
 import 'policy/strategies/any_reachable_policy.dart';
 import 'probe/connectivity_probe.dart';
@@ -10,6 +11,7 @@ import 'probe/transports/http_probe.dart';
 import 'status/internet_status.dart';
 import 'status/models/connection_quality.dart';
 
+part 'internal/event_sink.dart';
 part 'observer/sinks/silent_connectivity_observer.dart';
 
 /// Coordinates internet-connectivity checks.
@@ -44,6 +46,7 @@ final class InternetConnection {
     onListen: _handleFirstListener,
     onCancel: _handleLastCancel,
   );
+  final _eventSink = _EventSink();
   Timer? _timer;
   StreamSubscription<void>? _triggerSubscription;
   InternetStatus? _lastStatus;
@@ -125,6 +128,22 @@ final class InternetConnection {
   /// [ConnectionQuality.good] to [ConnectionQuality.slow] will.
   Stream<InternetStatus> get onStatusChange => _statusController.stream;
 
+  /// Stream of internal diagnostic events.
+  ///
+  /// Subscriptions observe lifecycle activity (status emissions, check
+  /// completions, external triggers, configuration changes, dispose)
+  /// microtask-deferred from the caller's frame — a slow listener cannot
+  /// stall the underlying check scheduler. The status stream
+  /// ([onStatusChange]) is unaffected and remains synchronous on the
+  /// caller's frame because status emission must not be delayed by
+  /// diagnostic work.
+  ///
+  /// Emissions race against [dispose] are best-effort: any event queued
+  /// after the sink closes is silently dropped. The terminal
+  /// [DisposedEvent] is always observed by subscribers attached at the
+  /// time [dispose] is called.
+  Stream<ConnectivityEvent> get events => _eventSink.stream;
+
   /// Runs one check and returns the resulting status.
   ///
   /// Does not affect the periodic timer, the status stream, or [lastStatus].
@@ -136,6 +155,7 @@ final class InternetConnection {
     final previous = _checkInterval;
     _checkInterval = interval;
     _observer.onCheckIntervalChanged(previous, interval);
+    _eventSink.emit(CheckIntervalChangedEvent(previous: previous, next: interval));
 
     if (_timer == null) return;
     _timer!.cancel();
@@ -159,6 +179,7 @@ final class InternetConnection {
     final previous = _slowThreshold;
     _slowThreshold = threshold;
     _observer.onSlowThresholdChanged(previous, threshold);
+    _eventSink.emit(SlowThresholdChangedEvent(previous: previous, next: threshold));
   }
 
   /// Releases the status stream, periodic timer, and external-trigger
@@ -179,18 +200,24 @@ final class InternetConnection {
 
     await _statusController.close();
     _observer.onDispose();
+    await _eventSink.dispose();
   }
 
   void _handleFirstListener() {
     _triggerSubscription ??= _externalTrigger?.listen(
       (_) {
         _observer.onExternalTriggerFired();
+        _eventSink.emit(const ExternalTriggerFiredEvent());
         unawaited(_runScheduledCheck());
       },
-      // Trigger errors are surfaced via the observer seam and otherwise
-      // swallowed — the trigger is best-effort and its errors must not
-      // propagate to the status stream's listeners.
-      onError: _observer.onExternalTriggerError,
+      // Trigger errors are surfaced via the observer seam and the
+      // diagnostic stream, then swallowed — the trigger is best-effort
+      // and its errors must not propagate to the status stream's
+      // listeners.
+      onError: (Object error, StackTrace stackTrace) {
+        _observer.onExternalTriggerError(error, stackTrace);
+        _eventSink.emit(ExternalTriggerErrorEvent(error, stackTrace));
+      },
     );
 
     unawaited(_runScheduledCheck());
@@ -216,9 +243,11 @@ final class InternetConnection {
     if (_disposed || !_statusController.hasListener) return;
 
     _observer.onCheckCompleted(status);
+    _eventSink.emit(CheckCompletedEvent(status));
 
     if (_isDistinctKind(_lastStatus, status)) {
       _observer.onStatusChangeEmitted(_lastStatus, status);
+      _eventSink.emit(StatusEmittedEvent(previous: _lastStatus, next: status));
       _statusController.add(status);
     }
     _lastStatus = status;
