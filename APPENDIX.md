@@ -367,10 +367,16 @@ anchor stable or grep-and-update every caller.
   completes. Any `DisposedEvent` emitted while nobody is attached is dropped
   by the same early-out, which is fine: there's nobody around to care.
 - **Known follow-up (unverified):** N=10 comparison runs across the
-  event-bus + scheduler-extraction refactor showed a recurring
-  `many_subscribers` `tick_drift` regression that grew across the
-  intermediate refactor steps (Step 2: +95 %; Step 2.1 with early-out:
-  +72 %; Step 3 with scheduler extracted: +143 %). Two suspected sources:
+  event-bus + collaborator-extraction refactor showed a recurring
+  `many_subscribers` `tick_drift` regression that swung wildly between
+  runs of the same code-path shape (Step 2: +95 %; Step 2.1 with
+  early-out: +72 %; Step 3 with scheduler extracted: +143 %; Step 4 with
+  trigger-link extracted: +334 %). The size of the swing is itself
+  evidence that the N=10 signal is dominated by run-to-run variance —
+  `many_subscribers` is highly sensitive to small timing perturbations
+  (GC pressure, CPU frequency scaling, thermal throttling), and the most
+  controlled signal (`slow_observer`, hovering near ±0 % across all
+  four runs) shows no equivalent drift. Two suspected sources:
   (a) event-object *allocation* at each emit call site —
   `CheckCompletedEvent(status)` is built before `emit` can consult
   `hasListener`, so the early-out only avoids the microtask hop, not the
