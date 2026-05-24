@@ -23,14 +23,11 @@ final class _PeriodicScheduler {
     : _interval = interval,
       _onTick = onTick;
 
-  /// The current tick interval.
-  Duration get interval => _interval;
-
   /// Begins ticking, or resets the rescheduling clock if already running.
   ///
   /// Cancels any pending timer and immediately invokes `onTick` once; after
   /// `onTick`'s returned future completes, schedules the next tick at the
-  /// current [interval]. A no-op after [dispose].
+  /// current interval. A no-op after [dispose].
   void start() {
     if (_disposed) return;
 

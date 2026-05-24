@@ -43,9 +43,14 @@ jobs:
       - run: dart pub global activate coverage
       - run: dart test --coverage=coverage
       - name: Format coverage as lcov
+        # `--check-ignore` makes `format_coverage` honour the
+        # `// coverage:ignore-line`, `ignore-start`/`ignore-end`, and
+        # `ignore-file` pragmas in source files. Without it, the directives
+        # are silently inert.
         run: |
           dart pub global run coverage:format_coverage \
             --lcov \
+            --check-ignore \
             --in=coverage \
             --report-on=lib \
             --packages=.dart_tool/package_config.json \
