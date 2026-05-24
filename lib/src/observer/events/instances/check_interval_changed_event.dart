@@ -14,6 +14,9 @@ final class CheckIntervalChangedEvent extends ConnectivityEvent {
   /// Creates a check-interval-changed event capturing the transition.
   const CheckIntervalChangedEvent({required this.previous, required this.next});
 
+  // Debug-only toString delegation; excluded from coverage.
+  // coverage:ignore-start
   @override
   String toString() => 'CheckIntervalChangedEvent(previous: $previous, next: $next)';
+  // coverage:ignore-end
 }

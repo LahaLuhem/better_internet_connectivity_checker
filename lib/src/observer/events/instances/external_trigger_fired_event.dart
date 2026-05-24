@@ -6,6 +6,9 @@ final class ExternalTriggerFiredEvent extends ConnectivityEvent {
   /// Creates an external-trigger-fired event.
   const ExternalTriggerFiredEvent();
 
+  // Debug-only toString delegation; excluded from coverage.
+  // coverage:ignore-start
   @override
   String toString() => 'ExternalTriggerFiredEvent()';
+  // coverage:ignore-end
 }

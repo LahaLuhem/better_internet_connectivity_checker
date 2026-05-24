@@ -53,6 +53,13 @@ abstract base class ConnectivityObserver {
   /// Const default constructor — subclasses are encouraged to be const.
   const ConnectivityObserver();
 
+  // The methods below are by-design no-op defaults — they exist purely so
+  // subclasses can selectively override only the events they care about.
+  // Excluded from coverage; exercising them would require a do-nothing
+  // subclass that adds no behavioural value beyond what the tests already
+  // assert via the overrides in `RecordingObserver`.
+  // coverage:ignore-start
+
   /// Called when [InternetConnection.onStatusChange] emits a deduplicated
   /// status transition.
   ///
@@ -125,6 +132,7 @@ abstract base class ConnectivityObserver {
   void onDispose() {
     // No-op default; override to observe checker teardown.
   }
+  // coverage:ignore-end
 }
 
 /// Bridges a stream of [ConnectivityEvent]s to a [ConnectivityObserver].

@@ -16,6 +16,9 @@ final class SlowThresholdChangedEvent extends ConnectivityEvent {
   /// Creates a slow-threshold-changed event capturing the transition.
   const SlowThresholdChangedEvent({required this.previous, required this.next});
 
+  // Debug-only toString delegation; excluded from coverage.
+  // coverage:ignore-start
   @override
   String toString() => 'SlowThresholdChangedEvent(previous: $previous, next: $next)';
+  // coverage:ignore-end
 }
