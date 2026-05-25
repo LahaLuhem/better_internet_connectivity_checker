@@ -1,6 +1,14 @@
 ## [Unreleased]
 ### Added
 - \[#4\] Benchmarking framework + snapshotting library performance
+- \[#5\] sealed `ConnectivityEvent` hierarchy + public `Stream<ConnectivityEvent>` on `InternetConnection.events` for reactive lifecycle observation
+- \[#5\] `attachObserver(events, observer)` top-level helper to wire `ConnectivityObserver` onto the events stream
+
+### Fixed
+- post merge fix
+
+### Removed
+- \[#5\] **Breaking:** `observer:` constructor parameter on `InternetConnection` — migrate via `attachObserver(connection.events, observer)`
 
 ## [0.2.0] - 2026-05-20
 ### Added
