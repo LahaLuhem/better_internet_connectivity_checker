@@ -52,10 +52,25 @@ jobs:
         if: steps.sem.outputs.type == 'skip'
         run: echo 'sem-skip applied — no changelog entry.'
 
+      # Mint a short-lived (~1 h) installation token for the GitHub App
+      # configured to bypass main's ruleset. We can't use the default
+      # GITHUB_TOKEN here because branch protection blocks
+      # `github-actions[bot]` direct pushes, and the bot identity is not
+      # surface-able in the ruleset's bypass list. The App is — via the
+      # ruleset's "Apps" bypass tab — and the install token authenticates
+      # as the App.
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        if: steps.sem.outputs.type != 'skip'
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
         if: steps.sem.outputs.type != 'skip'
         with:
           ref: main
+          token: ${{ steps.app-token.outputs.token }}
 
       # No project deps needed — cider is installed via `pub global activate`.
       # Skip the setup-dart composite (which runs `dart pub get`) for the
@@ -75,12 +90,16 @@ jobs:
           TYPE: ${{ steps.sem.outputs.type }}
           TITLE: ${{ github.event.pull_request.title }}
         run: |
-          git config user.name  'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # The numeric prefix on the email is the bot's GitHub user ID
+          # (stable across repos for the same App) — it's what links commits
+          # to the App's avatar in GitHub's UI. Look up via:
+          # `curl -s https://api.github.com/users/<slug>%5Bbot%5D | jq .id`
+          git config user.name  '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config user.email '287673903+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
           dart pub global run cider log "$TYPE" "$TITLE"
           git add CHANGELOG.md
-          # [skip ci] is belt-and-suspenders: GITHUB_TOKEN-authored pushes
-          # don't fire workflows by default, but the marker keeps intent
-          # visible to anyone reading main's history.
+          # [skip ci] now matters: App-token pushes DO trigger workflows
+          # (unlike GITHUB_TOKEN pushes, which don't). The marker prevents
+          # this commit from re-triggering the package CI on main.
           git commit -m 'Changelog updated [skip ci]'
           git push origin HEAD:main
