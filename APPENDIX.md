@@ -387,6 +387,43 @@ anchor stable or grep-and-update every caller.
   at the time `dispose()` is called observe `DisposedEvent` before the stream
   completes. Any `DisposedEvent` emitted while nobody is attached is dropped
   by the same early-out, which is fine: there's nobody around to care.
+- **Lazy controller allocation.** The backing
+  [`StreamController<ConnectivityEvent>.broadcast()`](./lib/src/internal/event_sink.dart)
+  is instantiated on first access to [`InternetConnection.events`](./lib/src/internet_connection.dart),
+  not at construction. Checkers whose consumers only watch
+  `onStatusChange` — the common case — never pay the per-instance
+  broadcast-controller cost. The post-dispose contract is preserved: a
+  subscriber attaching to `events` after [`dispose`] completes receives
+  `const Stream<ConnectivityEvent>.empty()`, an interned broadcast that
+  fires `done` immediately — same observable behaviour as the closed
+  controller in the original eager-allocation design, without forcing a
+  re-allocation on use-after-dispose. The fix is measurable: on the
+  ephemeral construct/dispose pattern (`flapping_network` benchmark at
+  N=30, 2026-05-25), the median peak RSS shifts from 79.3 M → 78.7 M —
+  ~600 KB per 30-checker workload, ~17 KB per never-subscribed instance.
+  The `events`-using paths (`slow_observer`, `attachObserver`) are
+  unaffected — the controller is allocated identically once subscription
+  happens.
+- **Known follow-up (open):** the ephemeral construct/dispose pattern
+  still shows a +19.8 % `flapping_network` median peak RSS gap vs the
+  pre-refactor baseline at N=30 (baseline 65.5 M → bugfix 78.5 M — the
+  lazy-allocation fix above only shaved ~1 pp off the original +20.9 %
+  gap). Both branches peak at the same ~80 M ceiling — the divergence
+  is that the pre-refactor VM happens to trigger a major GC at iter 12
+  (heap drops to ~64 M) and the post-refactor VM doesn't on this
+  workload. Two candidate causes (extra broadcast controller; the
+  `InternetConnection ↔ _PeriodicScheduler._onTick` /
+  `_ExternalTriggerLink._on*` closure cycle) were tested and ruled out:
+  lazy allocation closed only ~1 pp, the cycle-breaking experiment
+  (nullable callback fields + null in collaborator dispose) delivered
+  zero measurable change and was reverted. Remaining hypotheses
+  (per-tick `async` machinery in `_PeriodicScheduler._runTickAndReschedule`,
+  heap fragmentation from the new collaborator layout, pure VM heuristic
+  luck) are tracked in
+  `~/Desktop/bicc-gc-heuristic-investigation-2026-05-25.md`. Real-user
+  impact is bounded — both ephemeral and long-lived patterns hit the
+  same peak — so this is doc-only until the investigation identifies a
+  structural cause.
 
 ---
 
