@@ -421,34 +421,31 @@ anchor stable or grep-and-update every caller.
   refactor-friendly. Extraction is a mechanical lift-and-shift if a
   future feature (hysteresis, kind-aware backoff, custom equality) starts
   needing per-checker dedup state with its own behaviour.
-- **Known follow-up (unverified):** N=10 comparison runs across the
-  event-bus + collaborator-extraction refactor showed a recurring
-  `many_subscribers` `tick_drift` regression that swung wildly between
-  runs of the same code-path shape (Step 2: +95 %; Step 2.1 with
-  early-out: +72 %; Step 3 with scheduler extracted: +143 %; Step 4 with
-  trigger-link extracted: +334 %). The size of the swing is itself
-  evidence that the N=10 signal is dominated by run-to-run variance —
-  `many_subscribers` is highly sensitive to small timing perturbations
-  (GC pressure, CPU frequency scaling, thermal throttling), and the most
-  controlled signal (`slow_observer`, hovering near ±0 % across all
-  four runs) shows no equivalent drift. Two suspected sources:
-  (a) event-object *allocation* at each emit call site —
-  `CheckCompletedEvent(status)` is built before `emit` can consult
-  `hasListener`, so the early-out only avoids the microtask hop, not the
-  allocation; (b) the periodic scheduler's `_runTickAndReschedule` wraps
-  the `onTick` callback in an additional `async`/`await` hop per tick,
-  adding one microtask of latency between the timer firing and the work
-  starting. Whether either cost is real-vs-noise is not yet established —
-  the absolute drift differences (~µs scale) sit close to
-  iteration-to-iteration variance, and several other scenarios' wins
-  reversed direction between runs (`long_running` swung from -49 % to
-  +14 % to -75 % across three N=10 captures of essentially the same
-  intermediate code). **To resolve:** re-run baseline + post-refactor at
-  N=30 (tighter IQRs, narrower confidence intervals). Only if a regression
-  persists with significance, apply the appropriate fix: guard each emit
-  at the call site (`if (_eventSink.hasListener) _eventSink.emit(...)`)
-  to skip the event allocation; switch the scheduler's reschedule to a
-  `.then()` continuation that avoids the extra `await` hop.
+- **Verified clean at N=30 on 2026-05-25 — no regression.** N=10
+  comparison runs across the event-bus + collaborator-extraction
+  refactor had shown a recurring `many_subscribers` `tick_drift`
+  regression that swung wildly between captures (Step 2: +95 %;
+  Step 2.1 with early-out: +72 %; Step 3 with scheduler extracted:
+  +143 %; Step 4 with trigger-link extracted: +334 %) — the size of
+  the swing was itself the noise signal. Repeating the comparison at
+  N=30 (`c473acd` pre-refactor vs `17f36f0` post-refactor, 390 records
+  each, Apple Silicon macOS, Dart 3.11.5) collapses the variance:
+  `many_subscribers` `tick_drift` median is **−40.6 % (2,631 →
+  1,564 µs, p < 0.0001)** — a real improvement, not a regression. The
+  two suspected sources documented in earlier drafts of this note
+  ((a) event-object allocation at each emit site, (b) the periodic
+  scheduler's `_runTickAndReschedule` async/await wrapper) were never
+  demonstrated to matter on this workload, and the call-site
+  `hasListener` guards / `.then()` continuation fixes are unnecessary.
+  The two costs *do* exist in the hot path but at this tick rate
+  (10 ticks/sec) and this allocation size (~24 B per
+  `CheckCompletedEvent`) they sit well below the GC noise floor — the
+  pessimistic ceiling we computed (10 events/sec × 24 B = 240 B/sec
+  sustained) is roughly four orders of magnitude under the Dart VM's
+  young-gen allocation tolerance. The N=30 capture artefacts are in
+  `benchmark/results-local/{baseline-c473acd,main}-n30/` and
+  `benchmark/results-local/compare-pre-vs-post-n30/` (gitignored — the
+  raw JSONs are per-machine).
 
 ---
 
