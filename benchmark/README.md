@@ -115,8 +115,18 @@ can't be defended.
 - **AOT compile**, not JIT. `dart compile exe` produces deterministic warmup
   characteristics; `dart run` does not.
 - **SDK pinned** via [`.fvmrc`](../.fvmrc). Any bump invalidates the baseline.
-- **N ≥ 10 iterations** per scenario. Report **median + IQR**, never mean —
-  GC outliers skew means heavily on a single-threaded VM.
+- **N ≥ 10 iterations** per scenario for routine sanity checks. **Bump to
+  N=30 minimum** before claiming a regression or improvement on
+  `many_subscribers` `tick_drift` or `flapping_network` `rss_bytes` —
+  those two metric/scenario pairs swing wildly at N=10. Real example:
+  the `many_subscribers` `tick_drift` delta across four N=10 captures of
+  the in-progress event-bus refactor read +95 %, +72 %, +143 %, +334 %.
+  The same comparison at N=30 collapsed to **−40.6 %** (an improvement,
+  not a regression) with p < 0.0001. The size of the N=10 swing is itself
+  the noise signal — when sign and magnitude both flip between runs of
+  the same code, don't trust the headline; widen the sample. Report
+  **median + IQR**, never mean — GC outliers skew means heavily on a
+  single-threaded VM.
 - **Mann-Whitney U** (`scipy.stats.mannwhitneyu`) for significance claims.
   Nonparametric, robust to GC outliers, doesn't assume normality. p < 0.05
   for "significant difference" claims.
@@ -206,6 +216,28 @@ uv run python run.py compare \
   ../results-local/baseline/aggregated.json \
   ../results-local/after/aggregated.json
 ```
+
+### Long-running captures (N=30 full sweep, ~40 min)
+
+A full N=30 sweep on this hardware (Apple Silicon macOS) takes ~37–40
+minutes. Two operational notes for long runs:
+
+```bash
+# macOS will sleep the system mid-run and kill the python process.
+# Wrap the command in `caffeinate -dimsu` to keep the system fully awake
+# (display + idle + system + user-activity assertions).
+#
+# Use `python -u` (or set `PYTHONUNBUFFERED=1`) so the per-scenario
+# progress lines flush to the terminal in real time — otherwise the
+# output buffers for several minutes at a time and looks frozen.
+caffeinate -dimsu uv run python -u run.py run \
+  --iterations 30 --out ../results-local/main-n30/
+```
+
+If a long run dies before writing `aggregated.json` (the final step),
+the per-scenario `*.json` files under the output directory are still
+valid but the aggregated record is missing — start over rather than
+patching in.
 
 The terminal output flags every (scenario, metric) where the after-run
 differs significantly (p < 0.05, Mann-Whitney U). The same data plus paired
