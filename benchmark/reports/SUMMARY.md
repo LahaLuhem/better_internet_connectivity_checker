@@ -1,6 +1,6 @@
 # Benchmark results
 
-Captured **2026-05-22** against `0.2.0` at `e141638` on Dart SDK 3.11.5. N=10 iterations per scenario.
+Captured **2026-05-26** against `0.2.0` at `3a112e9` on Dart SDK 3.11.5. N=30 iterations per scenario.
 
 > Per-machine measurements. Numbers below reflect *this* machine (CPU, GC, OS scheduler, thermal state). Your numbers WILL differ - capture your own local baseline before measuring a code delta.
 
@@ -10,12 +10,12 @@ The `slow_observer` scenario simulates a heavy synchronous observer (50 ms per c
 
 | Scenario | N | Median (us) | IQR (us) | Min (us) | Max (us) |
 |---|---:|---:|---:|---:|---:|
-| `flapping_network` | 10 | 25,881 | 3,183 | 19,388 | 52,931 |
-| `long_running` | 10 | 58,196 | 17,330 | 35,601 | 100,865 |
-| `many_subscribers` | 30 | 8,634 | 9,107 | 1,610 | 45,099 |
-| `quiet_app` | 10 | 10,897 | 3,811 | 5,582 | 26,822 |
-| `slow_observer` | 10 | 1,787,673 | 16,767 | 1,777,024 | 1,840,575 |
-| `trigger_storm` | 10 | 11,020 | 15,721 | 6,635 | 49,729 |
+| `flapping_network` | 30 | 6,510 | 5,504 | 3,545 | 36,553 |
+| `long_running` | 30 | 40,178 | 18,320 | 16,822 | 54,649 |
+| `many_subscribers` | 90 | 2,280 | 3,910 | 1,353 | 17,264 |
+| `quiet_app` | 30 | 7,728 | 7,225 | 1,756 | 30,646 |
+| `slow_observer` | 30 | 2,746,721 | 13,970 | 2,726,355 | 2,790,382 |
+| `trigger_storm` | 30 | 6,018 | 1,646 | 3,598 | 14,301 |
 
 
 ![Headline tick drift](headline_tick_drift.png)
@@ -26,12 +26,12 @@ Peak RSS captured via `ProcessInfo.currentRss` sampled every 500 ms (every 250 m
 
 | Scenario | N | Median (MB) | IQR (MB) | Min (MB) | Max (MB) |
 |---|---:|---:|---:|---:|---:|
-| `flapping_network` | 10 | 74.30 | 15.12 | 29.45 | 76.61 |
-| `long_running` | 10 | 72.62 | 17.88 | 30.67 | 81.62 |
-| `many_subscribers` | 30 | 45.45 | 0.41 | 27.09 | 68.20 |
-| `quiet_app` | 10 | 73.14 | 16.36 | 29.14 | 75.67 |
-| `slow_observer` | 10 | 68.98 | 14.86 | 27.86 | 71.45 |
-| `trigger_storm` | 10 | 63.66 | 14.67 | 28.34 | 65.44 |
+| `flapping_network` | 30 | 74.88 | 1.86 | 27.91 | 77.19 |
+| `long_running` | 30 | 54.90 | 4.36 | 29.02 | 79.11 |
+| `many_subscribers` | 90 | 61.61 | 1.34 | 25.89 | 66.48 |
+| `quiet_app` | 30 | 73.51 | 0.66 | 27.58 | 74.06 |
+| `slow_observer` | 30 | 60.69 | 0.11 | 25.97 | 66.48 |
+| `trigger_storm` | 30 | 71.68 | 0.39 | 26.42 | 71.91 |
 
 
 ![Memory peak RSS](memory_peak_rss.png)
@@ -42,11 +42,11 @@ Same metric as the headline chart, but with the `slow_observer` outlier excluded
 
 | Scenario | N | Median (us) | IQR (us) | Min (us) | Max (us) |
 |---|---:|---:|---:|---:|---:|
-| `flapping_network` | 10 | 25,881 | 3,183 | 19,388 | 52,931 |
-| `long_running` | 10 | 58,196 | 17,330 | 35,601 | 100,865 |
-| `many_subscribers` | 30 | 8,634 | 9,107 | 1,610 | 45,099 |
-| `quiet_app` | 10 | 10,897 | 3,811 | 5,582 | 26,822 |
-| `trigger_storm` | 10 | 11,020 | 15,721 | 6,635 | 49,729 |
+| `flapping_network` | 30 | 6,510 | 5,504 | 3,545 | 36,553 |
+| `long_running` | 30 | 40,178 | 18,320 | 16,822 | 54,649 |
+| `many_subscribers` | 90 | 2,280 | 3,910 | 1,353 | 17,264 |
+| `quiet_app` | 30 | 7,728 | 7,225 | 1,756 | 30,646 |
+| `trigger_storm` | 30 | 6,018 | 1,646 | 3,598 | 14,301 |
 
 
 ![Scenario stability](scenario_stability.png)
@@ -57,9 +57,9 @@ From the `status_emission` micro (synchronous broadcast, isolated from the rest 
 
 | Subscribers | N | Median (us/emit) | IQR (us) |
 |---:|---:|---:|---:|
-| 1 | 10 | 0.132 | 0.002 |
-| 10 | 10 | 0.996 | 0.014 |
-| 100 | 10 | 8.81 | 0.095 |
+| 1 | 30 | 0.131 | 0.001 |
+| 10 | 30 | 1.00 | 0.010 |
+| 100 | 30 | 8.78 | 0.031 |
 
 
 ![Subscriber scaling](subscriber_scaling.png)

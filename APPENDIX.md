@@ -416,10 +416,19 @@ anchor stable or grep-and-update every caller.
   `_ExternalTriggerLink._on*` closure cycle) were tested and ruled out:
   lazy allocation closed only ~1 pp, the cycle-breaking experiment
   (nullable callback fields + null in collaborator dispose) delivered
-  zero measurable change and was reverted. Remaining hypotheses
-  (per-tick `async` machinery in `_PeriodicScheduler._runTickAndReschedule`,
-  heap fragmentation from the new collaborator layout, pure VM heuristic
-  luck) are tracked in
+  zero measurable change and was reverted. A third hypothesis — the
+  per-tick `async`/`await` wrapper in `_PeriodicScheduler._runTickAndReschedule`
+  inflating young-gen allocation pressure — was tested by rewriting the
+  wrapper as an `unawaited(_onTick().then(...))` continuation and
+  re-running `long_running` + `quiet_app` at N=30 on 2026-05-26. The
+  result was a regression, not an improvement: `quiet_app` median drift
+  +26 % (p=0.03), p95 drift +140 % (p=0.01); `long_running` drift flat
+  (Δ +0.5 %, p=0.49). Variance also widened ~4× on the p95 metric. The
+  hand-rolled `.then()` form is apparently *worse* than the
+  Dart-compiler-optimised `async`/`await` desugaring on small-tick
+  scenarios, so the wrapper stays as it is and that hypothesis is
+  closed too. Remaining hypotheses (heap fragmentation from the new
+  collaborator layout, pure VM heuristic luck) are tracked in
   `~/Desktop/bicc-gc-heuristic-investigation-2026-05-25.md`. Real-user
   impact is bounded — both ephemeral and long-lived patterns hit the
   same peak — so this is doc-only until the investigation identifies a
