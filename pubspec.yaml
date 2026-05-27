@@ -51,4 +51,4 @@ dev_dependencies:
 cider:
   link_template:
     tag: https://github.com/LahaLuhem/better_internet_connectivity_checker/releases/tag/%tag%
-    diff: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/%from%...v%to%
+    diff: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/%from%...%to%
