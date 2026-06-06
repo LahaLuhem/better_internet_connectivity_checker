@@ -22,6 +22,9 @@ build/
 # Maintainer-only tooling.
 scripts/
 
+# Context7 doc-indexer config — repo metadata for context7.com, not a consumer file.
+context7.json
+
 # Internal contributor / AI-agent docs — not useful to pub.dev consumers.
 # `AGENTS.md` and `CLAUDE.md` at the package root are symlinks into `.ai/`. `.ai/`
 # itself is auto-excluded by pub's hidden-path rule, but pub follows symlinks before

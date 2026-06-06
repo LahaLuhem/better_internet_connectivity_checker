@@ -1,0 +1,33 @@
+{
+  "url": "https://context7.com/lahaluhem/better_internet_connectivity_checker",
+  "public_key": "pk_zRQqaALefsVNkJ7uS6fVf",
+  "projectTitle": "Better Internet Connectivity Checker",
+  "description": "Pure-Dart internet connectivity checker. Distinguishes \"interface up\" from \"can reach the public internet\". Pluggable probes, policies, and triggers.",
+  "folders": [],
+  "excludeFolders": [
+    "build",
+    "benchmark",
+    "test",
+    "scripts",
+    ".github",
+    ".idea",
+    ".dart_tool"
+  ],
+  "excludeFiles": [
+    "CHANGELOG.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CODESTYLE.md"
+  ],
+  "rules": [
+    "Answers \"can I reach the public internet right now?\" — not \"is an interface up?\". Don't treat OS connectivity (or connectivity_plus) as reachability; feed it through externalRecheckTrigger to trigger a recheck, not as source of truth.",
+    "InternetStatus is a sealed type — pattern-match with a switch on Reachable(:final quality) and Unreachable(:final failedProbes). Never assume a plain online/offline boolean.",
+    "Create a checker with InternetConnection(...), run a single check via `await checker.checkOnce()`, and always `await checker.dispose()` when finished to release timers and the stream.",
+    "Customize via pluggable seams: implement ConnectivityProbe (or HttpProbe with a ProbeTarget), choose a ReachabilityPolicy (AnyReachablePolicy or AllReachablePolicy), and pass slowThreshold to flag slow-but-reachable links via ConnectionQuality.",
+    "The package is pure Dart with a single `http` dependency — it runs in CLI, server, web, and Flutter contexts and has no Flutter dependency of its own."
+  ],
+  "previousVersions": [
+    { "tag": "0.2.0" },
+    { "tag": "0.1.0" }
+  ]
+}
