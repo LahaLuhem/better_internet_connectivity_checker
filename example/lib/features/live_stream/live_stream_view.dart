@@ -2,8 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:gap/gap.dart';
-import 'package:material_ui/material_ui.dart'
-    show AppBar, Card, Colors, Icons, Scaffold, Slider, Theme;
+import 'package:material_ui/material_ui.dart' show Theme;
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+import 'package:platform_icons/platform_icons.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '../core/data/constants/core_constants.dart';
@@ -16,83 +17,85 @@ class LiveStreamView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: LiveStreamViewModel(),
-    viewBuilder: (context, viewModel) => Scaffold(
-      appBar: AppBar(title: const Text('Live status stream')),
-      body: ListView(
-        padding: const .all(16),
-        children: [
-          const DemoIntro(
-            title: 'onStatusChange',
-            description:
-                'The stream emits on every status-kind transition. '
-                'connectivity_plus is wired in as an external recheck trigger '
-                'so OS-reported network changes force an immediate recheck.',
-          ),
-          const Gap(16),
-          ValueListenableBuilder(
-            valueListenable: viewModel.streamStateListenable,
-            builder: (context, streamState, _) => Column(
-              crossAxisAlignment: .stretch,
-              spacing: 16,
-              children: [
-                StatusBadge(internetStatus: streamState?.status),
-                Card(
-                  child: Padding(
-                    padding: const .all(16),
-                    child: Column(
-                      crossAxisAlignment: .start,
-                      spacing: 8,
-                      children: [
-                        Text('Stream stats', style: Theme.of(context).textTheme.titleMedium),
-                        Text('Transitions received: ${streamState?.transitions ?? 0}'),
-                        Text('Last update: ${_formatTimestamp(streamState?.lastUpdate)}'),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+    viewBuilder: (context, viewModel) => PlatformScaffold(
+      appBarData: const PlatformAppBar(title: Text('Live status stream')),
+      body: SafeArea(
+        child: ListView(
+          padding: const .all(16),
+          children: [
+            const DemoIntro(
+              title: 'onStatusChange',
+              description:
+                  'The stream emits on every status-kind transition. '
+                  'connectivity_plus is wired in as an external recheck trigger '
+                  'so OS-reported network changes force an immediate recheck.',
             ),
-          ),
-          const Gap(16),
-          Card(
-            child: Padding(
-              padding: const .all(16),
-              child: Column(
-                crossAxisAlignment: .start,
+            const Gap(16),
+            ValueListenableBuilder(
+              valueListenable: viewModel.streamStateListenable,
+              builder: (context, streamState, _) => Column(
+                crossAxisAlignment: .stretch,
+                spacing: 16,
                 children: [
-                  Text('Slow threshold', style: Theme.of(context).textTheme.titleMedium),
-                  ValueListenableBuilder(
-                    valueListenable: viewModel.sliderValueMillisListenable,
-                    builder: (context, sliderValueMs, _) => Column(
-                      crossAxisAlignment: .start,
-                      children: [
-                        Text(
-                          sliderValueMs <= 0
-                              ? 'Disabled — every reachable status reports good.'
-                              : 'Above ${sliderValueMs.round()} ms a probe is classified as slow.',
-                        ),
-                        const Gap(4),
-                        Text(
-                          'Approximate hint: probes nominally delay ~1 s, so the '
-                          'transition lands fuzzily around the shaded band.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        _ThresholdSlider(viewModel: viewModel, sliderValueMs: sliderValueMs),
-                      ],
+                  StatusBadge(internetStatus: streamState?.status),
+                  PlatformCard(
+                    child: Padding(
+                      padding: const .all(16),
+                      child: Column(
+                        crossAxisAlignment: .start,
+                        spacing: 8,
+                        children: [
+                          Text('Stream stats', style: Theme.of(context).textTheme.titleMedium),
+                          Text('Transitions received: ${streamState?.transitions ?? 0}'),
+                          Text('Last update: ${_formatTimestamp(streamState?.lastUpdate)}'),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          const Gap(16),
-          AsyncIconActionButton(
-            onPressed: viewModel.onForceRecheckPressed,
-            idleIcon: Icons.refresh,
-            idleLabel: 'Force recheck (checkOnce)',
-            busyLabel: 'Rechecking…',
-          ),
-        ],
+            const Gap(16),
+            PlatformCard(
+              child: Padding(
+                padding: const .all(16),
+                child: Column(
+                  crossAxisAlignment: .start,
+                  children: [
+                    Text('Slow threshold', style: Theme.of(context).textTheme.titleMedium),
+                    ValueListenableBuilder(
+                      valueListenable: viewModel.sliderValueMillisListenable,
+                      builder: (context, sliderValueMs, _) => Column(
+                        crossAxisAlignment: .start,
+                        children: [
+                          Text(
+                            sliderValueMs <= 0
+                                ? 'Disabled — every reachable status reports good.'
+                                : 'Above ${sliderValueMs.round()} ms a probe is classified as slow.',
+                          ),
+                          const Gap(4),
+                          Text(
+                            'Approximate hint: probes nominally delay ~1 s, so the '
+                            'transition lands fuzzily around the shaded band.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          _ThresholdSlider(viewModel: viewModel, sliderValueMs: sliderValueMs),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Gap(16),
+            AsyncIconActionButton(
+              onPressed: viewModel.onForceRecheckPressed,
+              idleIcon: PlatformIcons.refresh,
+              idleLabel: 'Force recheck (checkOnce)',
+              busyLabel: 'Rechecking…',
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -151,20 +154,28 @@ class _ThresholdSlider extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: const BorderRadius.all(Radius.circular(16)),
           gradient: LinearGradient(
-            colors: [Colors.orange, Colors.orange, Colors.green, Colors.green]
-                .map((colour) => colour.withValues(alpha: ConstTheme.statusOutlineAlpha))
-                .toList(growable: false),
+            colors:
+                [
+                      ConstTheme.orange(context),
+                      ConstTheme.orange(context),
+                      ConstTheme.green(context),
+                      ConstTheme.green(context),
+                    ]
+                    .map((colour) => colour.withValues(alpha: ConstTheme.statusOutlineAlpha))
+                    .toList(growable: false),
             stops: const [0, _errorBandLowerStop, _errorBandUpperStop, 1],
           ),
         ),
       ),
-      Slider(
+      PlatformSlider(
         max: ConstDurations.maxSelectableLiveStreamSlowThreshold.inMilliseconds.toDouble(),
         divisions: ConstValues.liveStreamSlowThresholdSliderDivisions,
         value: sliderValueMs,
-        label: sliderValueMs <= 0 ? 'off' : '${sliderValueMs.round()} ms',
         onChanged: viewModel.onSlowThresholdSliderChanged,
         onChangeEnd: (value) => unawaited(viewModel.onSlowThresholdSliderReleased(value)),
+        materialSliderData: MaterialSliderData(
+          label: sliderValueMs <= 0 ? 'off' : '${sliderValueMs.round()} ms',
+        ),
       ),
     ],
   );

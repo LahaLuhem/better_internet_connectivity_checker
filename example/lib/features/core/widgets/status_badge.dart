@@ -1,8 +1,12 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/widgets.dart';
-import 'package:material_ui/material_ui.dart' show Chip, Colors, Icons;
+import 'package:material_ui/material_ui.dart' show Icons;
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+import 'package:platform_icons/platform_icons.dart';
 
 import '../data/constants/core_constants.dart';
+import 'platform/platform_chip.dart';
 
 class StatusBadge extends StatelessWidget {
   final InternetStatus? internetStatus;
@@ -12,14 +16,44 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (internetStatus) {
-      null => ('Not yet checked', Colors.blueGrey, Icons.help_outline),
-      Reachable(quality: .good) => ('Reachable', Colors.green, Icons.check_circle_outline),
-      Reachable(quality: .slow) => ('Reachable (slow)', Colors.orange, Icons.hourglass_bottom),
-      Unreachable() => ('Unreachable', Colors.red, Icons.cloud_off),
+      null => (
+        'Not yet checked',
+        ConstTheme.blueGrey(context),
+        Icon(
+          context.platformIcon(
+            material: Icons.help_outline,
+            cupertino: CupertinoIcons.question_circle,
+          ),
+          color: ConstTheme.blueGrey(context),
+          size: 20,
+        ),
+      ),
+      Reachable(quality: .good) => (
+        'Reachable',
+        ConstTheme.green(context),
+        PlatformIcon(PlatformIcons.checkMarkCircle, color: ConstTheme.green(context), size: 20),
+      ),
+      Reachable(quality: .slow) => (
+        'Reachable (slow)',
+        ConstTheme.orange(context),
+        Icon(
+          context.platformIcon(
+            material: Icons.hourglass_bottom,
+            cupertino: CupertinoIcons.hourglass,
+          ),
+          color: ConstTheme.orange(context),
+          size: 20,
+        ),
+      ),
+      Unreachable() => (
+        'Unreachable',
+        ConstTheme.red(context),
+        PlatformIcon(PlatformIcons.cloudErrorFilled, color: ConstTheme.red(context), size: 20),
+      ),
     };
 
-    return Chip(
-      avatar: Icon(icon, color: color, size: 20),
+    return PlatformChip(
+      avatar: icon,
       label: Text(
         label,
         style: TextStyle(color: color, fontWeight: .w600),

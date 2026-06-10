@@ -1,7 +1,9 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:flutter/widgets.dart';
 import 'package:gap/gap.dart';
-import 'package:material_ui/material_ui.dart' show AppBar, Card, Divider, Icons, Scaffold, Theme;
+import 'package:material_ui/material_ui.dart' show Theme;
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+import 'package:platform_icons/platform_icons.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '../core/data/const_formatters.dart';
@@ -14,33 +16,35 @@ class FailureInspectionView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: FailureInspectionViewModel(),
-    viewBuilder: (context, viewModel) => Scaffold(
-      appBar: AppBar(title: const Text('Failure inspection')),
-      body: ListView(
-        padding: const .all(16),
-        children: [
-          const DemoIntro(
-            title: 'Unreachable.failedProbes',
-            description:
-                'Every failed probe carries the target it hit, how long it '
-                'spent before failing, and the underlying exception (if any). '
-                'Targets here resolve to nowhere, so AllReachablePolicy '
-                'guarantees a failure.',
-          ),
-          const Gap(16),
-          AsyncIconActionButton(
-            onPressed: viewModel.onRunCheckPressed,
-            idleIcon: Icons.bug_report,
-            idleLabel: 'Run check',
-            busyLabel: 'Checking…',
-          ),
-          const Gap(16),
-          ValueListenableBuilder(
-            valueListenable: viewModel.lastResultListenable,
-            builder: (context, result, _) =>
-                result == null ? const SizedBox.shrink() : _ResultPanel(result: result),
-          ),
-        ],
+    viewBuilder: (context, viewModel) => PlatformScaffold(
+      appBarData: const PlatformAppBar(title: Text('Failure inspection')),
+      body: SafeArea(
+        child: ListView(
+          padding: const .all(16),
+          children: [
+            const DemoIntro(
+              title: 'Unreachable.failedProbes',
+              description:
+                  'Every failed probe carries the target it hit, how long it '
+                  'spent before failing, and the underlying exception (if any). '
+                  'Targets here resolve to nowhere, so AllReachablePolicy '
+                  'guarantees a failure.',
+            ),
+            const Gap(16),
+            AsyncIconActionButton(
+              onPressed: viewModel.onRunCheckPressed,
+              idleIcon: PlatformIcons.bugFilled,
+              idleLabel: 'Run check',
+              busyLabel: 'Checking…',
+            ),
+            const Gap(16),
+            ValueListenableBuilder(
+              valueListenable: viewModel.lastResultListenable,
+              builder: (context, result, _) =>
+                  result == null ? const SizedBox.shrink() : _ResultPanel(result: result),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -53,13 +57,13 @@ class _ResultPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => switch (result) {
-    Reachable() => Card(
+    Reachable() => PlatformCard(
       child: Padding(
         padding: const .all(16),
         child: StatusBadge(internetStatus: result),
       ),
     ),
-    Unreachable(:final failedProbes) => Card(
+    Unreachable(:final failedProbes) => PlatformCard(
       child: Padding(
         padding: const .all(16),
         child: Column(
@@ -69,7 +73,7 @@ class _ResultPanel extends StatelessWidget {
             StatusBadge(internetStatus: result),
             Text('Failed probes', style: Theme.of(context).textTheme.titleMedium),
             for (final (index, probe) in failedProbes.indexed) ...[
-              if (index > 0) const Divider(),
+              if (index > 0) const PlatformDivider(),
               _FailedProbeRow(probe: probe),
             ],
           ],

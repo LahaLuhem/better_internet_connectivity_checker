@@ -72,14 +72,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
+  cupertino_icons:
+    dependency: transitive
+    description:
+      name: cupertino_icons
+      sha256: "41e005c33bd814be4d3096aff55b1908d419fde52ca656c8c47719ec745873cd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.9"
+  cupertino_ui:
+    dependency: transitive
+    description:
+      name: cupertino_ui
+      sha256: "1fa3c6bf0925e96c7235ab4f1a6c701cc07e3c7abe13aa4e3d1219e651586615"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   dbus:
     dependency: transitive
     description:
       name: dbus
-      sha256: d0c98dcd4f5169878b6cf8f6e0a52403a9dff371a3e2f019697accbf6f44a270
+      sha256: "0ce9b0a839e6dee59a37a623d2fc26a35bbbe6404213e419b0d6411023d62645"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.12"
+    version: "0.7.14"
   fake_async:
     dependency: transitive
     description:
@@ -96,6 +112,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  fluentui_system_icons:
+    dependency: transitive
+    description:
+      name: fluentui_system_icons
+      sha256: "1592ae32dae75fb66741ab2c0607bc6554ef086f1c457e27ef937fb4901d33da"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.273"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -195,10 +219,10 @@ packages:
     dependency: transitive
     description:
       name: meta
-      sha256: "23f08335362185a5ea2ad3a4e597f1375e78bce8a040df5c600c8d3552ef2394"
+      sha256: "1741988757a65eb6b36abe716829688cf01910bbf91c34354ff7ec1c3de2b349"
       url: "https://pub.dev"
     source: hosted
-    version: "1.17.0"
+    version: "1.18.0"
   nested:
     dependency: transitive
     description:
@@ -231,6 +255,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.2"
+  platform_adaptive_widgets:
+    dependency: "direct main"
+    description:
+      name: platform_adaptive_widgets
+      sha256: "489da575172e4033ae2cc2ebba24539f39ca681d309acb53b4babba5d1d09219"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0"
+  platform_icons:
+    dependency: "direct main"
+    description:
+      name: platform_icons
+      sha256: "57a48d4ae5e59d68da3837a847ca1b15639d119eb0213c403728956b4032859a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.1"
   plugin_platform_interface:
     dependency: transitive
     description:
@@ -255,6 +295,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.5+1"
+  simplewidgets_platform_helper_packages:
+    dependency: transitive
+    description:
+      name: simplewidgets_platform_helper_packages
+      sha256: c6fdcb1f72c3f4e51ce99096618af9dee87619c07d574af6c55328765c2d8a81
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -312,10 +360,10 @@ packages:
     dependency: transitive
     description:
       name: test_api
-      sha256: "8161c84903fd860b26bfdefb7963b3f0b68fee7adea0f59ef805ecca346f0c7a"
+      sha256: "949a932224383300f01be9221c39180316445ecb8e7547f70a41a35bf421fb9e"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.10"
+    version: "0.7.11"
   tint:
     dependency: transitive
     description:
@@ -365,5 +413,5 @@ packages:
     source: hosted
     version: "6.6.1"
 sdks:
-  dart: ">=3.10.0 <4.0.0"
-  flutter: ">=3.38.1 <4.0.0"
+  dart: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0 <4.0.0"

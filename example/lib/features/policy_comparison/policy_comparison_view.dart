@@ -1,8 +1,9 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:flutter/widgets.dart';
 import 'package:gap/gap.dart';
-import 'package:material_ui/material_ui.dart'
-    show AppBar, Card, Icons, Scaffold, SwitchListTile, Theme;
+import 'package:material_ui/material_ui.dart' show Theme;
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+import 'package:platform_icons/platform_icons.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '../core/data/const_formatters.dart';
@@ -15,55 +16,61 @@ class PolicyComparisonView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: PolicyComparisonViewModel(),
-    viewBuilder: (context, viewModel) => Scaffold(
-      appBar: AppBar(title: const Text('Policy comparison')),
-      body: ListView(
-        padding: const .all(16),
-        children: [
-          const DemoIntro(
-            title: 'AnyReachablePolicy vs AllReachablePolicy',
-            description:
-                'Both checkers receive the same target list. Toggle the bogus '
-                'URL to see why "any" forgives a broken endpoint and "all" '
-                'does not.',
-          ),
-          const Gap(16),
-          ValueListenableBuilder(
-            valueListenable: viewModel.shouldIncludeBogusTargetListenable,
-            builder: (context, shouldIncludeBogusTarget, _) => SwitchListTile(
-              title: const Text('Include unreachable bogus URL'),
-              subtitle: const Text('this-domain-definitely-does-not-resolve.invalid'),
-              value: shouldIncludeBogusTarget,
-              onChanged: (value) => viewModel.onIncludeBogusTargetToggled(value: value),
+    viewBuilder: (context, viewModel) => PlatformScaffold(
+      appBarData: const PlatformAppBar(title: Text('Policy comparison')),
+      body: SafeArea(
+        child: ListView(
+          padding: const .all(16),
+          children: [
+            const DemoIntro(
+              title: 'AnyReachablePolicy vs AllReachablePolicy',
+              description:
+                  'Both checkers receive the same target list. Toggle the bogus '
+                  'URL to see why "any" forgives a broken endpoint and "all" '
+                  'does not.',
             ),
-          ),
-          const Gap(8),
-          AsyncIconActionButton(
-            onPressed: viewModel.onRunBothPressed,
-            idleIcon: Icons.play_arrow,
-            idleLabel: 'Run both policies',
-            busyLabel: 'Checking…',
-          ),
-          const Gap(16),
-          ValueListenableBuilder(
-            valueListenable: viewModel.resultsListenable,
-            builder: (context, results, _) => Column(
-              spacing: 16,
-              children: [
-                _PolicyCard(
-                  title: 'AnyReachablePolicy (default)',
-                  blurb: 'Succeeds on the first probe that succeeds.',
-                  result: results?.any,
+            const Gap(16),
+            ValueListenableBuilder(
+              valueListenable: viewModel.shouldIncludeBogusTargetListenable,
+              builder: (context, shouldIncludeBogusTarget, _) => PlatformListTile(
+                title: const Text('Include unreachable bogus URL'),
+                subtitle: const Text('this-domain-definitely-does-not-resolve.invalid'),
+                trailing: PlatformSwitch(
+                  value: shouldIncludeBogusTarget,
+                  onChanged: (value) => viewModel.onIncludeBogusTargetToggled(value: value),
                 ),
-                _PolicyCard(
-                  title: 'AllReachablePolicy',
-                  blurb: 'Every probe must succeed.',
-                  result: results?.all,
-                ),
-              ],
+                onTap: () =>
+                    viewModel.onIncludeBogusTargetToggled(value: !shouldIncludeBogusTarget),
+              ),
             ),
-          ),
-        ],
+            const Gap(8),
+            AsyncIconActionButton(
+              onPressed: viewModel.onRunBothPressed,
+              idleIcon: PlatformIcons.playFilled,
+              idleLabel: 'Run both policies',
+              busyLabel: 'Checking…',
+            ),
+            const Gap(16),
+            ValueListenableBuilder(
+              valueListenable: viewModel.resultsListenable,
+              builder: (context, results, _) => Column(
+                spacing: 16,
+                children: [
+                  _PolicyCard(
+                    title: 'AnyReachablePolicy (default)',
+                    blurb: 'Succeeds on the first probe that succeeds.',
+                    result: results?.any,
+                  ),
+                  _PolicyCard(
+                    title: 'AllReachablePolicy',
+                    blurb: 'Every probe must succeed.',
+                    result: results?.all,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -77,7 +84,7 @@ class _PolicyCard extends StatelessWidget {
   const _PolicyCard({required this.title, required this.blurb, required this.result});
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => PlatformCard(
     child: Padding(
       padding: const .all(16),
       child: Column(

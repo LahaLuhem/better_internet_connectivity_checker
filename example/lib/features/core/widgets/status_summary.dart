@@ -1,8 +1,8 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:flutter/widgets.dart';
-import 'package:material_ui/material_ui.dart' show Card;
 
 import '../data/const_formatters.dart';
+import 'platform/platform_card.dart';
 import 'status_badge.dart';
 
 class StatusSummary extends StatelessWidget {
@@ -11,7 +11,7 @@ class StatusSummary extends StatelessWidget {
   const StatusSummary({required this.internetStatus, super.key});
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => PlatformCard(
     margin: .zero,
     child: Padding(
       padding: const .all(16),

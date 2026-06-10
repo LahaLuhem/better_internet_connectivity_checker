@@ -1,15 +1,17 @@
 import 'package:flutter/widgets.dart';
-import 'package:material_ui/material_ui.dart' show CircularProgressIndicator, ElevatedButton, Icon;
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+import 'package:platform_icons/platform_icons.dart';
 import 'package:tap_debouncer/tap_debouncer.dart';
 
-/// An [ElevatedButton.icon] that locks itself while [onPressed] is in flight.
+/// A [PlatformButton.icon] that locks itself while [onPressed] is in flight.
 ///
 /// Wraps [TapDebouncer] with `cooldown: Duration.zero` so the button re-arms
-/// as soon as the async work completes. While locked, the icon is swapped for
-/// a [CircularProgressIndicator] and the label is replaced with [busyLabel].
+/// as soon as the async work completes. While locked, the button is disabled,
+/// the icon is swapped for a [PlatformProgressIndicator], and the label is
+/// replaced with [busyLabel].
 class AsyncIconActionButton extends StatelessWidget {
   final Future<void> Function() onPressed;
-  final IconData idleIcon;
+  final PlatformIcons idleIcon;
   final String idleLabel;
   final String busyLabel;
 
@@ -24,12 +26,20 @@ class AsyncIconActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TapDebouncer(
     onTap: onPressed,
-    cooldown: Duration.zero,
-    builder: (context, onTap) => ElevatedButton.icon(
-      onPressed: onTap,
+    cooldown: .zero,
+    builder: (_, onTap) => PlatformButton.icon(
+      onPressed: onTap ?? onPressed,
+      isEnabled: onTap != null,
       icon: onTap == null
-          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-          : Icon(idleIcon),
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: PlatformProgressIndicator(
+                materialProgressIndicatorData: MaterialProgressIndicatorData(strokeWidth: 2),
+                cupertinoProgressIndicatorData: CupertinoProgressIndicatorData(radius: 8),
+              ),
+            )
+          : PlatformIcon(idleIcon),
       label: Text(onTap == null ? busyLabel : idleLabel),
     ),
   );

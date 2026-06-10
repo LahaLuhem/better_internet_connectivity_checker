@@ -1,7 +1,9 @@
+import 'dart:async' show unawaited;
+
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:material_ui/material_ui.dart' show ScaffoldMessenger, SnackBar;
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/pmvvm.dart';
 
 import '../core/data/constants/core_constants.dart';
@@ -93,13 +95,13 @@ final class CustomTargetsViewModel extends ViewModel {
     _probeMethodNotifier.value = suggestedProbeMethod;
 
     if (!disposed && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Server replied 405 with allow: $allowSeen — switched '
-            '${probeMethod.label} → ${suggestedProbeMethod.label}'
-            '${allowRetry ? ' and retrying.' : '.'}',
-          ),
+      unawaited(
+        showPlatformToast(
+          context: context,
+          message:
+              'Server replied 405 with allow: $allowSeen — switched '
+              '${probeMethod.label} → ${suggestedProbeMethod.label}'
+              '${allowRetry ? ' and retrying.' : '.'}',
         ),
       );
     }

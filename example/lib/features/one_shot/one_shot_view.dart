@@ -1,7 +1,9 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:flutter/widgets.dart';
 import 'package:gap/gap.dart';
-import 'package:material_ui/material_ui.dart' show AppBar, Card, Icons, Scaffold, Theme;
+import 'package:material_ui/material_ui.dart' show Theme;
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+import 'package:platform_icons/platform_icons.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '../core/data/const_formatters.dart';
@@ -14,31 +16,33 @@ class OneShotView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: OneShotViewModel(),
-    viewBuilder: (context, viewModel) => Scaffold(
-      appBar: AppBar(title: const Text('One-shot check')),
-      body: ListView(
-        padding: const .all(16),
-        children: [
-          const DemoIntro(
-            title: 'checkOnce()',
-            description:
-                'Runs a single check against the default probe targets and '
-                'returns a sealed InternetStatus. The pattern-match below is '
-                'exhaustive — adding a future variant would be a compile error.',
-          ),
-          const Gap(16),
-          AsyncIconActionButton(
-            onPressed: viewModel.onRunCheckPressed,
-            idleIcon: Icons.play_arrow,
-            idleLabel: 'Run check',
-            busyLabel: 'Checking…',
-          ),
-          const Gap(16),
-          ValueListenableBuilder(
-            valueListenable: viewModel.lastResultListenable,
-            builder: (context, result, _) => _ResultPanel(result: result),
-          ),
-        ],
+    viewBuilder: (context, viewModel) => PlatformScaffold(
+      appBarData: const PlatformAppBar(title: Text('One-shot check')),
+      body: SafeArea(
+        child: ListView(
+          padding: const .all(16),
+          children: [
+            const DemoIntro(
+              title: 'checkOnce()',
+              description:
+                  'Runs a single check against the default probe targets and '
+                  'returns a sealed InternetStatus. The pattern-match below is '
+                  'exhaustive — adding a future variant would be a compile error.',
+            ),
+            const Gap(16),
+            AsyncIconActionButton(
+              onPressed: viewModel.onRunCheckPressed,
+              idleIcon: PlatformIcons.playFilled,
+              idleLabel: 'Run check',
+              busyLabel: 'Checking…',
+            ),
+            const Gap(16),
+            ValueListenableBuilder(
+              valueListenable: viewModel.lastResultListenable,
+              builder: (context, result, _) => _ResultPanel(result: result),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -51,7 +55,7 @@ class _ResultPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => switch (result) {
-    null => Card(
+    null => PlatformCard(
       child: Padding(
         padding: const .all(16),
         child: Text(
@@ -60,7 +64,7 @@ class _ResultPanel extends StatelessWidget {
         ),
       ),
     ),
-    Reachable(:final responseTime, :final quality) => Card(
+    Reachable(:final responseTime, :final quality) => PlatformCard(
       child: Padding(
         padding: const .all(16),
         child: Column(
@@ -76,7 +80,7 @@ class _ResultPanel extends StatelessWidget {
         ),
       ),
     ),
-    Unreachable(:final failedProbes) => Card(
+    Unreachable(:final failedProbes) => PlatformCard(
       child: Padding(
         padding: const .all(16),
         child: Column(
