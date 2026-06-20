@@ -23,15 +23,23 @@ class PlatformCard extends StatelessWidget {
   /// (the Material branch lets [Card] apply its own when [margin] is null).
   static const _defaultMargin = EdgeInsets.all(4);
 
+  /// Corner radius shared by the Cupertino branch's fill and its clip, so the
+  /// painted background and the child-clipping path stay in lockstep.
+  static const _cornerRadius = BorderRadius.all(Radius.circular(12));
+
   @override
   Widget build(BuildContext context) => PlatformWidget(
-    materialBuilder: (_) => Card(margin: margin, child: child),
+    materialBuilder: (_) => Card(margin: margin, clipBehavior: Clip.antiAlias, child: child),
     cupertinoBuilder: (context) => Padding(
       padding: margin ?? _defaultMargin,
-      child: DecoratedBox(
+      // Container (not DecoratedBox) so clipBehavior can clip the child to the
+      // rounded corners — without it a tappable child's press highlight bleeds
+      // past the curve. The clipBehavior also keeps use_decorated_box quiet.
+      child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: CupertinoColors.systemGrey6.resolveFrom(context),
-          borderRadius: const .all(.circular(12)),
+          borderRadius: _cornerRadius,
         ),
         child: child,
       ),
