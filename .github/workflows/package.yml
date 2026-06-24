@@ -21,7 +21,7 @@ jobs:
     name: Dart analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-dart
       - run: dart --no-version-check analyze lib test benchmark
 
@@ -29,7 +29,7 @@ jobs:
     name: Dependency validator
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-dart
       - run: dart pub global activate dependency_validator
       - run: dart pub global run dependency_validator
@@ -38,7 +38,7 @@ jobs:
     name: Unit tests + coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-dart
       - run: dart pub global activate coverage
       - run: dart test --coverage=coverage
