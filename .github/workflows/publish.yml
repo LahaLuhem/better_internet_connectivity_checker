@@ -20,7 +20,7 @@ jobs:
     permissions:
       id-token: write # OIDC auth to pub.dev (handled by dart-lang/setup-dart).
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dart-lang/setup-dart@v1
       - name: Install dependencies (root only — skip example/)
         run: dart pub get --no-example

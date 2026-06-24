@@ -20,7 +20,7 @@ jobs:
     name: Ruff lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-uv
         with:
           working-directory: benchmark/python
@@ -30,7 +30,7 @@ jobs:
     name: Ruff format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-uv
         with:
           working-directory: benchmark/python
@@ -40,7 +40,7 @@ jobs:
     name: Pytest + coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-uv
         with:
           working-directory: benchmark/python
