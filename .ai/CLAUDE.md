@@ -122,7 +122,9 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
 - `dart --no-version-check analyze .` clean (pedantic mode — non-negotiable).
 - `dart format --output=none --set-exit-if-changed .` clean.
 - `dart test` green (where tests exist).
-- `shellcheck scripts/*.sh` clean (where shell scripts exist).
+- `shellcheck scripts/*.sh` clean (where shell scripts exist); when workflows change,
+  `actionlint` clean too. Both run via the linterpol image rather than local installs:
+  `docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest shellcheck scripts/*.sh`.
 - DCM rules in `analysis_options.yaml` applied by hand (`dart analyze` does not run
   them): `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`,
   plus the project-wide rule that blank lines segment logical chunks inside methods.

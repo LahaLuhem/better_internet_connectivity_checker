@@ -411,8 +411,11 @@ The `library;` directive is required for `@docImport` to attach to anything — 
 ## Shell scripts
 
 - **`shellcheck` is the lint contract** for `scripts/*.sh`, mirroring `dart analyze` for
-  Dart. Run via `shellcheck scripts/*.sh`; `scripts/release.sh` preflight enforces it.
-  Install with `brew install shellcheck`.
+  Dart. It runs from the [`linterpol`](https://github.com/LahaLuhem/linterpol) Docker image
+  (`docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest shellcheck scripts/*.sh`),
+  so the only local requirement is Docker, no `brew install shellcheck`. Both
+  `scripts/release.sh` preflight and CI (`.github/workflows/repo.yml`) enforce it; the same
+  image also runs `actionlint` over the workflows.
 - **Prefer `# shellcheck disable=SC<code>` + a one-line "why" comment over refactoring
   for simple cases.** Refactor when the warning points at a real bug or when the rewrite
   is genuinely clearer; reach for the directive when the code is correct as-is and
