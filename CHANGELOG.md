@@ -4,6 +4,9 @@
 - \[#5\] sealed `ConnectivityEvent` hierarchy + public `Stream<ConnectivityEvent>` on `InternetConnection.events` for reactive lifecycle observation
 - \[#5\] `attachObserver(events, observer)` top-level helper to wire `ConnectivityObserver` onto the events stream
 
+### Changed
+- Use new linter mega repo
+
 ### Fixed
 - post merge fix
 - Fix some performance regressions caused by the refactor
