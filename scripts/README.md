@@ -79,7 +79,8 @@ The script refuses to proceed unless every check passes:
 - `flutter` on PATH (used to regenerate `example/pubspec.lock` against the new parent
   version — see *What's pipeline-owned vs. hand-editable* above).
 - `cider` on PATH.
-- `shellcheck` on PATH.
+- `docker` on PATH, daemon running (scripts + workflows are linted via the linterpol
+  image: `shellcheck` and `actionlint`, no local installs).
 - Working tree clean, on `main`, in sync with `origin/main` (fetches first).
 - `CHANGELOG.md` has a non-empty `## Unreleased` (or `## [Unreleased]`) section.
 - `dart format`, `dart analyze`, and `dart test` all clean.

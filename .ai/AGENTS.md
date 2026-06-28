@@ -21,8 +21,10 @@ README for usage; APPENDIX for design rationale.
 - **`dart test`** for tests, **`dart --no-version-check analyze .`** for pedantic static
   analysis (matches what `flutter --no-version-check analyze .` runs on a Flutter app —
   pedantic mode is intentional, not negotiable). No Flutter dep, no platform channels.
-- **`shellcheck`** for shell-script lint (`scripts/*.sh`). Installed via
-  `brew install shellcheck`; required by `scripts/release.sh` preflight.
+- **`shellcheck`** (shell scripts) and **`actionlint`** (GitHub workflows) run from the
+  [`linterpol`](https://github.com/LahaLuhem/linterpol) Docker image
+  (`ghcr.io/lahaluhem/linterpol`), not a local install, so only Docker is needed.
+  `scripts/release.sh` preflight runs both through the image; CI runs them in `repo.yml`.
 - **CHANGELOG, `version:` field, and `example/pubspec.lock` are owned by
   [`scripts/release.sh`](../scripts/release.sh).** Do not invoke `cider` commands by hand
   and do not edit `CHANGELOG.md`, `version:`, or `example/pubspec.lock` directly — run

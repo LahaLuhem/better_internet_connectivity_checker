@@ -61,6 +61,11 @@ fi
 
 MAIN_BRANCH="main"
 
+# Lint tooling (shellcheck + actionlint) ships in this image, so the preflight
+# needs only Docker locally, not hand-installed linters. Bump the tag (or pin a
+# digest) here in one place. https://github.com/LahaLuhem/linterpol
+LINTERPOL_IMAGE="ghcr.io/lahaluhem/linterpol:latest"
+
 BUMP=""
 YES=0
 DRY_RUN=0
@@ -88,10 +93,11 @@ Preflight (all must pass):
   - `dart` resolvable (via `.fvm/flutter_sdk/bin/` if FVM is set up, else PATH)
   - `flutter` on PATH (needed to regenerate example/pubspec.lock)
   - cider on PATH
-  - shellcheck on PATH
+  - docker on PATH + daemon running (lints scripts + workflows via linterpol)
   - working tree clean, on `main`, in sync with origin/main (fetches first)
   - CHANGELOG.md has a non-empty `## Unreleased` (or `## [Unreleased]`) section
-  - `shellcheck scripts/*.sh` clean
+  - `shellcheck scripts/*.sh` clean (via linterpol image)
+  - `actionlint` clean on `.github/workflows/` (via linterpol image)
   - `dart format --output=none --set-exit-if-changed .` clean
   - `dart --no-version-check analyze .` clean
   - `dart test` green
@@ -172,11 +178,16 @@ if ! command -v cider >/dev/null 2>&1; then
     exit 1
 fi
 log 'cider available.'
-if ! command -v shellcheck >/dev/null 2>&1; then
-    err 'shellcheck not on PATH. Install: brew install shellcheck'
+if ! command -v docker >/dev/null 2>&1; then
+    err 'docker not on PATH. The preflight lints scripts + workflows via'
+    err "the ${LINTERPOL_IMAGE} image. Install Docker and retry."
     exit 1
 fi
-log 'shellcheck available.'
+if ! docker info >/dev/null 2>&1; then
+    err 'docker is on PATH but the daemon is not responding. Start Docker and retry.'
+    exit 1
+fi
+log 'docker available (shellcheck + actionlint run via linterpol).'
 # `flutter` is needed to regenerate example/pubspec.lock so its `path: ../`
 # entry tracks the new parent version. Without this, the lockfile committed
 # at release time still references the old version → CI's pub publish run
@@ -290,9 +301,15 @@ log "'## Unreleased' populated."
 # ---------------------------------------------------------------------------
 # Preflight: format / analyze / test / publish dry-run (cheapest → slowest)
 # ---------------------------------------------------------------------------
-step 'Preflight: shellcheck scripts/'
-if ! shellcheck scripts/*.sh; then
+step 'Preflight: shellcheck scripts/ (via linterpol)'
+if ! docker run --rm -v "${REPO_ROOT}:/work:ro" "$LINTERPOL_IMAGE" shellcheck scripts/*.sh; then
     err 'shellcheck failed on one or more shell scripts.'
+    exit 1
+fi
+
+step 'Preflight: actionlint .github/workflows/ (via linterpol)'
+if ! docker run --rm -v "${REPO_ROOT}:/work:ro" "$LINTERPOL_IMAGE" actionlint; then
+    err 'actionlint failed on one or more workflows.'
     exit 1
 fi
 
