@@ -208,6 +208,13 @@ For everything else — naming, idioms (`Uri.https`, `.wait`, dot shorthands,
   than the Dart default — code that fails lint won't pass review.
 - **Surface semver implications loudly.** If a change touches anything re-exported from
   `lib/<package>.dart`, call out whether it's patch / minor / major before the diff lands.
+- **Refactor first when a change needs a better shape.** If a feature would sit better on a
+  different structure, do the enabling refactor as its own behaviour-preserving step (separate
+  commit/PR, no behaviour delta) before building the feature on top. A wrong shape is
+  especially costly to undo here: public-API breakage is semver-significant and slow to walk
+  back once published. This doesn't bypass ask-first or plan-first — surface the refactor and
+  get sign-off before anything that touches the public API, adds a dependency, or has wide
+  blast radius.
 - **Before proposing a performance or memory optimisation, read the existing rationale.**
   README's *Performance & memory*, *Caveats*, and *Roadmap* sections enumerate what's
   already in place and what's deliberately deferred. APPENDIX anchors
