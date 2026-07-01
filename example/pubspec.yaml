@@ -13,7 +13,7 @@ dependencies:
   better_internet_connectivity_checker:
     path: ../
 
-  connectivity_plus: 7.1.1
+  connectivity_plus: 7.2.0
   gap: 3.0.1
   http: 1.6.0
   material_ui: 0.0.1
