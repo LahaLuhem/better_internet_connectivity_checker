@@ -33,15 +33,13 @@ final class SlowCallbackWatchdog {
 
   /// Creates a watchdog for one observer attachment.
   ///
-  /// [observerType] names the offending subclass in the warning; [threshold] is the per-callback budget.
+  /// [_observerType] names the offending subclass in the warning; [_threshold] is the per-callback budget.
   /// [logSink] overrides the [developer.log] default (a test seam, not a consumer knob).
   SlowCallbackWatchdog({
-    required Type observerType,
-    required Duration threshold,
+    required this._observerType,
+    required this._threshold,
     void Function(String message)? logSink,
-  }) : _observerType = observerType,
-       _threshold = threshold,
-       _logSink = logSink ?? _logToDeveloper;
+  }) : _logSink = logSink ?? _logToDeveloper;
 
   /// Runs [dispatch] for [event], timing it against the threshold.
   ///

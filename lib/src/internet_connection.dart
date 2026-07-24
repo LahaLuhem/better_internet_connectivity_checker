@@ -61,11 +61,11 @@ final class InternetConnection {
   /// `assert` (release builds fall through to `Unreachable` every check).
   ///
   /// `checkInterval` is the gap between periodic checks once [onStatusChange] has a listener.
-  /// Defaults to [Values.defaultCheckInterval]; change it at runtime via the [checkInterval] setter.
+  /// Defaults to [Values.defaultCheckInterval]; change it at runtime via the [_checkInterval] setter.
   ///
   /// `slowThreshold` is the response-time cutoff above which a successful probe is classified as slow.
   /// Defaults to null (no classification — every reachable status is [ConnectionQuality.good]).
-  /// The [slowThreshold] setter changes it at runtime while preserving [lastStatus], unlike rebuilding.
+  /// The [_slowThreshold] setter changes it at runtime while preserving [lastStatus], unlike rebuilding.
   ///
   /// `policy` selects the aggregation strategy. Defaults to [AnyReachablePolicy] (any-of-N).
   ///
@@ -79,16 +79,13 @@ final class InternetConnection {
   /// top-level `attachObserver`.
   InternetConnection({
     List<ProbeTarget>? targets,
-    Duration checkInterval = Values.defaultCheckInterval,
-    ReachabilityPolicy policy = const AnyReachablePolicy(),
-    Duration? slowThreshold,
+    this._checkInterval = Values.defaultCheckInterval,
+    this._policy = const AnyReachablePolicy(),
+    this._slowThreshold,
     ConnectivityProbe? probe,
     Stream<void>? externalRecheckTrigger,
   }) : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty'),
        _targets = targets != null ? List.unmodifiable(targets) : Values.defaultProbeTargets,
-       _checkInterval = checkInterval,
-       _slowThreshold = slowThreshold,
-       _policy = policy,
        _externalTrigger = externalRecheckTrigger,
        _probe = probe ?? HttpProbe.head();
 

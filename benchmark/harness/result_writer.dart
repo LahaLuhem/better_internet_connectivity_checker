@@ -20,8 +20,8 @@ final class ResultWriter {
     required this.sdkVersion,
     required this.packageVersion,
     required this.gitSha,
-    required IOSink sink,
-  }) : _sink = sink;
+    required this._sink,
+  });
 
   /// Opens [outputPath] for writing and emits the JSON-array prefix `[`.
   /// Subsequent [writeRecord] calls add comma-separated records.

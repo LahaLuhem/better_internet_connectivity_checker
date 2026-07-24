@@ -41,10 +41,9 @@ final class EventLoopStallMeter {
   Duration _lastFire = .zero;
 
   EventLoopStallMeter({
-    Duration interval = const Duration(milliseconds: 1),
-    Duration stallFloor = const Duration(milliseconds: 2),
-  }) : _interval = interval,
-       _stallFloor = stallFloor;
+    this._interval = const Duration(milliseconds: 1),
+    this._stallFloor = const Duration(milliseconds: 2),
+  });
 
   /// All measured stalls in chronological order, as an unmodifiable view. Mostly zeros on a healthy
   /// loop. Blocking windows show up as isolated spikes (one per coalesced heartbeat).

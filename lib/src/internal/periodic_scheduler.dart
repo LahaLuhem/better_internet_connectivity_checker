@@ -16,9 +16,7 @@ final class _PeriodicScheduler {
   var _running = false;
   var _disposed = false;
 
-  _PeriodicScheduler({required Duration interval, required Future<void> Function() onTick})
-    : _interval = interval,
-      _onTick = onTick;
+  _PeriodicScheduler({required this._interval, required this._onTick});
 
   /// Begins ticking, or resets the rescheduling clock if already running.
   ///
