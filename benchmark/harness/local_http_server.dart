@@ -16,7 +16,7 @@ import 'dart:io';
 final class LocalHttpServer {
   HttpServer? _server;
   var _isUp = true;
-  Duration _latency = Duration.zero;
+  Duration _latency = .zero;
   int _statusCode = HttpStatus.ok;
   var _requestCount = 0;
 
@@ -72,7 +72,7 @@ final class LocalHttpServer {
 
     await for (final request in server) {
       _requestCount++;
-      if (_latency > Duration.zero) await Future<void>.delayed(_latency);
+      if (_latency > .zero) await Future<void>.delayed(_latency);
       await (request.response..statusCode = _isUp ? _statusCode : HttpStatus.serviceUnavailable)
           .close();
     }

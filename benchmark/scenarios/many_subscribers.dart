@@ -55,7 +55,7 @@ Future<void> _runOneConfig({
 }) async {
   final checker = InternetConnection(
     targets: [ProbeTarget(uri: Uri.parse('http://127.0.0.1/fake'))],
-    probe: FakeProbe.alwaysSuccess(responseTime: Duration.zero),
+    probe: FakeProbe.alwaysSuccess(responseTime: .zero),
     checkInterval: const Duration(milliseconds: 100),
   );
 

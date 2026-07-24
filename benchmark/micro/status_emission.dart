@@ -34,10 +34,7 @@ final class _StatusEmission extends BenchmarkBase {
     _subscriptions = [
       for (var i = 0; i < subscriberCount; i++) _controller.stream.listen(noopWithVal),
     ];
-    _payload = const Reachable(
-      responseTime: Duration(milliseconds: 10),
-      quality: ConnectionQuality.good,
-    );
+    _payload = const Reachable(responseTime: Duration(milliseconds: 10), quality: .good);
   }
 
   @override

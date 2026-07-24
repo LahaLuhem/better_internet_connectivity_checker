@@ -35,7 +35,7 @@ Future<void> main(List<String> argv) async {
   for (var i = 0; i < args.iterations; i++) {
     final checker = InternetConnection(
       targets: [ProbeTarget(uri: Uri.parse('http://fake/'))],
-      probe: FakeProbe.alwaysSuccess(responseTime: Duration.zero),
+      probe: FakeProbe.alwaysSuccess(responseTime: .zero),
     );
 
     forceGc();

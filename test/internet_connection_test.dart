@@ -181,12 +181,12 @@ void main() {
 
         async.flushMicrotasks();
         check(events).length.equals(1);
-        check((events.last as Reachable).quality).equals(ConnectionQuality.good);
+        check((events.last as Reachable).quality).equals(.good);
 
         responseTime = const Duration(milliseconds: 800);
         async.elapse(const Duration(seconds: 5));
         check(events).length.equals(2);
-        check((events.last as Reachable).quality).equals(ConnectionQuality.slow);
+        check((events.last as Reachable).quality).equals(.slow);
 
         unawaited(connection.dispose());
       });
@@ -211,14 +211,14 @@ void main() {
         connection.onStatusChange.listen(events.add);
 
         async.flushMicrotasks();
-        check((events.last as Reachable).quality).equals(ConnectionQuality.good);
+        check((events.last as Reachable).quality).equals(.good);
 
         // Tighten the threshold below the (fixed) response time.
         connection.slowThreshold = const Duration(milliseconds: 50);
         check(connection.slowThreshold).equals(const Duration(milliseconds: 50));
 
         async.elapse(const Duration(seconds: 5));
-        check((events.last as Reachable).quality).equals(ConnectionQuality.slow);
+        check((events.last as Reachable).quality).equals(.slow);
 
         unawaited(connection.dispose());
       });
@@ -284,7 +284,7 @@ void main() {
       check(connection.slowThreshold).isNull();
 
       final status = await connection.checkOnce();
-      check((status as Reachable).quality).equals(ConnectionQuality.good);
+      check((status as Reachable).quality).equals(.good);
     });
   });
 

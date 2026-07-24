@@ -36,14 +36,8 @@ final class _NoopCountingObserver extends ConnectivityObserver {
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
 
-  const previous = Reachable(
-    responseTime: Duration(milliseconds: 10),
-    quality: ConnectionQuality.good,
-  );
-  const next = Reachable(
-    responseTime: Duration(milliseconds: 600),
-    quality: ConnectionQuality.slow,
-  );
+  const previous = Reachable(responseTime: Duration(milliseconds: 10), quality: .good);
+  const next = Reachable(responseTime: Duration(milliseconds: 600), quality: .slow);
 
   final writer = await ResultWriter.open(
     outputPath: args.outputPath,

@@ -89,7 +89,7 @@ void main() {
         slowThreshold: const Duration(milliseconds: 500),
       );
 
-      check((status as Reachable).quality).equals(ConnectionQuality.slow);
+      check((status as Reachable).quality).equals(.slow);
     });
 
     scenario('returns Unreachable with no failures for an empty target list', () async {
