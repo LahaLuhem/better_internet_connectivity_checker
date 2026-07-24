@@ -4,6 +4,7 @@ import 'models/connection_quality.dart';
 part 'outcomes/reachable.dart';
 part 'outcomes/unreachable.dart';
 
+/// The outcome of a reachability check: either [Reachable] or [Unreachable].
 ///
 /// Sealed so callers can pattern-match exhaustively:
 ///

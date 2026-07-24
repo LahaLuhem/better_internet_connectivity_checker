@@ -117,16 +117,19 @@ can't be defended.
 - **SDK pinned** via [`.fvmrc`](../.fvmrc). Any bump invalidates the baseline.
 - **N ≥ 10 iterations** per scenario for routine sanity checks. **Bump to
   N=30 minimum** before claiming a regression or improvement on
-  `many_subscribers` `tick_drift` or `flapping_network` `rss_bytes` —
-  those two metric/scenario pairs swing wildly at N=10. Real example:
-  the `many_subscribers` `tick_drift` delta across four N=10 captures of
-  the in-progress event-bus refactor read +95 %, +72 %, +143 %, +334 %.
-  The same comparison at N=30 collapsed to **−40.6 %** (an improvement,
-  not a regression) with p < 0.0001. The size of the N=10 swing is itself
-  the noise signal — when sign and magnitude both flip between runs of
-  the same code, don't trust the headline; widen the sample. Report
-  **median + IQR**, never mean — GC outliers skew means heavily on a
-  single-threaded VM.
+  `many_subscribers` stall metrics or `flapping_network` `rss_bytes` —
+  those two metric/scenario pairs swing wildly at N=10. Real example
+  (captured with the pre-redesign `TickDriftMeter`, whose integral
+  semantics amplified jitter): the `many_subscribers` drift delta across
+  four N=10 captures of the in-progress event-bus refactor read +95 %,
+  +72 %, +143 %, +334 %. The same comparison at N=30 collapsed to
+  **−40.6 %** (an improvement, not a regression) with p < 0.0001. The
+  size of the N=10 swing is itself the noise signal — when sign and
+  magnitude both flip between runs of the same code, don't trust the
+  headline; widen the sample. The gap-based `EventLoopStallMeter` should
+  be less duration-sensitive, but re-verify the noise floor before
+  relaxing the N=30 rule. Report **median + IQR**, never mean — GC
+  outliers skew means heavily on a single-threaded VM.
 - **Mann-Whitney U** (`scipy.stats.mannwhitneyu`) for significance claims.
   Nonparametric, robust to GC outliers, doesn't assume normality. p < 0.05
   for "significant difference" claims.
@@ -143,12 +146,23 @@ can't be defended.
 - **Memory**: static footprint, active footprint, allocation rate per tick, RSS delta over long runs.
 - **Time**: coordinator overhead per tick, tier-1/tier-2 emission latency, per-event cost vs subscribers, dispose latency.
 - **Concurrency**: throughput ceiling, trigger storm response, subscriber-count scaling.
-- **Event-loop blocking**: max sync-chunk duration via `tick_drift_meter.dart`.
+- **Event-loop blocking**: worst continuous stall + blocked-time share via
+  `harness/event_loop_stall_meter.dart`. A 1 ms heartbeat timer records the
+  gap between consecutive fires; `max_stall_microseconds` is the largest
+  single gap beyond the heartbeat interval (worst continuous stall) and
+  `blocked_duty_ratio` is total stalled time over the measured window.
+  Both are duration-independent, unlike the retired `TickDriftMeter`'s
+  `max_drift_microseconds`, which accumulated every stall into a
+  run-length-scaled integral (see the meter's dartdoc for the full
+  post-mortem).
 
-The **headline metric** is the `slow_observer` scenario — measures whether a
-slow observer/subscriber stalls the scheduler. This is the bug the upcoming
-event-bus refactor fixes; the before/after chart for this scenario is the PR's
-main exhibit.
+The **headline metric** is `max_stall_microseconds` on the `slow_observer`
+scenario — the package's worst case under a deliberately-blocking synchronous
+observer. Expect it to pin at the observer's own per-callback delay (~50 ms):
+a Dart isolate is single-threaded, so no dispatch strategy can shrink it. What
+the package *does* control is its check cadence under that load
+(`observer_call_count` ÷ run duration — should hold ~10/s at the 100 ms
+interval) and the noise floor on every other scenario.
 
 ## Result JSON schema
 
@@ -254,11 +268,11 @@ set.
 
 ### `report` outputs (single dataset)
 
-- `headline_tick_drift.png` — box plot of `max_drift_microseconds` per
-  scenario on a log y-axis. `slow_observer` should tower above the rest;
-  that gap is the bug the upcoming refactor fixes.
+- `headline_max_stall.png` — box plot of `max_stall_microseconds` per
+  scenario on a log y-axis. `slow_observer` sits at its observer's own
+  blocking time (~50k µs); the rest is the package's noise floor.
 - `memory_peak_rss.png` — peak RSS per scenario in MB.
-- `scenario_stability.png` — `max_drift_microseconds` per scenario with
+- `scenario_stability.png` — `max_stall_microseconds` per scenario with
   `slow_observer` excluded so the noise floor is readable. Narrow boxes =
   reproducible.
 - `subscriber_scaling.png` — broadcast cost per emission vs subscriber
@@ -268,9 +282,10 @@ set.
 
 ### `compare` outputs (two datasets)
 
-- `compare_headline_tick_drift.png` — same shape as the headline chart
-  but with two boxes per scenario (baseline vs current). The
-  `slow_observer` box should collapse post-refactor.
+- `compare_headline_max_stall.png` — same shape as the headline chart
+  but with two boxes per scenario (baseline vs current). `slow_observer`
+  is pinned by its observer's delay and should NOT move; a shift there
+  means the harness changed, not the package.
 - `compare_memory_peak_rss.png` — paired memory boxes per scenario.
 - `compare_scenario_stability.png` — paired noise floor, `slow_observer`
   excluded so the y-axis stays readable.
@@ -292,30 +307,33 @@ to a local path (e.g. `../results-local/my-run/charts/`) and leave the
 committed set alone.
 
 <details>
-<summary><strong>Reference run — 2026-05-22, Apple Silicon macOS, Dart 3.11.5, N=10</strong> (maintainer's machine; your numbers WILL differ)</summary>
+<summary><strong>Reference run — 2026-07-24, Apple Silicon macOS, Dart 3.12.2, N=30</strong> (maintainer's machine; your numbers WILL differ)</summary>
 
 These figures are a sanity check, not a target. "Am I in the right ballpark?"
 not "did I beat the baseline?". Treat them as approximate.
 
 | Scenario / N | Metric | Median |
 |---|---|---|
-| **`slow_observer`** | **`max_drift_microseconds`** | **1,790,228 µs (~1.79 s)** |
-| `slow_observer` | `median_drift_microseconds` | 927,326 µs (~927 ms) |
-| `quiet_app` | `max_drift_microseconds` | 4,049 µs (~4 ms) |
-| `quiet_app` | `dispose_microseconds` | 7.5 µs |
-| `check_once_overhead` (micro) | `microseconds_per_check` | 0.40 µs |
+| **`slow_observer`** | **`max_stall_microseconds`** | **116,174 µs (~116 ms)** |
+| `slow_observer` | `blocked_duty_ratio` | 57.4 % |
+| `quiet_app` | `max_stall_microseconds` | 5,066 µs (~5 ms) |
+| `quiet_app` | `dispose_microseconds` | 6.0 µs |
+| `check_once_overhead` (micro) | `microseconds_per_check` | 0.43 µs |
 | `observer_dispatch` (micro) | `microseconds_per_dispatch` | 0.01 µs |
 | `status_emission` N=1 (micro) | `microseconds_per_emission` | 0.13 µs |
-| `status_emission` N=10 (micro) | `microseconds_per_emission` | 1.02 µs |
-| `status_emission` N=100 (micro) | `microseconds_per_emission` | 8.95 µs |
+| `status_emission` N=10 (micro) | `microseconds_per_emission` | 0.99 µs |
+| `status_emission` N=100 (micro) | `microseconds_per_emission` | 8.79 µs |
 | `trigger_storm` | `emissions_per_trigger` | 0.002 |
-| `many_subscribers` N=100 | `max_drift_microseconds` | 8,404 µs |
+| `many_subscribers` N=100 | `max_stall_microseconds` | 3,185 µs (~3 ms) |
 | `flapping_network` (9 s) | `emission_count` | 3 (2 reachable + 1 unreachable) |
-| `long_running` (30 s smoke) | `rss_growth_bytes_per_minute` | ~35 MB/min (dominated by startup) |
+| `long_running` (30 s smoke) | `rss_growth_bytes_per_minute` | ~0.5 MB/min |
 
-The `slow_observer.max_drift_microseconds` figure (~1.79 s of sustained
-scheduler stall) is the empirical proof of the bug the upcoming refactor
-fixes — on this machine, on this SDK. Your machine will see a comparable
-order of magnitude but a different exact number.
+The `slow_observer` figures capture the package's worst case under a
+deliberately-blocking synchronous observer (50 ms `sleep` per callback,
+100 ms interval): ~116 ms worst continuous stall (two callbacks in one
+microtask drain) and ~57 % of the run blocked. Both are properties of the
+*observer*, not something the package can dispatch its way out of — a Dart
+isolate is single-threaded. Every other scenario sits at a sub-1 %
+blocked-duty noise floor. Your machine will differ in absolute terms.
 
 </details>

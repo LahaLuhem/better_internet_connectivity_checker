@@ -1,18 +1,12 @@
-/// Micro-benchmark: cost of one `StreamController.add(InternetStatus)` with N
-/// listeners.
+/// Micro-benchmark: cost of one `StreamController.add(InternetStatus)` with N listeners.
 ///
-/// Measures the broadcast-stream emission path in isolation — no probe, no
-/// scheduler, no observer. With `--iterations K`, emits `K × 3` records
-/// (three subscriber counts per iteration; `subscriber_count` is the pivot).
+/// Measures the broadcast-stream emission path in isolation — no probe, scheduler, or observer.
+/// With `--iterations K`, emits `K × 3` records (three subscriber counts per iteration. `subscriber_count` is the pivot).
 ///
-/// Uses a **synchronous** broadcast (`sync: true`). The production
-/// `InternetConnection` uses async-default broadcast (events queue, deliver
-/// on next microtask), where the producer pays a constant cost regardless
-/// of N. Measuring async here would give the same number three times — no
-/// signal. Sync broadcast forces in-line delivery, so the cost scales
-/// linearly with N and the measurement reveals what one fan-out site costs
-/// per subscriber. The async path can be re-derived as "sync minus per-
-/// listener work" later.
+/// Uses a **synchronous** broadcast (`sync: true`) deliberately. Production `InternetConnection` uses
+/// async-default broadcast, where the producer's cost is constant in N — measuring that here would
+/// give the same number three times. Sync delivery forces in-line fan-out, so cost scales with N and
+/// the per-subscriber delivery cost becomes visible.
 library;
 
 import 'dart:async';
@@ -26,9 +20,10 @@ import '../harness/scenario_args.dart';
 const _subscriberCounts = <int>[1, 10, 100];
 
 final class _StatusEmission extends BenchmarkBase {
+  final int subscriberCount;
+
   _StatusEmission(this.subscriberCount) : super('status_emission_n$subscriberCount');
 
-  final int subscriberCount;
   late StreamController<InternetStatus> _controller;
   late List<StreamSubscription<InternetStatus>> _subscriptions;
   late InternetStatus _payload;

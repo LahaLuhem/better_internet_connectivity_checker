@@ -43,7 +43,7 @@ def sample_records() -> list[ResultRecord]:
     """A small, realistic set: 3 scenarios with mixed sample/summary shapes.
 
     - `quiet_app`        - 3 iterations, both raw samples and summary
-    - `slow_observer`    - 2 iterations, huge drift (the bug we visualise)
+    - `slow_observer`    - 2 iterations, ~50 ms stalls (the blocking observer)
     - `status_emission`  - 1 iteration x 3 subscriber counts (multi-record)
     """
     return [
@@ -52,12 +52,13 @@ def sample_records() -> list[ResultRecord]:
             0,
             samples={
                 "rss_bytes": [30_000_000, 31_000_000, 32_000_000],
-                "tick_drift_microseconds": [100, 200, 300],
+                "stall_microseconds": [100, 200, 300],
             },
             summary={
                 "peak_rss_bytes": 32_000_000,
-                "max_drift_microseconds": 300,
-                "median_drift_microseconds": 200,
+                "max_stall_microseconds": 300,
+                "total_blocked_microseconds": 600,
+                "blocked_duty_ratio": 0.0001,
             },
         ),
         _record(
@@ -65,12 +66,13 @@ def sample_records() -> list[ResultRecord]:
             1,
             samples={
                 "rss_bytes": [30_500_000, 31_500_000, 32_500_000],
-                "tick_drift_microseconds": [110, 210, 310],
+                "stall_microseconds": [110, 210, 310],
             },
             summary={
                 "peak_rss_bytes": 32_500_000,
-                "max_drift_microseconds": 310,
-                "median_drift_microseconds": 210,
+                "max_stall_microseconds": 310,
+                "total_blocked_microseconds": 630,
+                "blocked_duty_ratio": 0.0001,
             },
         ),
         _record(
@@ -78,25 +80,34 @@ def sample_records() -> list[ResultRecord]:
             2,
             samples={
                 "rss_bytes": [31_000_000, 32_000_000, 33_000_000],
-                "tick_drift_microseconds": [120, 220, 320],
+                "stall_microseconds": [120, 220, 320],
             },
             summary={
                 "peak_rss_bytes": 33_000_000,
-                "max_drift_microseconds": 320,
-                "median_drift_microseconds": 220,
+                "max_stall_microseconds": 320,
+                "total_blocked_microseconds": 660,
+                "blocked_duty_ratio": 0.0001,
             },
         ),
         _record(
             "slow_observer",
             0,
-            samples={"tick_drift_microseconds": [1_800_000, 1_850_000, 1_900_000]},
-            summary={"max_drift_microseconds": 1_900_000, "median_drift_microseconds": 1_850_000},
+            samples={"stall_microseconds": [49_000, 50_000, 51_000]},
+            summary={
+                "max_stall_microseconds": 51_000,
+                "total_blocked_microseconds": 150_000,
+                "blocked_duty_ratio": 0.5,
+            },
         ),
         _record(
             "slow_observer",
             1,
-            samples={"tick_drift_microseconds": [1_810_000, 1_860_000, 1_910_000]},
-            summary={"max_drift_microseconds": 1_910_000, "median_drift_microseconds": 1_860_000},
+            samples={"stall_microseconds": [49_500, 50_500, 51_500]},
+            summary={
+                "max_stall_microseconds": 51_500,
+                "total_blocked_microseconds": 151_500,
+                "blocked_duty_ratio": 0.51,
+            },
         ),
         # status_emission emits one record per (iteration, subscriber_count).
         _record(
@@ -127,16 +138,16 @@ def baseline_records() -> list[ResultRecord]:
         _record(
             "quiet_app",
             i,
-            samples={"tick_drift_microseconds": [100 + i * 10, 200 + i * 10, 300 + i * 10]},
-            summary={"max_drift_microseconds": 300 + i * 10},
+            samples={"stall_microseconds": [100 + i * 10, 200 + i * 10, 300 + i * 10]},
+            summary={"max_stall_microseconds": 300 + i * 10},
         )
         for i in range(3)
     ] + [
         _record(
             "slow_observer",
             i,
-            samples={"tick_drift_microseconds": [1_800_000 + i * 1000] * 3},
-            summary={"max_drift_microseconds": 1_800_000 + i * 1000},
+            samples={"stall_microseconds": [50_000 + i * 100] * 3},
+            summary={"max_stall_microseconds": 50_000 + i * 100},
         )
         for i in range(3)
     ]
@@ -144,22 +155,23 @@ def baseline_records() -> list[ResultRecord]:
 
 @pytest.fixture
 def current_records() -> list[ResultRecord]:
-    """Synthetic 'after-refactor' run - slow_observer drift collapses, quiet stays."""
+    """Synthetic 'current' run - slow_observer stalls shrank, quiet_app stays."""
     return [
         _record(
             "quiet_app",
             i,
-            samples={"tick_drift_microseconds": [100 + i * 10, 200 + i * 10, 300 + i * 10]},
-            summary={"max_drift_microseconds": 300 + i * 10},
+            samples={"stall_microseconds": [100 + i * 10, 200 + i * 10, 300 + i * 10]},
+            summary={"max_stall_microseconds": 300 + i * 10},
         )
         for i in range(3)
     ] + [
         _record(
             "slow_observer",
             i,
-            # Drift dropped 100x post-refactor.
-            samples={"tick_drift_microseconds": [18_000 + i * 100] * 3},
-            summary={"max_drift_microseconds": 18_000 + i * 100},
+            # The harness observer's per-callback delay was cut 10x, so the
+            # worst continuous stall follows it down.
+            samples={"stall_microseconds": [5_000 + i * 100] * 3},
+            summary={"max_stall_microseconds": 5_000 + i * 100},
         )
         for i in range(3)
     ]

@@ -3,8 +3,8 @@
 The maintainer drops sections from these files into the package README,
 so the structure is one h2 section per chart with a summary table above
 and the image embed below. `value_formatter` is the precision-aware
-number formatter that keeps both `1,812,265 us` (slow_observer drift) and
-`0.138 us/emit` (status_emission micro) readable in the same column.
+number formatter that keeps both `51,842 us` (slow_observer max stall)
+and `0.138 us/emit` (status_emission micro) readable in the same column.
 """
 
 from __future__ import annotations
@@ -24,10 +24,12 @@ def value_formatter(units: str) -> Callable[[float | int | None], str]:
 
     Precision tier (for "us" / freeform): values >= 1000 round to integers
     with thousands separators; values 1-1000 get two decimal places; sub-1
-    values get three. Keeps both the slow_observer headline (~1.8M us) and
+    values get three. Keeps both the slow_observer headline (~50k us) and
     the status_emission micro (~0.13 us / emit) readable in the same table.
 
     "MB" divides byte-valued numbers by 1024^2 and shows two decimals.
+    "%" multiplies ratio-valued numbers (0..1) by 100 and appends a percent
+    sign - used for `blocked_duty_ratio`.
     """
 
     def _format_microseconds(value: float | int | None) -> str:
@@ -42,6 +44,8 @@ def value_formatter(units: str) -> Callable[[float | int | None], str]:
 
     if units == "MB":
         return lambda v: f"{v / (1024.0 * 1024.0):,.2f}" if v is not None else "-"
+    if units == "%":
+        return lambda v: f"{v * 100.0:,.2f}%" if v is not None else "-"
     if units == "us":
         return _format_microseconds
     return lambda v: f"{v:,.2f}" if v is not None else "-"
@@ -153,16 +157,30 @@ def render_summary_markdown(
         "> Per-machine measurements. Numbers below reflect *this* machine "
         "(CPU, GC, OS scheduler, thermal state). Your numbers WILL differ - "
         "capture your own local baseline before measuring a code delta.\n",
-        "## Headline: worst-case scheduler stall per scenario\n",
-        "The `slow_observer` scenario simulates a heavy synchronous observer "
-        "(50 ms per callback) running against a 100 ms tick. Pre-refactor, "
-        "this blocks the scheduler - the box for `slow_observer` should "
-        "tower over the others on the log axis below.\n",
-        metric_table(dataframe, "max_drift_microseconds", units="us"),
+        "## Headline: worst-case event-loop stall per scenario\n",
+        "Longest single continuous window in which synchronous work blocked "
+        "the event loop (gap between 1 ms heartbeats, minus the heartbeat "
+        "interval). The `slow_observer` scenario wires a deliberately-"
+        "misbehaving observer that sleeps 50 ms per callback, so its box "
+        "should sit at ~50k us - the observer's own blocking time, which no "
+        "dispatch strategy can mask on a single-threaded isolate. The other "
+        "scenarios show the package's intrinsic noise floor.\n",
+        metric_table(dataframe, "max_stall_microseconds", units="us"),
     ]
 
-    if "headline_tick_drift.png" in chart_names:
-        parts.append("\n![Headline tick drift](headline_tick_drift.png)\n")
+    if "headline_max_stall.png" in chart_names:
+        parts.append("\n![Headline max stall](headline_max_stall.png)\n")
+
+    parts.extend(
+        [
+            "## Event-loop blocked share per scenario\n",
+            "`blocked_duty_ratio` is total stalled time divided by the "
+            "measured window - the duration-independent 'how bad is it "
+            "overall' number. For `slow_observer` expect roughly delay / "
+            "check-interval (~50%); everything else should be near zero.\n",
+            metric_table(dataframe, "blocked_duty_ratio", units="%"),
+        ]
+    )
 
     parts.extend(
         [
@@ -184,7 +202,7 @@ def render_summary_markdown(
             "metric is reproducible iteration-to-iteration.\n",
             metric_table(
                 dataframe,
-                "max_drift_microseconds",
+                "max_stall_microseconds",
                 units="us",
                 exclude_scenario="slow_observer",
             ),
@@ -251,14 +269,16 @@ def render_compare_markdown(
 
     parts.extend(
         [
-            "## Headline: tick drift, baseline vs current\n",
-            "Paired box plot per scenario. The `slow_observer` box should "
-            "collapse from ~10^6 us to the noise floor (~10^4 us) post-refactor; "
-            "other scenarios should not move significantly.\n",
+            "## Headline: max event-loop stall, baseline vs current\n",
+            "Paired box plot per scenario. `slow_observer`'s box is pinned "
+            "at its observer's per-callback blocking time (~50k us) by "
+            "design - a code change cannot move it, only a change to the "
+            "harness observer can. The other scenarios are the noise floor "
+            "and should not move significantly.\n",
         ]
     )
-    if "compare_headline_tick_drift.png" in chart_names:
-        parts.append("\n![Headline compare](compare_headline_tick_drift.png)\n")
+    if "compare_headline_max_stall.png" in chart_names:
+        parts.append("\n![Headline compare](compare_headline_max_stall.png)\n")
 
     parts.extend(
         [
@@ -276,7 +296,7 @@ def render_compare_markdown(
             "## Stability: noise floor, baseline vs current\n",
             "`slow_observer` excluded so the y-axis stays linear. Box widths "
             "tell you how stable the measurement is iteration-to-iteration; "
-            "the refactor should not destabilise the noise floor.\n",
+            "a code change should not destabilise the noise floor.\n",
         ]
     )
     if "compare_scenario_stability.png" in chart_names:

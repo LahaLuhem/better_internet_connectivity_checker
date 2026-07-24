@@ -84,6 +84,22 @@ class TestValueFormatterMegabytes:
         assert fmt(None) == "-"
 
 
+class TestValueFormatterPercent:
+    """`units="%"` renders 0..1 ratios as percentages - blocked_duty_ratio."""
+
+    def test_ratio_scaled_to_percent(self) -> None:
+        fmt = value_formatter("%")
+        assert fmt(0.5) == "50.00%"
+
+    def test_small_ratio_keeps_decimals(self) -> None:
+        fmt = value_formatter("%")
+        assert fmt(0.0001) == "0.01%"
+
+    def test_none_renders_as_dash(self) -> None:
+        fmt = value_formatter("%")
+        assert fmt(None) == "-"
+
+
 class TestValueFormatterDefault:
     def test_freeform_two_decimals(self) -> None:
         fmt = value_formatter("anything-else")
@@ -108,10 +124,10 @@ class TestMetricTable:
         sample_records: list[ResultRecord],
     ) -> None:
         df = pl.DataFrame(flatten_records(sample_records), infer_schema_length=None)
-        result = metric_table(df, "max_drift_microseconds", units="us")
+        result = metric_table(df, "max_stall_microseconds", units="us")
         # Header row
         assert "| Scenario | N |" in result
-        # Both scenarios with max_drift_microseconds present
+        # Both scenarios with max_stall_microseconds present
         assert "`quiet_app`" in result
         assert "`slow_observer`" in result
 
@@ -121,7 +137,7 @@ class TestMetricTable:
     ) -> None:
         df = pl.DataFrame(flatten_records(sample_records), infer_schema_length=None)
         result = metric_table(
-            df, "max_drift_microseconds", units="us", exclude_scenario="slow_observer"
+            df, "max_stall_microseconds", units="us", exclude_scenario="slow_observer"
         )
         assert "`quiet_app`" in result
         assert "`slow_observer`" not in result
@@ -226,7 +242,7 @@ class TestRenderSummaryMarkdown:
     ) -> None:
         df = self._df(sample_records)
         chart_paths = [
-            Path("headline_tick_drift.png"),
+            Path("headline_max_stall.png"),
             Path("memory_peak_rss.png"),
             Path("scenario_stability.png"),
             Path("subscriber_scaling.png"),
@@ -235,13 +251,14 @@ class TestRenderSummaryMarkdown:
 
         # Header block
         assert "# Benchmark results\n" in result
-        # All four h2 sections rendered
-        assert "## Headline: worst-case scheduler stall per scenario" in result
+        # All five h2 sections rendered
+        assert "## Headline: worst-case event-loop stall per scenario" in result
+        assert "## Event-loop blocked share per scenario" in result
         assert "## Peak resident set size per scenario" in result
         assert "## Stability: noise floor across scenarios" in result
         assert "## Subscriber scaling: broadcast cost vs N listeners" in result
         # All four chart embeds
-        assert "![Headline tick drift](headline_tick_drift.png)" in result
+        assert "![Headline max stall](headline_max_stall.png)" in result
         assert "![Memory peak RSS](memory_peak_rss.png)" in result
         assert "![Scenario stability](scenario_stability.png)" in result
         assert "![Subscriber scaling](subscriber_scaling.png)" in result
@@ -257,10 +274,11 @@ class TestRenderSummaryMarkdown:
         df = self._df(sample_records)
         result = render_summary_markdown(df, chart_paths=[], records=sample_records)
 
-        # Three always-rendered h2 sections (subscriber_scaling is the only
-        # section gated entirely on chart presence; the other three render
+        # Four always-rendered h2 sections (subscriber_scaling is the only
+        # section gated entirely on chart presence; the others render
         # their tables even without the chart).
-        assert "## Headline: worst-case scheduler stall per scenario" in result
+        assert "## Headline: worst-case event-loop stall per scenario" in result
+        assert "## Event-loop blocked share per scenario" in result
         assert "## Peak resident set size per scenario" in result
         assert "## Stability: noise floor across scenarios" in result
         # Subscriber scaling section is wrapped in `if chart present`, so
@@ -294,10 +312,10 @@ class TestRenderCompareMarkdown:
         baseline_records: list[ResultRecord],
         current_records: list[ResultRecord],
     ) -> None:
-        rows = [self._row(scenario="quiet_app", metric="tick_drift_microseconds", p=0.5)]
+        rows = [self._row(scenario="quiet_app", metric="stall_microseconds", p=0.5)]
         chart_paths = [
             Path("compare_forest.png"),
-            Path("compare_headline_tick_drift.png"),
+            Path("compare_headline_max_stall.png"),
             Path("compare_memory_peak_rss.png"),
             Path("compare_scenario_stability.png"),
             Path("compare_subscriber_scaling.png"),
@@ -315,20 +333,20 @@ class TestRenderCompareMarkdown:
         assert "**Current**" in result
         # Section headers
         assert "## Forest: all comparable" in result
-        assert "## Headline: tick drift" in result
+        assert "## Headline: max event-loop stall" in result
         assert "## Memory: peak RSS" in result
         assert "## Stability: noise floor" in result
         assert "## Subscriber scaling, baseline vs current" in result
         assert "## Mann-Whitney U significance table" in result
         # All five chart embeds
         assert "![Forest plot](compare_forest.png)" in result
-        assert "![Headline compare](compare_headline_tick_drift.png)" in result
+        assert "![Headline compare](compare_headline_max_stall.png)" in result
         assert "![Memory compare](compare_memory_peak_rss.png)" in result
         assert "![Stability compare](compare_scenario_stability.png)" in result
         assert "![Scaling compare](compare_subscriber_scaling.png)" in result
         # Significance table includes the row
         assert "`quiet_app`" in result
-        assert "`tick_drift_microseconds`" in result
+        assert "`stall_microseconds`" in result
 
     def test_renders_without_chart_embeds_when_chart_paths_empty(
         self,
@@ -344,7 +362,7 @@ class TestRenderCompareMarkdown:
 
         # Sections present unconditionally
         assert "## Forest: all comparable" in result
-        assert "## Headline: tick drift" in result
+        assert "## Headline: max event-loop stall" in result
         assert "## Memory: peak RSS" in result
         assert "## Stability: noise floor" in result
         # Subscriber scaling section is chart-gated - absent here

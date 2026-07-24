@@ -1,14 +1,8 @@
-/// Micro-benchmark: cost of one `InternetConnection.checkOnce()` against an
-/// instant fake probe.
+/// Micro-benchmark: cost of one `InternetConnection.checkOnce()` against an instant fake probe.
 ///
-/// Isolates the coordinator's per-check cost (probe call → policy aggregation
-/// → result construction) from network noise. The probe is a [FakeProbe] that
-/// returns synchronously — any time measured here is *coordinator overhead*.
-///
-/// This is the cleanest before/after signal for the refactor: pre-refactor
-/// includes the inline `_observer.onCheckCompleted` virtual call;
-/// post-refactor will include the `scheduleMicrotask(...)` + event-bus
-/// dispatch. The delta tells us the cost of the indirection.
+/// Isolates the coordinator's per-check cost (probe call → policy aggregation → result construction)
+/// from network noise: the [FakeProbe] returns synchronously, so any time measured here is *coordinator
+/// overhead*, the baseline for judging any dispatch-path change.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -19,9 +13,9 @@ import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
 final class _CheckOnceOverhead extends AsyncBenchmarkBase {
-  _CheckOnceOverhead(this._checker) : super('check_once_overhead');
-
   final InternetConnection _checker;
+
+  _CheckOnceOverhead(this._checker) : super('check_once_overhead');
 
   @override
   Future<void> run() => _checker.checkOnce();

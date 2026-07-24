@@ -1,6 +1,6 @@
 """Benchmark orchestration + analysis for `better_internet_connectivity_checker`.
 
-Package layout (mirrors `mysql_distillery`):
+Package layout:
 
 - `config`            - package-wide paths, scenario durations, chart constants
 - `subcommands/`      - one module per CLI subcommand (build / runner / compare / report)

@@ -1,27 +1,19 @@
-// The class is logically immutable (`final` class, `final` field, `const`
-// constructor), but doesn't carry `@immutable` because that annotation ships
-// only in `package:meta` — a dep we deliberately avoid (keeps the runtime
-// pubspec at one entry, per the package's pure-Dart, minimal-dep posture).
+// Logically immutable (`final` class, `final` field, `const` constructor) but can't carry
+// `@immutable`: that annotation ships only in `package:meta`, a dep we avoid to keep the runtime
+// pubspec at one entry (pure-Dart, minimal-dep posture).
 // ignore_for_file: avoid_equals_and_hash_code_on_mutable_classes
 
-/// A `const`-constructible wrapper around [Uri] that defers parsing until
-/// first member access.
+/// A `const`-constructible wrapper around [Uri] that defers parsing until first member access.
 ///
-/// `Uri.parse(...)` is not a `const` expression, so [Uri] instances cannot
-/// appear inside `const` constructors or `const` collection literals.
-/// [ConstUri] stores the raw string at compile time and parses it lazily on
-/// first accessor call, caching the result process-wide so multiple instances
-/// pointing at the same string share one parsed [Uri].
+/// `Uri.parse(...)` isn't a `const` expression, so [Uri]s can't sit in `const` constructors or
+/// literals. [ConstUri] holds the raw string at compile time and parses lazily on first access,
+/// caching process-wide so instances of the same string share one parsed [Uri].
 ///
 /// Trade-offs vs. `Uri.https(...)` / `Uri.parse(...)`:
-/// - **Gains** `const` construction — enclosing value types can become `const`
-///   and benefit from compile-time canonicalisation.
-/// - **Loses** eager validation — a malformed URI surfaces only on first
-///   accessor call. `Uri.parse` itself is permissive, so most typos (e.g.
-///   `'htps://...'`) parse "successfully" with the wrong scheme rather than
-///   throwing.
-/// - **Adds** one map lookup per accessor, plus a one-off parse on first
-///   access of any given string.
+/// - **Gains** `const` construction — enclosing value types can become `const` and canonicalise.
+/// - **Loses** eager validation — a malformed URI surfaces only on first access, and `Uri.parse` is
+///   permissive anyway (most typos parse "successfully" with the wrong scheme rather than throwing).
+/// - **Adds** one map lookup per accessor, plus a one-off parse on first access of a given string.
 ///
 /// Adapted from https://gist.github.com/passsy/0be2ca0e86ff11e400187f7076404678.
 final class ConstUri implements Uri {

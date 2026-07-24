@@ -1,26 +1,18 @@
 import 'dart:async';
 import 'dart:io';
 
-/// A configurable HTTP server bound to `127.0.0.1` for scenario benchmarks
-/// that need a real (but deterministic) transport. Avoids the noise of real
-/// network calls — DNS, TLS, packet loss, NAT — while still exercising the
-/// `HttpProbe` code path end-to-end.
+/// A configurable HTTP server on `127.0.0.1` for scenarios needing a real but deterministic transport —
+/// exercises the `HttpProbe` path end-to-end without the noise of DNS, TLS, packet loss, or NAT.
+/// Binds to port 0 (OS picks a free port); read [boundPort] after [start].
 ///
-/// Bound to port 0 by default — the OS picks a free port. Read [boundPort]
-/// after [start] returns.
+/// Runtime knobs:
 ///
-/// Configure runtime behaviour via the setters:
+/// * [setUp] / [setDown] — flip between responding [statusCode] and refusing with 503. Used by `flapping_network`.
+/// * [latency] — artificial response delay, applied before responding.
+/// * [statusCode] — the status returned when up. Defaults to 200.
 ///
-/// * [setUp] / [setDown] — flip between "responding 200" and "refusing
-///   connections" (returns 503). Used by `flapping_network`.
-/// * [latency] — artificial response delay. Applied via `Future.delayed`
-///   before responding.
-/// * [statusCode] — the HTTP status code returned when the server is "up".
-///   Defaults to 200.
-///
-/// Setters are thread-safe in the sense that Dart's single-threaded event
-/// loop guarantees in-flight requests see a consistent snapshot of these
-/// fields.
+/// No locking needed: Dart's single-threaded event loop means in-flight requests see a consistent
+/// snapshot of these fields.
 final class LocalHttpServer {
   HttpServer? _server;
   var _isUp = true;
@@ -53,9 +45,8 @@ final class LocalHttpServer {
   Future<void> stop() async {
     await _server?.close(force: true);
     _server = null;
-    // Note: `_requestCount` is NOT reset here — callers commonly read it
-    // after stop() for end-of-scenario reporting. [start] resets if you
-    // reuse the same instance.
+    // Note: `_requestCount` is NOT reset here — callers commonly read it after stop() for end-of-scenario
+    // reporting. [start] resets if you reuse the same instance.
   }
 
   /// Server starts answering [statusCode] (default 200) again.
@@ -67,8 +58,7 @@ final class LocalHttpServer {
   /// Toggles between up and down. Used by `flapping_network` on a timer.
   void toggle() => _isUp = !_isUp;
 
-  // Write-only knob: scenarios push runtime config in; the current value
-  // never needs reading back.
+  // Write-only knob: scenarios push runtime config in; the current value never needs reading back.
   // ignore: avoid_setters_without_getters
   set latency(Duration value) => _latency = value;
 
@@ -82,9 +72,7 @@ final class LocalHttpServer {
 
     await for (final request in server) {
       _requestCount++;
-      if (_latency > Duration.zero) {
-        await Future<void>.delayed(_latency);
-      }
+      if (_latency > Duration.zero) await Future<void>.delayed(_latency);
       await (request.response..statusCode = _isUp ? _statusCode : HttpStatus.serviceUnavailable)
           .close();
     }

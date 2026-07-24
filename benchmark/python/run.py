@@ -17,18 +17,12 @@ Workflow (run from `benchmark/python/`):
     uv run python run.py compare ../results-local/baseline/aggregated.json \\
                                   ../results-local/run-1/aggregated.json
 
-Both `report` and `compare` default to writing into `benchmark/reports/` -
-the canonical committed dir referenced from the package README. Pass `--out`
-to override (e.g. for ad-hoc local snapshots that shouldn't overwrite the
-committed set).
+Both `report` and `compare` default to `benchmark/reports/` (the committed dir the package README
+links); pass `--out` for ad-hoc snapshots that shouldn't overwrite it.
 
-Methodology rules (do not break - see ../README.md for rationale):
-- AOT compile, not JIT (`dart compile exe`).
-- N >= 10 iterations per scenario. Report median + IQR.
-- Mann-Whitney U for significance claims. p < 0.05.
-- AC power, no competing apps.
-- Localhost HTTP only - no real network.
-- NEVER parallelise scenario *runs* - CPU contention destroys signal.
+Methodology is non-negotiable and lives in ../README.md: AOT not JIT, N >= 10, median + IQR,
+Mann-Whitney for significance, AC power, localhost only, and never parallelise runs (concurrent
+CPU load destroys the signal).
 """
 
 from __future__ import annotations

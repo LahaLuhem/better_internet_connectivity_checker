@@ -3,19 +3,14 @@ import '../../probe/models/probe_target.dart';
 import '../../status/internet_status.dart';
 import '../reachability_policy.dart';
 
-/// A strict [ReachabilityPolicy]: every probe must succeed for the connection
-/// to be considered reachable.
+/// A strict [ReachabilityPolicy]: every probe must succeed for the connection to count as reachable.
 ///
-/// Useful when the probe list is curated to model "is this *specific* set of
-/// services reachable" (e.g. an enterprise environment that hard-requires a
-/// fixed set of internal endpoints). Not recommended with arbitrary public
-/// endpoints — any one of them being briefly down would flag a working
-/// connection as unreachable.
+/// Fits a curated list modelling "is this *specific* set of services reachable" (e.g. an enterprise requiring fixed internal endpoints).
+/// Not for arbitrary public endpoints — any one briefly down would flag a working connection as unreachable.
 ///
-/// Runs every probe in parallel and waits for all of them. The reported
-/// response time on a [Reachable] status is the slowest of the successful
-/// probes — under "all", the slowest probe dictates the user-perceived
-/// latency and therefore the slow-or-not classification.
+/// Runs all probes in parallel and waits for every one. A [Reachable]'s response time is the
+/// slowest successful probe's, since under "all" the slowest dictates user-perceived latency and thus
+/// the slow-or-not classification.
 final class AllReachablePolicy implements ReachabilityPolicy {
   /// Creates an [AllReachablePolicy].
   const AllReachablePolicy();

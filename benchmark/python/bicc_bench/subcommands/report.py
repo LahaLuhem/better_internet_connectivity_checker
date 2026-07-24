@@ -20,7 +20,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     """Generate PNG charts + SUMMARY.md from one aggregated.json file.
 
     Charts (one PNG each):
-    - headline_tick_drift.png  - max scheduler stall per scenario
+    - headline_max_stall.png   - max event-loop stall per scenario
     - memory_peak_rss.png      - peak RSS per scenario
     - scenario_stability.png   - noise floor (slow_observer excluded)
     - subscriber_scaling.png   - broadcast cost vs N (from status_emission)
@@ -57,7 +57,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     charts.set_default_theme()
 
     chart_paths: list[Path] = [
-        charts.plot_headline_tick_drift(dataframe, out_dir / "headline_tick_drift.png"),
+        charts.plot_headline_max_stall(dataframe, out_dir / "headline_max_stall.png"),
         charts.plot_memory_peak_rss(dataframe, out_dir / "memory_peak_rss.png"),
         charts.plot_scenario_stability(dataframe, out_dir / "scenario_stability.png"),
     ]

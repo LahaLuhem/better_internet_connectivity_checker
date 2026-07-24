@@ -1,24 +1,22 @@
 /// Scenario: trigger storm.
 ///
-/// External recheck trigger fires 100 times per second for the configured
-/// duration. Mirrors the worst-case mobile scenario where `connectivity_plus`
-/// emits rapid OS-level network-change events (e.g. wifi handoff oscillation).
+/// External recheck trigger fires 100 times per second for the configured duration. Mirrors the worst-case
+/// mobile scenario where `connectivity_plus` emits rapid OS-level network-change events (e.g. wifi handoff oscillation).
 ///
-/// Measures whether the scheduler coalesces / debounces these correctly —
-/// the contract is that an in-flight check is not preempted, and the next
-/// scheduled tick is reset on each trigger. Excessive emissions or per-trigger
-/// work indicates a coalescing regression.
+/// Measures whether the scheduler coalesces / debounces these correctly — the contract is that an
+/// in-flight check is not preempted, and the next scheduled tick is reset on each trigger. Excessive
+/// emissions or per-trigger work indicates a coalescing regression.
 library;
 
 import 'dart:async';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
+import '../harness/event_loop_stall_meter.dart';
 import '../harness/fake_probe.dart';
 import '../harness/memory_sampler.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
-import '../harness/tick_drift_meter.dart';
 
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
@@ -54,7 +52,7 @@ Future<void> _runIteration(
   );
 
   final memorySampler = MemorySampler()..start();
-  final driftMeter = TickDriftMeter()..start();
+  final stallMeter = EventLoopStallMeter()..start();
 
   var emissionCount = 0;
   final subscription = checker.onStatusChange.listen((_) => emissionCount++);
@@ -70,7 +68,7 @@ Future<void> _runIteration(
   await Future<void>.delayed(Duration(seconds: args.durationSeconds));
 
   stormTimer.cancel();
-  driftMeter.stop();
+  stallMeter.stop();
   memorySampler.stop();
 
   await subscription.cancel();
@@ -81,9 +79,7 @@ Future<void> _runIteration(
     iteration: iteration,
     samples: {
       'rss_bytes': memorySampler.samples,
-      'tick_drift_microseconds': driftMeter.drifts
-          .map((d) => d.inMicroseconds)
-          .toList(growable: false),
+      'stall_microseconds': stallMeter.stalls.map((d) => d.inMicroseconds).toList(growable: false),
     },
     summary: {
       'trigger_fire_count': triggerCount,
@@ -91,8 +87,9 @@ Future<void> _runIteration(
       // The ratio surfaces whether triggers are coalesced (low ratio) or
       // each trigger does work end-to-end (ratio ≈ 1 — a regression).
       'emissions_per_trigger': emissionCount / (triggerCount == 0 ? 1 : triggerCount),
-      'max_drift_microseconds': driftMeter.maxDrift.inMicroseconds,
-      'p95_drift_microseconds': driftMeter.p95Drift.inMicroseconds,
+      'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,
+      'total_blocked_microseconds': stallMeter.totalBlocked.inMicroseconds,
+      'blocked_duty_ratio': stallMeter.blockedDutyRatio,
       'peak_rss_bytes': memorySampler.peakRss,
       'rss_delta_bytes': memorySampler.rssDelta,
     },

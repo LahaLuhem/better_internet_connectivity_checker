@@ -301,10 +301,19 @@ attachObserver(checker.events, _AppConnectivityObserver(appLogger));
 ```
 
 Events are dispatched microtask-deferred from the frame that produced them — a thrown
-exception inside an override does **not** propagate back into the scheduler. Synchronous
-blocking work inside the override (e.g. `sleep`, sync IO, busy loops) **does** still
-stall the event loop and will stall the scheduler with it; prefer Future-returning
-operations for any expensive sink.
+exception inside an override does **not** propagate back into the scheduler, and the
+periodic checks stay on cadence as long as an override's synchronous work per tick stays
+below the check interval. What the deferral **cannot** do is protect the event loop
+itself: a Dart isolate is single-threaded, so `sleep`, sync IO, or a busy loop inside an
+override blocks every timer and frame on the isolate for its full duration. Keep
+overrides fast; hand expensive sinks to async APIs, or move heavy computation off-isolate
+with `Isolate.run` on copied data.
+
+To catch offenders during development, `attachObserver` times every callback in debug
+builds (asserts enabled) and logs a one-shot `dart:developer` warning per event type when
+an override overruns its budget — one 60 fps frame (16 ms) by default, tunable via its
+`slowCallbackThreshold` parameter. Release and profile builds compile the watchdog out
+entirely.
 
 Runnable examples live in [`example/`](./example/) — a Flutter demo app exercising
 one-shot checks, status streaming, both aggregation policies, slow-connection detection,
@@ -389,12 +398,12 @@ methodology and reproduction steps are in
 [`benchmark/README.md`](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/benchmark/README.md).
 
 Numbers and charts below are the maintainer's machine snapshot (Apple Silicon macOS,
-Dart SDK 3.11.5, N=10). They are sanity-check ballparks, not a performance contract —
+Dart SDK 3.12.2, N=30). They are sanity-check ballparks, not a performance contract —
 CPU, GC, OS scheduler, and thermal state vary across machines, so your absolute
 numbers WILL differ. Capture your own local baseline before claiming a regression
 or an improvement from a code change.
 
-![Worst-case scheduler stall per scenario, log y-axis](https://raw.githubusercontent.com/LahaLuhem/better_internet_connectivity_checker/main/benchmark/reports/headline_tick_drift.png)
+![Worst-case event-loop stall per scenario, log y-axis](https://raw.githubusercontent.com/LahaLuhem/better_internet_connectivity_checker/main/benchmark/reports/headline_max_stall.png)
 
 ![Peak resident set size per scenario](https://raw.githubusercontent.com/LahaLuhem/better_internet_connectivity_checker/main/benchmark/reports/memory_peak_rss.png)
 

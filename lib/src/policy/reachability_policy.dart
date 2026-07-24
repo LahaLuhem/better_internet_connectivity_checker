@@ -4,22 +4,14 @@ import '../status/internet_status.dart';
 
 /// Aggregates per-probe results into an [InternetStatus].
 ///
-/// Decoupling aggregation from probing lets the same probe layer support
-/// different reachability semantics — "any one of N suffices" (default),
-/// "all of N must succeed" (strict), or future variants like "k of N".
+/// Decoupling aggregation from probing lets one probe layer back different reachability semantics:
+/// "any of N" (default), "all of N" (strict), or future variants like "k of N". Implementations drive
+/// probes their own way (sequential or parallel, racing or waiting) and apply the slow-threshold uniformly —
+/// a successful probe exceeding it is marked slow on the [Reachable].
 ///
-/// Implementations drive the probe (sequentially or in parallel, racing or
-/// waiting) according to their own semantics, and apply the slow-threshold
-/// argument uniformly: a successful probe whose response time exceeds it is
-/// classified as slow on the returned [Reachable] status.
-///
-/// Stateless by convention: implementations should not hold per-call state.
-/// Concrete policies are `const`-constructible so they can be shared.
-///
-/// State-bearing policies (e.g. a circuit-breaker policy that remembers
-/// recent failures) deserve a proper class, so this stays an interface
-/// rather than a function typedef.
-// Kept as a class so stateful policies can hold fields.
+/// Stateless by convention, and concrete policies are `const`-constructible so they can be shared.
+/// Kept an interface, not a typedef, so state-bearing policies (e.g. a circuit breaker) can hold fields.
+// Kept as an interface (not a typedef) so stateful policies can hold fields.
 // ignore: one_member_abstracts
 abstract interface class ReachabilityPolicy {
   /// Evaluates all [targets] using [probe] and returns the rolled-up status.
