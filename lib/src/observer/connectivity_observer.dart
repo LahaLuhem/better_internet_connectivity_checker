@@ -136,24 +136,27 @@ StreamSubscription<ConnectivityEvent> attachObserver(
   ConnectivityObserver observer, {
   Duration slowCallbackThreshold = Values.defaultSlowCallbackThreshold,
 }) {
-  void dispatch(ConnectivityEvent event) {
-    switch (event) {
-      case StatusEmittedEvent(:final previous, :final next):
-        observer.onStatusChangeEmitted(previous, next);
-      case CheckCompletedEvent(:final result):
-        observer.onCheckCompleted(result);
-      case ExternalTriggerFiredEvent():
-        observer.onExternalTriggerFired();
-      case ExternalTriggerErrorEvent(:final error, :final stackTrace):
-        observer.onExternalTriggerError(error, stackTrace);
-      case CheckIntervalChangedEvent(:final previous, :final next):
-        observer.onCheckIntervalChanged(previous, next);
-      case SlowThresholdChangedEvent(:final previous, :final next):
-        observer.onSlowThresholdChanged(previous, next);
-      case DisposedEvent():
-        observer.onDispose();
-    }
-  }
+  void dispatch(ConnectivityEvent event) => switch (event) {
+    StatusEmittedEvent(:final previous, :final next) => observer.onStatusChangeEmitted(
+      previous,
+      next,
+    ),
+    CheckCompletedEvent(:final result) => observer.onCheckCompleted(result),
+    ExternalTriggerFiredEvent() => observer.onExternalTriggerFired(),
+    ExternalTriggerErrorEvent(:final error, :final stackTrace) => observer.onExternalTriggerError(
+      error,
+      stackTrace,
+    ),
+    CheckIntervalChangedEvent(:final previous, :final next) => observer.onCheckIntervalChanged(
+      previous,
+      next,
+    ),
+    SlowThresholdChangedEvent(:final previous, :final next) => observer.onSlowThresholdChanged(
+      previous,
+      next,
+    ),
+    DisposedEvent() => observer.onDispose(),
+  };
 
   // Reassigned inside the assert so the watchdog lives only where asserts run (debug, tests).
   // Release keeps the bare dispatch.

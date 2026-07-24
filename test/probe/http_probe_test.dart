@@ -139,11 +139,11 @@ void main() {
 
       var triggered = false;
       unawaited(abortable.abortTrigger!.whenComplete(() => triggered = true));
-      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(.zero);
       check(triggered).isFalse();
 
       cancelCompleter.complete();
-      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(.zero);
       check(triggered).isTrue();
 
       responseCompleter.complete(http.StreamedResponse(const Stream.empty(), 200));

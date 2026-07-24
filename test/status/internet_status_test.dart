@@ -13,22 +13,22 @@ void main() {
         'no threshold configured': (
           responseTime: Duration(seconds: 5),
           slowThreshold: null,
-          quality: ConnectionQuality.good,
+          quality: .good,
         ),
         'under threshold': (
           responseTime: Duration(milliseconds: 100),
           slowThreshold: Duration(milliseconds: 500),
-          quality: ConnectionQuality.good,
+          quality: .good,
         ),
         'over threshold': (
           responseTime: Duration(milliseconds: 600),
           slowThreshold: Duration(milliseconds: 500),
-          quality: ConnectionQuality.slow,
+          quality: .slow,
         ),
         'equal to threshold (boundary)': (
           responseTime: Duration(milliseconds: 500),
           slowThreshold: Duration(milliseconds: 500),
-          quality: ConnectionQuality.good,
+          quality: .good,
         ),
       },
       outline: (example) {
@@ -50,7 +50,7 @@ void main() {
     scenario('the sealed hierarchy switches exhaustively onto Reachable', () {
       const InternetStatus status = Reachable(
         responseTime: Duration(milliseconds: 100),
-        quality: ConnectionQuality.good,
+        quality: .good,
       );
 
       final label = switch (status) {
@@ -73,10 +73,7 @@ void main() {
     });
 
     scenario('Reachable.toString renders responseTime and quality in stable diagnostic form', () {
-      const status = Reachable(
-        responseTime: Duration(milliseconds: 250),
-        quality: ConnectionQuality.good,
-      );
+      const status = Reachable(responseTime: Duration(milliseconds: 250), quality: .good);
 
       check(status.toString()).equals(
         'Reachable('

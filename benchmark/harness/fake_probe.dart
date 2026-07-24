@@ -35,7 +35,7 @@ final class FakeProbe implements ConnectivityProbe {
   FakeProbe.scripted(List<ProbeResult> script)
     : assert(script.isNotEmpty, 'scripted FakeProbe needs at least one result'),
       _mode = .scripted,
-      _responseTime = Duration.zero,
+      _responseTime = .zero,
       _error = null,
       _script = List.unmodifiable(script);
 
@@ -47,15 +47,11 @@ final class FakeProbe implements ConnectivityProbe {
   Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) {
     _callCount++;
 
-    return switch (_mode) {
-      .alwaysSuccess => Future.value(
-        ProbeResult.success(target: target, responseTime: _responseTime),
-      ),
-      .alwaysFailure => Future.value(
-        ProbeResult.failure(target: target, responseTime: _responseTime, error: _error),
-      ),
-      .scripted => Future.value(_nextScripted(target)),
-    };
+    return Future.syncValue(switch (_mode) {
+      .alwaysSuccess => .success(target: target, responseTime: _responseTime),
+      .alwaysFailure => .failure(target: target, responseTime: _responseTime, error: _error),
+      .scripted => _nextScripted(target),
+    });
   }
 
   ProbeResult _nextScripted(ProbeTarget target) {
@@ -65,12 +61,8 @@ final class FakeProbe implements ConnectivityProbe {
     // Rebind the target — the scripted result was likely built with a placeholder target, but the
     // scheduler passes its configured target in.
     return result.isSuccess
-        ? ProbeResult.success(target: target, responseTime: result.responseTime)
-        : ProbeResult.failure(
-            target: target,
-            responseTime: result.responseTime,
-            error: result.error,
-          );
+        ? .success(target: target, responseTime: result.responseTime)
+        : .failure(target: target, responseTime: result.responseTime, error: result.error);
   }
 }
 

@@ -100,7 +100,7 @@ void main() {
       controller
         ..add(checkCompleted)
         ..add(checkCompleted);
-      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(.zero);
 
       check(observer.checkCompletedCalls).equals(2);
     });

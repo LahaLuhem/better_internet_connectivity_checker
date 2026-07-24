@@ -46,7 +46,7 @@ Future<void> _runIteration(
   final triggerController = StreamController<void>.broadcast();
   final checker = InternetConnection(
     targets: [ProbeTarget(uri: Uri.parse('http://127.0.0.1/fake'))],
-    probe: FakeProbe.alwaysSuccess(responseTime: Duration.zero),
+    probe: FakeProbe.alwaysSuccess(responseTime: .zero),
     checkInterval: const Duration(seconds: 30), // long: triggers drive the rechecks
     externalRecheckTrigger: triggerController.stream,
   );
