@@ -2,15 +2,12 @@ part of '../connectivity_event.dart';
 
 /// Emitted when the connection's slow-classification cutoff is reassigned.
 ///
-/// Either [previous] or [next] may be null (slow classification disabled).
-/// Fires even when [previous] equals [next].
+/// Either bound may be null (slow classification disabled). Fires even when [previous] equals [next].
 final class SlowThresholdChangedEvent extends ConnectivityEvent {
-  /// The threshold that was in effect before the assignment, or null if
-  /// slow classification was disabled.
+  /// The threshold in effect before the assignment, or null if slow classification was disabled.
   final Duration? previous;
 
-  /// The new threshold that took effect, or null if slow classification
-  /// is now disabled.
+  /// The new threshold, or null if slow classification is now disabled.
   final Duration? next;
 
   /// Creates a slow-threshold-changed event capturing the transition.

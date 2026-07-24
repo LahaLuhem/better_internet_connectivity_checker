@@ -6,8 +6,7 @@ import 'dart:io';
 /// [`~/Desktop/bicc-benchmark-plan-2026-05-21.md`](file:///Users/mehul/Desktop/bicc-benchmark-plan-2026-05-21.md)
 /// §5 — one record per iteration, appended to a per-run output file.
 ///
-/// One [ResultWriter] per scenario invocation. Construct, call [open],
-/// emit one [writeRecord] per iteration, then [close].
+/// One [ResultWriter] per scenario invocation. Construct, call [open], emit one [writeRecord] per iteration, then [close].
 final class ResultWriter {
   final String scenario;
   final String sdkVersion;
@@ -25,7 +24,7 @@ final class ResultWriter {
   }) : _sink = sink;
 
   /// Opens [outputPath] for writing and emits the JSON-array prefix `[`.
-  /// Subsequent [writeRecord] calls add comma-separated records;
+  /// Subsequent [writeRecord] calls add comma-separated records.
   /// [close] writes the closing `]` and flushes.
   static Future<ResultWriter> open({
     required String outputPath,
@@ -36,8 +35,8 @@ final class ResultWriter {
   }) async {
     final file = File(outputPath);
     await file.parent.create(recursive: true);
-    // The sink is intentionally held for the writer's lifetime and closed by
-    // [close]; the lint can't trace ownership across the factory boundary.
+    // The sink is intentionally held for the writer's lifetime and closed by [close]. The lint can't
+    // trace ownership across the factory boundary.
     // ignore: close_sinks
     final sink = file.openWrite()..write('[\n');
 
@@ -50,9 +49,8 @@ final class ResultWriter {
     );
   }
 
-  /// Appends one record. [samples] is the per-metric arrays of raw
-  /// measurements; [summary] is per-metric aggregates the scenario chose
-  /// to pre-compute (the Python analyzer can recompute from samples).
+  /// Appends one record. [samples] is the per-metric arrays of raw measurements. [summary] is per-metric
+  /// aggregates the scenario chose to pre-compute (the Python analyzer can recompute from samples).
   void writeRecord({
     required int iteration,
     required Map<String, List<num>> samples,
@@ -82,15 +80,13 @@ final class ResultWriter {
   }
 }
 
-/// Forces a young-generation GC by allocating then dropping a large amount
-/// of pressure. Imperfect — the Dart VM is free to defer — but the
-/// canonical "I want a clean slate before measuring" pattern.
+/// Forces a young-generation GC by allocating then dropping a large amount of pressure. Imperfect —
+/// the Dart VM is free to defer — but the canonical "I want a clean slate before measuring" pattern.
 ///
 /// Call this immediately before opening a measurement window. Idempotent.
 void forceGc() {
   // Allocate ~8 MB of unreachable garbage to provoke young-gen collection.
-  // Drop the reference immediately; the VM should reclaim before the next
-  // synchronous chunk.
+  // Drop the reference immediately; the VM should reclaim before the next synchronous chunk.
   // ignore: unused_local_variable
   final pressure = List<List<int>>.generate(64, (_) => List<int>.filled(16384, 0));
 }

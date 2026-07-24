@@ -1,13 +1,8 @@
 /// Micro-benchmark: cost of one observer-method dispatch.
 ///
-/// Measures the virtual-call cost of [ConnectivityObserver.onStatusChangeEmitted]
-/// in isolation — bypasses [InternetConnection] entirely. The point is to put
-/// a number on "what does one fan-out site cost today" so the post-refactor
-/// `_events.add(StatusEmittedEvent(...))` path has a direct comparison.
-///
-/// Pre-refactor expected cost: ~one virtual dispatch + no allocation.
-/// Post-refactor expected cost: ~one allocation (event object) + microtask
-/// schedule + broadcast `add`. This bench captures the "before".
+/// Measures the virtual-call cost of [ConnectivityObserver.onStatusChangeEmitted] in isolation, bypassing
+/// [InternetConnection] — a floor for "what does invoking one callback cost", against which the event-stream
+/// path (allocate event + microtask + broadcast `add`) can be compared.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -17,19 +12,18 @@ import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
 final class _ObserverDispatch extends BenchmarkBase {
-  _ObserverDispatch(this._observer, this._previous, this._next) : super('observer_dispatch');
-
   final _NoopCountingObserver _observer;
   final InternetStatus _previous;
   final InternetStatus _next;
+
+  _ObserverDispatch(this._observer, this._previous, this._next) : super('observer_dispatch');
 
   @override
   void run() => _observer.onStatusChangeEmitted(_previous, _next);
 }
 
-/// Minimal subclass — counts calls but does no work. Mirrors what a
-/// PrintingConnectivityObserver-style consumer looks like in the steady
-/// state (no expensive side effect on the hot path).
+/// Minimal subclass — counts calls but does no work. Mirrors what a PrintingConnectivityObserver-style
+/// consumer looks like in the steady state (no expensive side effect on the hot path).
 final class _NoopCountingObserver extends ConnectivityObserver {
   _NoopCountingObserver();
 

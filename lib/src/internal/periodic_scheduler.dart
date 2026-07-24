@@ -2,16 +2,13 @@ part of '../internet_connection.dart';
 
 /// Internal periodic-tick scheduler.
 ///
-/// Owns the [Timer] underlying [InternetConnection]'s recurring checks and
-/// the rescheduling loop that fires `onTick` then queues the next tick.
-/// The coordinator (the facade class) drives the lifecycle via [start],
-/// [stop], [updateInterval], and [dispose]; the scheduler itself is dumb
-/// about what "checking" means or when it should be active.
+/// Owns the [Timer] behind [InternetConnection]'s recurring checks and the loop that fires `onTick`
+/// then queues the next tick. The coordinator drives the lifecycle via [start], [stop],
+/// [updateInterval], and [dispose]. The scheduler stays dumb about what "checking" means.
 ///
-/// Overlapping invocations of `onTick` are deliberately not prevented —
-/// today's package contract (see APPENDIX `why-checkOnce-not-single-flighted`)
-/// allows parallel probes when the external recheck trigger fires during
-/// an in-flight scheduled check. The scheduler matches that contract.
+/// Overlapping `onTick` invocations are deliberately allowed — the package contract
+/// (APPENDIX `why-checkOnce-not-single-flighted`) permits parallel probes when an external trigger
+/// fires mid-check.
 final class _PeriodicScheduler {
   Duration _interval;
   final Future<void> Function() _onTick;
@@ -25,9 +22,8 @@ final class _PeriodicScheduler {
 
   /// Begins ticking, or resets the rescheduling clock if already running.
   ///
-  /// Cancels any pending timer and immediately invokes `onTick` once; after
-  /// `onTick`'s returned future completes, schedules the next tick at the
-  /// current interval. A no-op after [dispose].
+  /// Cancels any pending timer, invokes `onTick` once immediately, then schedules the next tick at
+  /// the current interval once that future completes. A no-op after [dispose].
   void start() {
     if (_disposed) return;
 
@@ -36,20 +32,17 @@ final class _PeriodicScheduler {
     unawaited(_runTickAndReschedule());
   }
 
-  /// Cancels any pending tick and prevents future rescheduling until the
-  /// next [start]. Any in-flight `onTick` is allowed to complete but its
-  /// next-tick scheduling is suppressed by the running-flag check.
+  /// Cancels any pending tick and suppresses rescheduling until the next [start]. An in-flight `onTick`
+  /// still completes, but the running-flag check drops its next-tick scheduling.
   void stop() {
     _running = false;
     _cancelTimer();
   }
 
-  /// Replaces the current tick interval and resets the timer if running.
+  /// Replaces the tick interval, resetting the timer if running.
   ///
-  /// When called on a running scheduler, the in-flight rescheduling clock
-  /// is discarded and a fresh timer is queued at the new [interval]. A
-  /// no-op when paused or disposed (the new interval takes effect on the
-  /// next [start]).
+  /// On a running scheduler, discards the in-flight rescheduling clock and queues a fresh timer at
+  /// the new [interval]. When paused or disposed it's a no-op — the interval takes effect on next [start].
   void updateInterval(Duration interval) {
     _interval = interval;
     if (!_running || _disposed) return;

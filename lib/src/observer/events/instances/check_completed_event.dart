@@ -1,8 +1,7 @@
 part of '../connectivity_event.dart';
 
-/// Emitted after every internal check completes, regardless of whether the
-/// result changed the emitted status. Mirrors the cadence of the periodic
-/// timer plus any external-trigger-driven rechecks.
+/// Emitted after every internal check completes, whether or not the result changed the emitted status.
+/// Mirrors the periodic timer's cadence plus any trigger-driven rechecks.
 final class CheckCompletedEvent extends ConnectivityEvent {
   /// The status produced by the completed check.
   final InternetStatus result;

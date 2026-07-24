@@ -49,20 +49,20 @@ class TestGroupSamples:
 
     def test_groups_by_scenario_and_metric(self, sample_records: list[ResultRecord]) -> None:
         groups = group_samples(sample_records)
-        # quiet_app emitted rss_bytes and tick_drift_microseconds samples
+        # quiet_app emitted rss_bytes and stall_microseconds samples
         # across 3 iterations (3 samples each per iteration = 9 total).
         assert ("quiet_app", "rss_bytes") in groups
-        assert ("quiet_app", "tick_drift_microseconds") in groups
+        assert ("quiet_app", "stall_microseconds") in groups
         assert len(groups[("quiet_app", "rss_bytes")]) == 9
-        assert len(groups[("quiet_app", "tick_drift_microseconds")]) == 9
+        assert len(groups[("quiet_app", "stall_microseconds")]) == 9
 
-    def test_slow_observer_drift_collected(self, sample_records: list[ResultRecord]) -> None:
+    def test_slow_observer_stalls_collected(self, sample_records: list[ResultRecord]) -> None:
         groups = group_samples(sample_records)
-        drifts = groups[("slow_observer", "tick_drift_microseconds")]
+        stalls = groups[("slow_observer", "stall_microseconds")]
         # 2 iterations x 3 samples each = 6 values
-        assert len(drifts) == 6
-        # All in the bug range
-        assert all(d >= 1_800_000 for d in drifts)
+        assert len(stalls) == 6
+        # All in the blocking-observer range (~50 ms sleeps)
+        assert all(s >= 49_000 for s in stalls)
 
     def test_summary_only_records_have_no_samples(self) -> None:
         records: list[ResultRecord] = [
@@ -124,10 +124,10 @@ class TestComputeCompareRows:
         current_records: list[ResultRecord],
     ) -> None:
         rows = compute_compare_rows(baseline_records, current_records)
-        # Both runs have quiet_app/tick_drift and slow_observer/tick_drift.
+        # Both runs have quiet_app/stall and slow_observer/stall samples.
         keys = {(r.scenario, r.metric) for r in rows}
-        assert ("quiet_app", "tick_drift_microseconds") in keys
-        assert ("slow_observer", "tick_drift_microseconds") in keys
+        assert ("quiet_app", "stall_microseconds") in keys
+        assert ("slow_observer", "stall_microseconds") in keys
 
     def test_slow_observer_collapse_is_significant_improvement(
         self,
@@ -136,12 +136,10 @@ class TestComputeCompareRows:
     ) -> None:
         rows = compute_compare_rows(baseline_records, current_records)
         slow = next(
-            r
-            for r in rows
-            if r.scenario == "slow_observer" and r.metric == "tick_drift_microseconds"
+            r for r in rows if r.scenario == "slow_observer" and r.metric == "stall_microseconds"
         )
-        # Drift dropped from ~1.8M to ~18k - that's ~-99%
-        assert slow.delta_pct < -90
+        # Max stall dropped from ~50k to ~5k - that's ~-90%
+        assert slow.delta_pct < -85
         assert slow.significant
         # Improvement direction
         assert slow.current_median < slow.baseline_median
@@ -153,7 +151,7 @@ class TestComputeCompareRows:
     ) -> None:
         rows = compute_compare_rows(baseline_records, current_records)
         quiet = next(
-            r for r in rows if r.scenario == "quiet_app" and r.metric == "tick_drift_microseconds"
+            r for r in rows if r.scenario == "quiet_app" and r.metric == "stall_microseconds"
         )
         # quiet_app samples are identical between baseline and current.
         # Mann-Whitney on identical samples is undefined - we coerce to p=1.0.

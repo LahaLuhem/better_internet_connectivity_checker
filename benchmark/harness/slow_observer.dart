@@ -2,22 +2,19 @@ import 'dart:io';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
-/// A [ConnectivityObserver] that synchronously blocks for a configurable
-/// duration on every callback — simulating a slow logger, metrics push, or
-/// any expensive side-effect a real consumer might wire in.
+/// A [ConnectivityObserver] that synchronously blocks for a configurable duration on every callback —
+/// simulating a slow logger, metrics push, or any expensive side-effect a real consumer might wire in.
 ///
-/// Pre-refactor, [ConnectivityObserver] callbacks fire **synchronously on
-/// the same zone as the underlying `InternetConnection` event** (per the
-/// dartdoc on [ConnectivityObserver]). A slow observer therefore stalls the
-/// scheduler's tick loop — this class exists to make that latent bug
-/// observable and measurable.
+/// Dispatch is microtask-deferred since the event-bus refactor, but a Dart isolate is single-threaded:
+/// synchronous work inside an override blocks the event loop for its full duration regardless of which
+/// queue dispatched it. This class exists to make that cost observable and measurable — the per-callback
+/// delay should reappear as `max_stall_microseconds`, and the delay-to-interval ratio as `blocked_duty_ratio`.
 ///
-/// The blocking is genuine `sleep` (from `dart:io`), not a busy-wait — so
-/// CPU usage stays low, but the event loop is paused exactly like a slow
-/// synchronous logger would pause it.
+/// The blocking is genuine `sleep` (from `dart:io`), not a busy-wait — so CPU usage stays low, but
+/// the event loop is paused exactly like a slow synchronous logger would pause it.
 ///
-/// Default: 50 ms delay on every callback. Constructor knobs let scenarios
-/// vary the delay or disable per-method delays selectively.
+/// Default: 50 ms delay on every callback. Constructor knobs let scenarios vary the delay or disable
+/// per-method delays selectively.
 final class SlowObserver extends ConnectivityObserver {
   final Duration _delay;
   final bool _delayOnStatusChange;
@@ -26,8 +23,8 @@ final class SlowObserver extends ConnectivityObserver {
   final bool _delayOnConfigChange;
   final bool _delayOnDispose;
 
-  /// Counts of how many times each callback fired. Useful for verifying the
-  /// scenario exercised the code paths it was supposed to.
+  /// Counts of how many times each callback fired. Useful for verifying the scenario exercised the
+  /// code paths it was supposed to.
   final callCounts = <String, int>{};
 
   SlowObserver({

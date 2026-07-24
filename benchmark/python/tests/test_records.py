@@ -90,7 +90,7 @@ class TestFlattenRecords:
         assert quiet_0["package_version"] == "0.2.0"
         assert quiet_0["git_sha"] == "abc1234"
         assert quiet_0["peak_rss_bytes"] == 32_000_000
-        assert quiet_0["max_drift_microseconds"] == 300
+        assert quiet_0["max_stall_microseconds"] == 300
 
     def test_missing_fields_use_sentinels(self) -> None:
         records: list[ResultRecord] = [{}]  # no scenario, no iteration, no anything

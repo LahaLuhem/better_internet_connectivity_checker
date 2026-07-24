@@ -18,21 +18,15 @@ part 'internal/periodic_scheduler.dart';
 ///
 /// Owns three responsibilities:
 ///
-/// 1. **One-shot checks** via [checkOnce] — runs every target through the
-///    configured [ConnectivityProbe] and aggregates via the configured
-///    [ReachabilityPolicy].
-/// 2. **Status streaming** via [onStatusChange] — periodically checks (at
-///    [checkInterval]) and emits the resulting [InternetStatus] only when its
-///    kind differs from the previously emitted one.
-/// 3. **External recheck triggers** — if an [Stream] is provided as the
-///    constructor's `externalRecheckTrigger`, an emission on that stream
-///    forces an immediate recheck. Useful for wiring `connectivity_plus` or
-///    any other signal that suggests the network state changed.
+/// 1. **One-shot checks** via [checkOnce] — runs every target through the configured [ConnectivityProbe],
+///     aggregated by the configured [ReachabilityPolicy].
+/// 2. **Status streaming** via [onStatusChange] — checks every [checkInterval] and emits the result
+///     only when its kind differs from the last emitted one.
+/// 3. **External recheck triggers** — an emission on the constructor's `externalRecheckTrigger` stream
+///    forces an immediate recheck. Wire `connectivity_plus` or any other network-change signal through it.
 ///
-/// Construct once per use case. There is no shared singleton — two
-/// independently-configured instances coexist without interfering. Always
-/// call [dispose] when finished to release the underlying stream, timer, and
-/// external-trigger subscription.
+/// Construct once per use case; there is no shared singleton, and independent instances don't interfere.
+/// Always [dispose] when finished to release the stream, timer, and trigger subscription.
 final class InternetConnection {
   final List<ProbeTarget> _targets;
   Duration _checkInterval;
@@ -62,40 +56,27 @@ final class InternetConnection {
 
   /// Creates an [InternetConnection].
   ///
-  /// `targets` are the URIs probed on each check. Defaults to a curated list
-  /// of public reliability endpoints chosen for operator diversity and low
-  /// cache surface. The list must be non-empty; passing an empty iterable
-  /// trips a debug-mode `assert` (release builds silently fall through to
-  /// `Unreachable` on every check).
+  /// `targets` are the URIs probed on each check. Defaults to a curated list of public reliability
+  /// endpoints (diverse operators, low cache surface). Must be non-empty. An empty list trips a debug-mode
+  /// `assert` (release builds fall through to `Unreachable` every check).
   ///
-  /// `checkInterval` is the gap between periodic status checks once
-  /// [onStatusChange] has at least one listener. Defaults to
-  /// [Values.defaultCheckInterval]. Adjust at runtime by assigning to the
-  /// [checkInterval] setter.
+  /// `checkInterval` is the gap between periodic checks once [onStatusChange] has a listener.
+  /// Defaults to [Values.defaultCheckInterval]; change it at runtime via the [checkInterval] setter.
   ///
-  /// `slowThreshold` is the response-time cutoff above which a successful
-  /// probe is classified as slow. Defaults to null (no slow classification —
-  /// every reachable status reports [ConnectionQuality.good]). Adjust at
-  /// runtime by assigning to the [slowThreshold] setter — preserves
-  /// [lastStatus] across the change, unlike rebuilding the
-  /// [InternetConnection].
+  /// `slowThreshold` is the response-time cutoff above which a successful probe is classified as slow.
+  /// Defaults to null (no classification — every reachable status is [ConnectionQuality.good]).
+  /// The [slowThreshold] setter changes it at runtime while preserving [lastStatus], unlike rebuilding.
   ///
-  /// `policy` selects the aggregation strategy. Defaults to
-  /// [AnyReachablePolicy] (any-of-N suffices).
+  /// `policy` selects the aggregation strategy. Defaults to [AnyReachablePolicy] (any-of-N).
   ///
-  /// `probe` runs a single check; defaults to [HttpProbe.head]. Pass a custom
-  /// probe to swap the transport (e.g. a retry-wrapping decorator, an
-  /// [HttpProbe.get] for HEAD-unfriendly endpoints) or to inject a mock in
-  /// tests.
+  /// `probe` runs a single check; defaults to [HttpProbe.head]. Pass a custom probe to swap the
+  /// transport (a retry decorator, [HttpProbe.get] for HEAD-unfriendly endpoints) or inject a mock.
   ///
-  /// `externalRecheckTrigger` is an optional stream whose events force an
-  /// immediate recheck regardless of the timer. Typical Flutter wiring:
-  /// `Connectivity().onConnectivityChanged.map(noopWithVal)`.
+  /// `externalRecheckTrigger` is an optional stream whose events force an immediate recheck. Typical
+  /// Flutter wiring: `Connectivity().onConnectivityChanged.map(noopWithVal)`.
   ///
-  /// To observe lifecycle events (status emissions, check completions,
-  /// external triggers, configuration changes, dispose), subscribe to
-  /// [events] directly or wire a `ConnectivityObserver` via the
-  /// `attachObserver` top-level function.
+  /// To observe lifecycle events, subscribe to [events] or wire a `ConnectivityObserver` via the
+  /// top-level `attachObserver`.
   InternetConnection({
     List<ProbeTarget>? targets,
     Duration checkInterval = Values.defaultCheckInterval,
@@ -114,38 +95,32 @@ final class InternetConnection {
   /// The current periodic check interval.
   Duration get checkInterval => _checkInterval;
 
-  /// The current slow-classification cutoff, or null when slow detection is
-  /// disabled (every reachable status reports [ConnectionQuality.good]).
+  /// The current slow-classification cutoff, or null when slow detection is disabled
+  /// (every reachable status reports [ConnectionQuality.good]).
   Duration? get slowThreshold => _slowThreshold;
 
-  /// The most recently observed status, or null before the first check (or
-  /// after the last [onStatusChange] subscriber cancels, which suspends the
-  /// periodic timer).
+  /// The most recently observed status, or null before the first check
+  /// (or after the last [onStatusChange] subscriber cancels, which suspends the periodic timer).
   InternetStatus? get lastStatus => _lastStatus;
 
   /// Stream of status transitions.
   ///
-  /// Periodic checks start when the first listener subscribes; the timer is
-  /// suspended when the last listener cancels. Emissions are deduped on
-  /// status *kind* — two consecutive [Reachable] events with the same
-  /// [ConnectionQuality] won't double-fire, but a flip from
-  /// [ConnectionQuality.good] to [ConnectionQuality.slow] will.
+  /// Periodic checks start on the first listener and suspend when the last one cancels. Emissions
+  /// are deduped on status *kind*: two consecutive [Reachable]s of the same [ConnectionQuality] won't
+  /// double-fire, but a [ConnectionQuality.good] → [ConnectionQuality.slow] flip will.
   Stream<InternetStatus> get onStatusChange => _statusController.stream;
 
   /// Stream of internal diagnostic events.
   ///
-  /// Subscriptions observe lifecycle activity (status emissions, check
-  /// completions, external triggers, configuration changes, dispose)
-  /// microtask-deferred from the caller's frame — a slow listener cannot
-  /// stall the underlying check scheduler. The status stream
-  /// ([onStatusChange]) is unaffected and remains synchronous on the
-  /// caller's frame because status emission must not be delayed by
-  /// diagnostic work.
+  /// Surfaces lifecycle activity (status emissions, check completions, external triggers, config changes, dispose)
+  /// microtask-deferred from the caller's frame. The deferral keeps the scheduler on cadence while a
+  /// listener's synchronous work per event stays below the check interval, but it cannot insulate the
+  /// event loop: synchronous blocking work in a listener still blocks the whole isolate for its duration
+  /// (see the threading notes on `ConnectivityObserver`). [onStatusChange] is unaffected and stays
+  /// synchronous — status emission must not wait on diagnostic work.
   ///
-  /// Emissions race against [dispose] are best-effort: any event queued
-  /// after the sink closes is silently dropped. The terminal
-  /// [DisposedEvent] is always observed by subscribers attached at the
-  /// time [dispose] is called.
+  /// Emissions racing [dispose] are best-effort: anything queued after the sink closes is dropped.
+  /// The terminal [DisposedEvent] always reaches subscribers attached when [dispose] is called.
   Stream<ConnectivityEvent> get events => _eventSink.stream;
 
   /// Runs one check and returns the resulting status.
@@ -164,29 +139,22 @@ final class InternetConnection {
 
   /// Updates the slow-classification cutoff.
   ///
-  /// Pass `null` to disable slow classification (every reachable status
-  /// will report [ConnectionQuality.good]). Does **not** reset the periodic
-  /// timer, run a check, or clear [lastStatus] — the new threshold takes
-  /// effect at the next scheduled or externally-triggered check. Use
-  /// [checkOnce] (without affecting the stream) or wait for the next tick
-  /// to see the impact.
+  /// Pass `null` to disable slow classification (every reachable status reports [ConnectionQuality.good]).
+  /// Does **not** reset the timer, run a check, or clear [lastStatus] — the new threshold takes effect
+  /// at the next scheduled or triggered check.
   ///
-  /// Prefer this over reconstructing the [InternetConnection] when only
-  /// the threshold changes: rebuilding loses the in-memory [lastStatus],
-  /// so the next emission's `previous` field on [StatusEmittedEvent]
-  /// resets to null.
+  /// Prefer this over rebuilding the [InternetConnection] when only the threshold changes: rebuilding
+  /// loses the in-memory [lastStatus], resetting the next [StatusEmittedEvent]'s `previous` to null.
   set slowThreshold(Duration? threshold) {
     final previous = _slowThreshold;
     _slowThreshold = threshold;
     _eventSink.emit(SlowThresholdChangedEvent(previous: previous, next: threshold));
   }
 
-  /// Releases the status stream, periodic timer, and external-trigger
-  /// subscription.
+  /// Releases the status stream, periodic timer, and external-trigger subscription.
   ///
-  /// After [dispose] returns, the instance must not be used. Calling
-  /// [checkOnce] or subscribing to [onStatusChange] yields undefined
-  /// behaviour.
+  /// After [dispose] returns the instance must not be used: [checkOnce] or subscribing to [onStatusChange]
+  /// yields undefined behaviour.
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;

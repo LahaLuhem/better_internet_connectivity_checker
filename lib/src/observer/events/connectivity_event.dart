@@ -8,8 +8,7 @@ part 'instances/external_trigger_fired_event.dart';
 part 'instances/slow_threshold_changed_event.dart';
 part 'instances/status_emitted_event.dart';
 
-/// Lifecycle event surfaced by the diagnostic stream of an
-/// `InternetConnection`.
+/// Lifecycle event surfaced by the diagnostic stream of an `InternetConnection`.
 ///
 /// Sealed so subscribers can pattern-match exhaustively:
 ///

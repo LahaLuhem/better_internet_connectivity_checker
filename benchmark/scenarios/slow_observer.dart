@@ -1,25 +1,29 @@
 /// Scenario: slow observer — the headline benchmark.
 ///
-/// Observer sleeps 50 ms per callback; check interval 100 ms. Pre-refactor,
-/// the synchronous observer stalls the scheduler loop — sustained tick drift.
-/// Post-refactor, the microtask-deferred event dispatch should keep drift at
-/// the noise floor.
+/// Observer sleeps 50 ms per callback; check interval 100 ms. This measures the package's worst case
+/// under a deliberately-misbehaving synchronous observer, and the numbers it produces are a property
+/// of the *observer*, not something dispatch changes can fix: a Dart isolate is single-threaded, so
+/// 50 ms of synchronous work blocks the event loop for 50 ms no matter which queue (direct call, microtask, event queue)
+/// it was dispatched from. Expect `max_stall_microseconds` ≈ the observer's per-callback delay and
+/// `blocked_duty_ratio` ≈ delay ÷ check interval (~0.5 here).
 ///
-/// **The before/after chart for `max_drift_microseconds` from this scenario
-/// is the PR's main exhibit.** Probe is a [FakeProbe] (instant) — we want to
-/// isolate observer behaviour from HTTP variance.
+/// What the event-bus refactor *did* change is the check cadence: the next tick's timer is armed before
+/// observer microtasks drain, so checks stay on-interval as long as per-tick observer work < the interval.
+/// Cadence is visible via `observer_call_count` ÷ run duration.
+///
+/// Probe is a [FakeProbe] (instant) — we want to isolate observer behaviour from HTTP variance.
 library;
 
 import 'dart:async';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
+import '../harness/event_loop_stall_meter.dart';
 import '../harness/fake_probe.dart';
 import '../harness/memory_sampler.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 import '../harness/slow_observer.dart';
-import '../harness/tick_drift_meter.dart';
 
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
@@ -55,7 +59,7 @@ Future<void> _runIteration(
   attachObserver(checker.events, observer);
 
   final memorySampler = MemorySampler()..start();
-  final driftMeter = TickDriftMeter()..start();
+  final stallMeter = EventLoopStallMeter()..start();
 
   var emissionCount = 0;
   final subscription = checker.onStatusChange.listen((_) => emissionCount++);
@@ -63,7 +67,7 @@ Future<void> _runIteration(
   forceGc();
   await Future<void>.delayed(Duration(seconds: args.durationSeconds));
 
-  driftMeter.stop();
+  stallMeter.stop();
   memorySampler.stop();
 
   await subscription.cancel();
@@ -75,14 +79,12 @@ Future<void> _runIteration(
     iteration: iteration,
     samples: {
       'rss_bytes': memorySampler.samples,
-      'tick_drift_microseconds': driftMeter.drifts
-          .map((d) => d.inMicroseconds)
-          .toList(growable: false),
+      'stall_microseconds': stallMeter.stalls.map((d) => d.inMicroseconds).toList(growable: false),
     },
     summary: {
-      'max_drift_microseconds': driftMeter.maxDrift.inMicroseconds,
-      'median_drift_microseconds': driftMeter.medianDrift.inMicroseconds,
-      'p95_drift_microseconds': driftMeter.p95Drift.inMicroseconds,
+      'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,
+      'total_blocked_microseconds': stallMeter.totalBlocked.inMicroseconds,
+      'blocked_duty_ratio': stallMeter.blockedDutyRatio,
       'emission_count': emissionCount,
       'observer_call_count': totalObserverCalls,
       'peak_rss_bytes': memorySampler.peakRss,

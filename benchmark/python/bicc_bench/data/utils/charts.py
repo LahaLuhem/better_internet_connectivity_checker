@@ -48,19 +48,20 @@ def write_empty_chart(out_path: Path, message: str) -> None:
 # ---- report charts (single dataset) ---------------------------------------
 
 
-def plot_headline_tick_drift(dataframe: pl.DataFrame, out_path: Path) -> Path:
-    """Box plot of max_drift_microseconds per scenario, log y-scale.
+def plot_headline_max_stall(dataframe: pl.DataFrame, out_path: Path) -> Path:
+    """Box plot of max_stall_microseconds per scenario, log y-scale.
 
-    `slow_observer` stalls the scheduler with sleep(50ms) every 100ms tick.
-    On the log y-axis its box will tower ~3 orders of magnitude above the
-    other scenarios - that gap IS the bug story.
+    `slow_observer` blocks the event loop with sleep(50ms) per callback, so
+    its box sits at the observer's own blocking time (~50k us) - roughly an
+    order of magnitude above the other scenarios' noise floor on the log
+    axis. That gap is the single-isolate blocking cost, not a package bug.
     """
-    metric = "max_drift_microseconds"
+    metric = "max_stall_microseconds"
     plot_df = (
         dataframe.filter(pl.col(metric).is_not_null()).select(["scenario", metric]).to_pandas()
     )
     if plot_df.empty:
-        write_empty_chart(out_path, "No tick-drift data found.")
+        write_empty_chart(out_path, "No event-loop stall data found.")
         return out_path
 
     fig, ax = plt.subplots(figsize=(9, 5))
@@ -74,9 +75,9 @@ def plot_headline_tick_drift(dataframe: pl.DataFrame, out_path: Path) -> Path:
         legend=False,
     )
     ax.set_yscale("log")
-    ax.set_ylabel("Max tick drift (us, log scale)")
+    ax.set_ylabel("Max event-loop stall (us, log scale)")
     ax.set_xlabel("")
-    ax.set_title("Worst-case scheduler stall per scenario")
+    ax.set_title("Worst-case event-loop stall per scenario")
     plt.xticks(rotation=30, ha="right")
     plt.tight_layout()
     fig.savefig(out_path, dpi=CHART_DPI)
@@ -117,13 +118,14 @@ def plot_memory_peak_rss(dataframe: pl.DataFrame, out_path: Path) -> Path:
 
 
 def plot_scenario_stability(dataframe: pl.DataFrame, out_path: Path) -> Path:
-    """Box plot of max_drift_microseconds EXCLUDING slow_observer.
+    """Box plot of max_stall_microseconds EXCLUDING slow_observer.
 
-    Slow observer's tick-drift is ~1000x the others, so it dominates the
-    y-scale of the headline chart. Excluding it here lets the noise floor
-    of the other scenarios be readable. Narrow boxes = reproducible.
+    Slow observer's stall ceiling is its observer's 50 ms sleep - an order
+    of magnitude above the others - so it dominates the y-scale of the
+    headline chart. Excluding it here lets the noise floor of the other
+    scenarios be readable. Narrow boxes = reproducible.
     """
-    metric = "max_drift_microseconds"
+    metric = "max_stall_microseconds"
     plot_df = (
         dataframe.filter(pl.col(metric).is_not_null())
         .filter(pl.col("scenario") != "slow_observer")
@@ -131,7 +133,7 @@ def plot_scenario_stability(dataframe: pl.DataFrame, out_path: Path) -> Path:
         .to_pandas()
     )
     if plot_df.empty:
-        write_empty_chart(out_path, "No non-slow_observer drift data found.")
+        write_empty_chart(out_path, "No non-slow_observer stall data found.")
         return out_path
 
     fig, ax = plt.subplots(figsize=(9, 5))
@@ -154,7 +156,7 @@ def plot_scenario_stability(dataframe: pl.DataFrame, out_path: Path) -> Path:
         alpha=0.4,
         size=3,
     )
-    ax.set_ylabel("Max tick drift (us)")
+    ax.set_ylabel("Max event-loop stall (us)")
     ax.set_xlabel("")
     ax.set_title("Per-scenario noise floor (slow_observer excluded)")
     plt.xticks(rotation=30, ha="right")
@@ -236,14 +238,14 @@ def paired_dataframe(
     return pl.concat([base, curr], how="diagonal")
 
 
-def plot_compare_headline_tick_drift(paired: pl.DataFrame, out_path: Path) -> Path:
-    """Paired box plot of max_drift_microseconds per scenario, log y-scale."""
-    metric = "max_drift_microseconds"
+def plot_compare_headline_max_stall(paired: pl.DataFrame, out_path: Path) -> Path:
+    """Paired box plot of max_stall_microseconds per scenario, log y-scale."""
+    metric = "max_stall_microseconds"
     plot_df = (
         paired.filter(pl.col(metric).is_not_null()).select(["scenario", metric, "run"]).to_pandas()
     )
     if plot_df.empty:
-        write_empty_chart(out_path, "No tick-drift data in both runs.")
+        write_empty_chart(out_path, "No event-loop stall data in both runs.")
         return out_path
 
     fig, ax = plt.subplots(figsize=(11, 5))
@@ -257,9 +259,9 @@ def plot_compare_headline_tick_drift(paired: pl.DataFrame, out_path: Path) -> Pa
         hue_order=["baseline", "current"],
     )
     ax.set_yscale("log")
-    ax.set_ylabel("Max tick drift (us, log scale)")
+    ax.set_ylabel("Max event-loop stall (us, log scale)")
     ax.set_xlabel("")
-    ax.set_title("Worst-case scheduler stall: baseline vs current")
+    ax.set_title("Worst-case event-loop stall: baseline vs current")
     ax.legend(title="", loc="best")
     plt.xticks(rotation=30, ha="right")
     plt.tight_layout()
@@ -302,13 +304,13 @@ def plot_compare_memory_peak_rss(paired: pl.DataFrame, out_path: Path) -> Path:
 
 
 def plot_compare_scenario_stability(paired: pl.DataFrame, out_path: Path) -> Path:
-    """Paired box plot of max_drift_microseconds EXCLUDING slow_observer.
+    """Paired box plot of max_stall_microseconds EXCLUDING slow_observer.
 
     Same framing as report's stability chart - excluding the outlier so the
     noise-floor scenarios stay readable on a linear axis. Paired here shows
-    whether the refactor moved (or destabilised) the noise floor.
+    whether the code change moved (or destabilised) the noise floor.
     """
-    metric = "max_drift_microseconds"
+    metric = "max_stall_microseconds"
     plot_df = (
         paired.filter(pl.col(metric).is_not_null())
         .filter(pl.col("scenario") != "slow_observer")
@@ -316,7 +318,7 @@ def plot_compare_scenario_stability(paired: pl.DataFrame, out_path: Path) -> Pat
         .to_pandas()
     )
     if plot_df.empty:
-        write_empty_chart(out_path, "No non-slow_observer drift data in both runs.")
+        write_empty_chart(out_path, "No non-slow_observer stall data in both runs.")
         return out_path
 
     fig, ax = plt.subplots(figsize=(11, 5))
@@ -329,7 +331,7 @@ def plot_compare_scenario_stability(paired: pl.DataFrame, out_path: Path) -> Pat
         order=sorted(plot_df["scenario"].unique()),
         hue_order=["baseline", "current"],
     )
-    ax.set_ylabel("Max tick drift (us)")
+    ax.set_ylabel("Max event-loop stall (us)")
     ax.set_xlabel("")
     ax.set_title("Per-scenario noise floor: baseline vs current (slow_observer excluded)")
     ax.legend(title="", loc="best")

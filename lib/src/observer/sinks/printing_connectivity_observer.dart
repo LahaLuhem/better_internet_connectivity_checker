@@ -1,47 +1,36 @@
-// Omitted from coverage via `lcov --remove '*/printing_connectivity_observer.dart'`
-// in `.github/workflows/package.yml`. Pure delegation to `dart:developer`'s
-// `log()` sink — every method is a single-line forwarder with no branching,
-// no state, and no side effect we own. `developer.log` has no first-class
-// test seam (no Stream of records to assert against), so unit-testing would
-// either capture VM-service events (heavy, brittle) or assert "didn't throw"
-// (no signal). Matches the principle applied in `benchmark/python/`'s
-// `[tool.coverage.run] omit`: smoke-only files don't contribute to either
-// side of the ratio. When adding another smoke-only file, append a matching
-// `--remove` glob to the workflow step.
+// Omitted from coverage via `lcov --remove '*/printing_connectivity_observer.dart'` in
+// `.github/workflows/package.yml`: every method is a single-line forwarder to `dart:developer`'s
+// `log()` with no branching or state, and `developer.log` has no test seam
+// (testing it would capture VM-service events or assert "didn't throw" — no signal). Same principle
+// as `benchmark/python/`'s `[tool.coverage.run] omit`. Adding another smoke-only file? Append a
+// matching `--remove` glob to the workflow step.
 
 import 'dart:developer' as developer;
 
 import '../../status/internet_status.dart';
 import '../connectivity_observer.dart';
 
-/// A [ConnectivityObserver] that writes every event to
-/// [developer.log] under a configurable logger name.
+/// A [ConnectivityObserver] that writes every event to [developer.log] under a configurable name.
 ///
-/// Chosen over `print()` so the package stays compliant with
-/// `avoid_print` (a project-wide lint) and integrates with Flutter
-/// DevTools' logging view out of the box. In a plain-Dart context
-/// (CLI, server, web) [developer.log] still surfaces via stdout —
-/// callers wanting structured sinks should subclass
-/// [ConnectivityObserver] directly instead.
+/// Chosen over `print()` to stay `avoid_print`-compliant and integrate with Flutter DevTools' logging view.
+/// In plain Dart (CLI, server, web) [developer.log] still surfaces via stdout.
+/// Callers wanting a structured sink should subclass [ConnectivityObserver] directly.
 ///
 /// {@macro connectivity_observer_threading}
 final class PrintingConnectivityObserver extends ConnectivityObserver {
   /// Default logger name used for every emitted record.
   static const _defaultName = 'better_internet_connectivity_checker';
 
-  /// Severity level forwarded to [developer.log] for trigger errors —
-  /// matches `Level.SEVERE` from `package:logging`'s scale so consumers
-  /// piping through `package:logging` see the record at the expected
-  /// severity.
+  /// Severity forwarded to [developer.log] for trigger errors — `package:logging`'s `Level.SEVERE`,
+  /// so consumers piping through `package:logging` see the expected severity.
   static const _severeLevel = 900;
 
   final String _name;
 
   /// Creates a [PrintingConnectivityObserver].
   ///
-  /// [name] is forwarded to [developer.log]'s `name:` argument; it shows up
-  /// as the source channel in DevTools and lets consumers filter records
-  /// from this package distinctly from their own logging.
+  /// [name] is forwarded to [developer.log]'s `name:` — the DevTools source channel, letting consumers
+  /// filter this package's records from their own.
   const PrintingConnectivityObserver({String name = _defaultName}) : _name = name;
 
   @override

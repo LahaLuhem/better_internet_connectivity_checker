@@ -6,32 +6,24 @@ import '../connectivity_probe.dart';
 import '../models/probe_result.dart';
 import '../models/probe_target.dart';
 
-/// A [ConnectivityProbe] that performs an HTTP request and treats the
-/// response status as the reachability signal.
+/// A [ConnectivityProbe] that performs an HTTP request and treats the response status as the reachability
+/// signal.
 ///
 /// Pick the request method via the named constructor:
 ///
-/// - [HttpProbe.head] is the default. HEAD is the cheapest probe HTTP
-///   exposes: servers respond without a body, so it minimises bandwidth and
-///   latency. Most reliability endpoints support it.
-/// - [HttpProbe.get] is the fallback when an endpoint returns HTTP 405 for
-///   HEAD, strips caching headers on HEAD, or otherwise misbehaves under it.
-///   The response body is consumed from the wire but not buffered into
-///   memory, so a verbose endpoint does not bloat the probe's footprint —
-///   any `isSuccess` predicate sees an empty `response.body` regardless of
-///   what the server sent.
+/// - [HttpProbe.head] (default) — HEAD is the cheapest probe HTTP exposes (no response body, so minimal bandwidth and latency),
+///   and most reliability endpoints support it.
+/// - [HttpProbe.get] — the fallback for endpoints that return 405 for HEAD, strip caching headers
+///   on it, or otherwise misbehave. The body is drained from the wire but never buffered, so a
+///   verbose endpoint doesn't bloat the probe; `isSuccess` always sees an empty `response.body`.
 ///
-/// Pass a custom [http.Client] to inject middleware, set proxies, or use
-/// a `MockClient` in tests. The default client is owned by this probe; close
-/// it via [http.Client.close] only if you constructed it yourself.
+/// Pass a custom [http.Client] to inject middleware, set proxies, or mock in tests. The default
+/// client is owned by this probe. Close a client via [http.Client.close] only if you made it.
 ///
-/// The probe issues an [http.AbortableRequest] so that the underlying socket
-/// is closed when the per-target deadline expires or when the policy's
-/// `cancelSignal` fires (e.g. a sibling probe wins under
-/// `AnyReachablePolicy`). Clients that honour [http.Abortable] — the native
-/// `IOClient` and the web `BrowserClient` — abort at the transport layer;
-/// clients that do not (notably `MockClient`) silently fall through to a
-/// normal completion.
+/// The probe issues an [http.AbortableRequest], so the socket closes when the per-target deadline
+/// expires or the policy's `cancelSignal` fires (e.g. a sibling wins under `AnyReachablePolicy`).
+/// Clients honouring [http.Abortable] — native `IOClient`, web `BrowserClient` — abort at the
+/// transport layer; those that don't (notably `MockClient`) fall through to normal completion.
 final class HttpProbe implements ConnectivityProbe {
   final String _method;
   final http.Client _client;
@@ -39,8 +31,8 @@ final class HttpProbe implements ConnectivityProbe {
   /// Creates an [HttpProbe] that issues HTTP HEAD requests.
   HttpProbe.head({http.Client? client}) : this._('HEAD', client);
 
-  /// Creates an [HttpProbe] that issues HTTP GET requests. The response body
-  /// is drained from the wire but not loaded into memory.
+  /// Creates an [HttpProbe] that issues HTTP GET requests. The response body is drained from the wire
+  /// but not loaded into memory.
   HttpProbe.get({http.Client? client}) : this._('GET', client);
 
   HttpProbe._(this._method, http.Client? client) : _client = client ?? http.Client();

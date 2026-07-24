@@ -6,18 +6,13 @@ import '../../probe/models/probe_target.dart';
 import '../../status/internet_status.dart';
 import '../reachability_policy.dart';
 
-/// The default [ReachabilityPolicy]: succeed on the first probe that
-/// succeeds, fail only after every probe fails.
+/// The default [ReachabilityPolicy]: succeed on the first probe that succeeds, fail only once every
+/// probe has failed.
 ///
-/// Runs every probe in parallel and races them for the first success. On the
-/// first success, returns a [Reachable] status immediately and signals
-/// pending probes to cancel via [ConnectivityProbe.probe]'s `cancelSignal`.
-/// Probes that honour the signal — the built-in `HttpProbe` does — abort
-/// at the transport layer so siblings do not leave sockets dangling for the
-/// remainder of their timeout.
-///
-/// If every probe fails, returns an [Unreachable] status carrying all
-/// collected failures.
+/// Races all probes in parallel. On the first success, returns [Reachable] immediately and cancels
+/// the rest via [ConnectivityProbe.probe]'s `cancelSignal` — probes that honour it (the built-in `HttpProbe` does)
+/// abort at the transport layer rather than leaving sockets dangling for the rest of their timeout.
+/// If every probe fails, returns [Unreachable] carrying all the failures.
 final class AnyReachablePolicy implements ReachabilityPolicy {
   /// Creates an [AnyReachablePolicy].
   const AnyReachablePolicy();
@@ -48,9 +43,8 @@ final class AnyReachablePolicy implements ReachabilityPolicy {
             completer.complete(
               Reachable.fromResponseTime(result.responseTime, slowThreshold: slowThreshold),
             );
-            releasePendingProbes();
 
-            return;
+            return releasePendingProbes();
           }
 
           failures.add(result);

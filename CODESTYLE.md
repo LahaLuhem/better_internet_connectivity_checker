@@ -340,6 +340,29 @@ Public symbols carry `///` dartdoc that explains *why*, not *what* — types alr
 carry the *what*. `public_member_api_docs` is enabled; see
 [hard rule 4 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules) for the contract.
 
+### Keep it crisp — no mini-thesis
+
+Comments and dartdoc are brief, concise, and to the point. State the load-bearing
+fact, then stop. A doc comment is not the place to re-derive the reasoning, restate the
+same point three ways, or narrate every edge case the code already handles. If a reader
+needs the full rationale, that lives in [`APPENDIX.md`](./APPENDIX.md); link to it rather
+than inlining the essay.
+
+**Why.** A wall of prose above every member drops the signal-to-noise ratio — the reader
+skims past it, so the one line that mattered gets skimmed too. Shorter docs get read.
+
+**How to apply.** Cut hedges, redundant restatement, and blow-by-blow edge-case tours.
+Keep: the *why*, a non-obvious constraint, a gotcha a caller would otherwise hit. When
+trimming pushes a point out, ask whether it belongs in APPENDIX instead of the comment.
+
+### Soft-wrap comments and dartdoc near 100 columns
+
+The 100-col cap ([`.editorconfig`](./.editorconfig)) is a hard wrap for code but a *soft*
+target for comment / dartdoc prose. Fill the line toward 100 rather than wrapping early at
+~72. Overrunning slightly is fine when it avoids waste: finishing the current word, a
+single short trailing word, or an ongoing bracketed / linked reference. Don't break a line
+just to stay a few chars under.
+
 ### `@docImport` for dartdoc-only references
 
 When a file needs a symbol *only* for `[Name]` references in dartdoc (not in code), do

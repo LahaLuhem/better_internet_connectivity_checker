@@ -1,23 +1,21 @@
 /// Scenario: quiet steady-state app.
 ///
-/// One subscriber, configurable check interval (default 500 ms), local HTTP
-/// server always-up. Measures the baseline cost of running [InternetConnection]
-/// against a real-but-deterministic transport — RSS over time, tick drift,
-/// emission count, dispose latency.
+/// One subscriber, configurable check interval (default 500 ms), local HTTP server always up.
+/// Measures the baseline cost of running [InternetConnection] against a real-but-deterministic transport —
+/// RSS over time, event-loop stalls, emission count, dispose latency.
 ///
-/// This is the "everything works" reference scenario. Any post-refactor
-/// regression in steady-state cost shows up here first.
+/// The "everything works" reference scenario: a steady-state regression shows up here first.
 library;
 
 import 'dart:async';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
+import '../harness/event_loop_stall_meter.dart';
 import '../harness/local_http_server.dart';
 import '../harness/memory_sampler.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
-import '../harness/tick_drift_meter.dart';
 
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
@@ -32,9 +30,9 @@ Future<void> main(List<String> argv) async {
 
   for (var i = 0; i < args.iterations; i++) {
     await _runIteration(args, iteration: i, writer: writer);
-    // Settle between iterations: forceGc drops young-gen pressure; the small
-    // delay gives the event loop time to drain any deferred microtasks from
-    // the previous iteration's dispose chain before we open the next checker.
+    // Settle between iterations: forceGc drops young-gen pressure. The small delay gives the event
+    // loop time to drain any deferred microtasks from the previous iteration's dispose chain before
+    // we open the next checker.
     forceGc();
     await Future<void>.delayed(const Duration(milliseconds: 100));
   }
@@ -56,7 +54,7 @@ Future<void> _runIteration(
   );
 
   final memorySampler = MemorySampler(interval: const Duration(milliseconds: 500))..start();
-  final driftMeter = TickDriftMeter()..start();
+  final stallMeter = EventLoopStallMeter()..start();
 
   var emissionCount = 0;
   final subscription = checker.onStatusChange.listen((_) => emissionCount++);
@@ -65,7 +63,7 @@ Future<void> _runIteration(
   // Let the scheduler tick for the configured duration.
   await Future<void>.delayed(Duration(seconds: args.durationSeconds));
 
-  driftMeter.stop();
+  stallMeter.stop();
   memorySampler.stop();
 
   await subscription.cancel();
@@ -78,17 +76,15 @@ Future<void> _runIteration(
     iteration: iteration,
     samples: {
       'rss_bytes': memorySampler.samples,
-      'tick_drift_microseconds': driftMeter.drifts
-          .map((d) => d.inMicroseconds)
-          .toList(growable: false),
+      'stall_microseconds': stallMeter.stalls.map((d) => d.inMicroseconds).toList(growable: false),
     },
     summary: {
       'peak_rss_bytes': memorySampler.peakRss,
       'min_rss_bytes': memorySampler.minRss,
       'rss_delta_bytes': memorySampler.rssDelta,
-      'max_drift_microseconds': driftMeter.maxDrift.inMicroseconds,
-      'median_drift_microseconds': driftMeter.medianDrift.inMicroseconds,
-      'p95_drift_microseconds': driftMeter.p95Drift.inMicroseconds,
+      'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,
+      'total_blocked_microseconds': stallMeter.totalBlocked.inMicroseconds,
+      'blocked_duty_ratio': stallMeter.blockedDutyRatio,
       'emission_count': emissionCount,
       'dispose_microseconds': disposeStopwatch.elapsedMicroseconds,
       'http_request_count': server.requestCount,

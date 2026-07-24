@@ -1,25 +1,19 @@
 /// Scenario: flapping network.
 ///
-/// Local HTTP server toggles between "up" (200) and "down" (503) every 3
-/// seconds. The checker runs at 1 s interval against it, so each toggle is
-/// observed within the next tick. Measures the dedup + emission path under
-/// genuine status churn: every toggle should produce exactly one emission
-/// (Reachable ↔ Unreachable).
-///
-/// Verifies the dedup contract holds under realistic transition rates. After
-/// the refactor, the same metrics should hold — no regression in emission
-/// count, no spurious duplicate emissions.
+/// Local HTTP server toggles up (200) / down (503) every 3 s; the checker runs at 1 s interval, so
+/// each toggle is seen within the next tick. Exercises the dedup + emission path under genuine status
+/// churn: every toggle should yield exactly one emission (Reachable ↔ Unreachable), no duplicates.
 library;
 
 import 'dart:async';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
+import '../harness/event_loop_stall_meter.dart';
 import '../harness/local_http_server.dart';
 import '../harness/memory_sampler.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
-import '../harness/tick_drift_meter.dart';
 
 Future<void> main(List<String> argv) async {
   final args = ScenarioArgs.parse(argv);
@@ -55,7 +49,7 @@ Future<void> _runIteration(
   );
 
   final memorySampler = MemorySampler()..start();
-  final driftMeter = TickDriftMeter()..start();
+  final stallMeter = EventLoopStallMeter()..start();
 
   var emissionCount = 0;
   var reachableEmissions = 0;
@@ -77,7 +71,7 @@ Future<void> _runIteration(
   await Future<void>.delayed(Duration(seconds: args.durationSeconds));
 
   toggleTimer.cancel();
-  driftMeter.stop();
+  stallMeter.stop();
   memorySampler.stop();
 
   await subscription.cancel();
@@ -89,17 +83,16 @@ Future<void> _runIteration(
     iteration: iteration,
     samples: {
       'rss_bytes': memorySampler.samples,
-      'tick_drift_microseconds': driftMeter.drifts
-          .map((d) => d.inMicroseconds)
-          .toList(growable: false),
+      'stall_microseconds': stallMeter.stalls.map((d) => d.inMicroseconds).toList(growable: false),
     },
     summary: {
       'emission_count': emissionCount,
       'reachable_emissions': reachableEmissions,
       'unreachable_emissions': unreachableEmissions,
       'http_request_count': requestCount,
-      'max_drift_microseconds': driftMeter.maxDrift.inMicroseconds,
-      'p95_drift_microseconds': driftMeter.p95Drift.inMicroseconds,
+      'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,
+      'total_blocked_microseconds': stallMeter.totalBlocked.inMicroseconds,
+      'blocked_duty_ratio': stallMeter.blockedDutyRatio,
       'peak_rss_bytes': memorySampler.peakRss,
       'rss_delta_bytes': memorySampler.rssDelta,
     },

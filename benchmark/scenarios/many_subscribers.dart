@@ -1,25 +1,21 @@
 /// Scenario: many subscribers.
 ///
-/// Runs three sub-scenarios in sequence with N ∈ {1, 10, 100} subscribers on
-/// `onStatusChange`. Each emits its own JSON record (scenario name is shared
-/// across all three; `subscriber_count` is the pivot key). With
-/// `--iterations K`, that's K × 3 records per invocation.
+/// Runs three sub-scenarios in sequence with N ∈ {1, 10, 100} subscribers on `onStatusChange`, each
+/// emitting its own JSON record (shared scenario name; `subscriber_count` is the pivot). With `--iterations K`,
+/// that's K × 3 records per invocation.
 ///
-/// Captures the per-subscriber broadcast cost — should scale linearly. After
-/// the refactor, the tier-1 status stream stays as-is so this number should
-/// not regress; the new tier-2 diagnostic stream is measured separately
-/// post-refactor.
+/// Captures the per-subscriber broadcast cost, which should scale linearly with N.
 library;
 
 import 'dart:async';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
+import '../harness/event_loop_stall_meter.dart';
 import '../harness/fake_probe.dart';
 import '../harness/memory_sampler.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
-import '../harness/tick_drift_meter.dart';
 
 const _subscriberCounts = <int>[1, 10, 100];
 
@@ -64,7 +60,7 @@ Future<void> _runOneConfig({
   );
 
   final memorySampler = MemorySampler()..start();
-  final driftMeter = TickDriftMeter()..start();
+  final stallMeter = EventLoopStallMeter()..start();
 
   // Each subscriber: count emissions it sees. Aggregate count = sum.
   final perSubscriberCounts = List<int>.filled(subscriberCount, 0);
@@ -76,7 +72,7 @@ Future<void> _runOneConfig({
   forceGc();
   await Future<void>.delayed(Duration(seconds: durationSeconds));
 
-  driftMeter.stop();
+  stallMeter.stop();
   memorySampler.stop();
 
   for (final sub in subscriptions) {
@@ -87,23 +83,21 @@ Future<void> _runOneConfig({
   final totalDeliveries = perSubscriberCounts.fold<int>(0, (a, b) => a + b);
   final perSubscriberMedian = subscriberCount == 0 ? 0 : totalDeliveries ~/ subscriberCount;
 
-  // The JSON `scenario` field is `many_subscribers` for every record produced
-  // here (set on the shared writer). The `subscriber_count` summary key is
-  // the canonical pivot when comparing N=1 vs N=10 vs N=100 downstream.
+  // The JSON `scenario` field is `many_subscribers` for every record produced here (set on the shared writer).
+  // The `subscriber_count` summary key is the canonical pivot when comparing N=1 vs N=10 vs N=100 downstream.
   writer.writeRecord(
     iteration: iteration,
     samples: {
       'rss_bytes': memorySampler.samples,
-      'tick_drift_microseconds': driftMeter.drifts
-          .map((d) => d.inMicroseconds)
-          .toList(growable: false),
+      'stall_microseconds': stallMeter.stalls.map((d) => d.inMicroseconds).toList(growable: false),
     },
     summary: {
       'subscriber_count': subscriberCount,
       'total_deliveries': totalDeliveries,
       'per_subscriber_median_deliveries': perSubscriberMedian,
-      'max_drift_microseconds': driftMeter.maxDrift.inMicroseconds,
-      'p95_drift_microseconds': driftMeter.p95Drift.inMicroseconds,
+      'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,
+      'total_blocked_microseconds': stallMeter.totalBlocked.inMicroseconds,
+      'blocked_duty_ratio': stallMeter.blockedDutyRatio,
       'peak_rss_bytes': memorySampler.peakRss,
       'rss_delta_bytes': memorySampler.rssDelta,
     },
