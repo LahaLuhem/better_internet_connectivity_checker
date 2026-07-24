@@ -17,7 +17,7 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
-const _subscriberCounts = <int>[1, 10, 100];
+const _subscriberCounts = [1, 10, 25, 50, 100];
 
 final class _StatusEmission extends BenchmarkBase {
   final int subscriberCount;

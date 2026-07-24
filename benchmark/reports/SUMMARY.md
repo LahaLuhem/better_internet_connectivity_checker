@@ -70,9 +70,11 @@ From the `status_emission` micro (synchronous broadcast, isolated from the rest 
 
 | Subscribers | N | Median (us/emit) | IQR (us) |
 |---:|---:|---:|---:|
-| 1 | 30 | 0.133 | 0.000 |
-| 10 | 30 | 0.989 | 0.005 |
-| 100 | 30 | 8.79 | 0.021 |
+| 1 | 30 | 0.137 | 0.002 |
+| 10 | 30 | 1.00 | 0.010 |
+| 25 | 30 | 2.31 | 0.026 |
+| 50 | 30 | 4.47 | 0.061 |
+| 100 | 30 | 8.96 | 0.174 |
 
 
 ![Subscriber scaling](subscriber_scaling.png)

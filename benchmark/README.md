@@ -320,9 +320,11 @@ not "did I beat the baseline?". Treat them as approximate.
 | `quiet_app` | `dispose_microseconds` | 6.0 µs |
 | `check_once_overhead` (micro) | `microseconds_per_check` | 0.43 µs |
 | `observer_dispatch` (micro) | `microseconds_per_dispatch` | 0.01 µs |
-| `status_emission` N=1 (micro) | `microseconds_per_emission` | 0.13 µs |
-| `status_emission` N=10 (micro) | `microseconds_per_emission` | 0.99 µs |
-| `status_emission` N=100 (micro) | `microseconds_per_emission` | 8.79 µs |
+| `status_emission` N=1 (micro) | `microseconds_per_emission` | 0.14 µs |
+| `status_emission` N=10 (micro) | `microseconds_per_emission` | 1.00 µs |
+| `status_emission` N=25 (micro) | `microseconds_per_emission` | 2.31 µs |
+| `status_emission` N=50 (micro) | `microseconds_per_emission` | 4.47 µs |
+| `status_emission` N=100 (micro) | `microseconds_per_emission` | 8.96 µs |
 | `trigger_storm` | `emissions_per_trigger` | 0.002 |
 | `many_subscribers` N=100 | `max_stall_microseconds` | 3,185 µs (~3 ms) |
 | `flapping_network` (9 s) | `emission_count` | 3 (2 reachable + 1 unreachable) |
