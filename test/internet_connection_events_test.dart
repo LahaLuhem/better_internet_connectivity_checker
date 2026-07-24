@@ -5,13 +5,14 @@ import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
 
-import '_helpers/stub_probe.dart';
+import 'support/bdd.dart';
+import 'support/stub_probe.dart';
 
 void main() {
   final target = ProbeTarget(uri: Uri.https('example.com'));
 
-  group('InternetConnection.events', () {
-    test('emits CheckCompletedEvent for every periodic tick', () {
+  feature('InternetConnection.events', () {
+    scenario('emits CheckCompletedEvent for every periodic tick', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -41,7 +42,7 @@ void main() {
       });
     });
 
-    test('emits StatusEmittedEvent only on deduped transitions', () {
+    scenario('emits StatusEmittedEvent only on deduped transitions', () {
       var reachable = false;
       final probe = StubProbe((target) async {
         if (reachable) {
@@ -82,7 +83,7 @@ void main() {
       });
     });
 
-    test('emits ExternalTriggerFiredEvent when the trigger fires', () {
+    scenario('emits ExternalTriggerFiredEvent when the trigger fires', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -112,7 +113,7 @@ void main() {
       });
     });
 
-    test('emits ExternalTriggerErrorEvent when the trigger errors', () {
+    scenario('emits ExternalTriggerErrorEvent when the trigger errors', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -144,7 +145,7 @@ void main() {
       });
     });
 
-    test('emits CheckIntervalChangedEvent on setter assignment', () {
+    scenario('emits CheckIntervalChangedEvent on setter assignment', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -172,7 +173,7 @@ void main() {
       });
     });
 
-    test('emits SlowThresholdChangedEvent on setter assignment', () {
+    scenario('emits SlowThresholdChangedEvent on setter assignment', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -200,7 +201,7 @@ void main() {
       });
     });
 
-    test('emits DisposedEvent as the terminal event before the stream closes', () {
+    scenario('emits DisposedEvent as the terminal event before the stream closes', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -221,7 +222,7 @@ void main() {
       });
     });
 
-    test('emission is microtask-deferred — subscriber sees event after the caller frame', () {
+    scenario('emission is microtask-deferred — subscriber sees event after the caller frame', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),

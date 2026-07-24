@@ -5,14 +5,15 @@ import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
 
-import '_helpers/recording_observer.dart';
-import '_helpers/stub_probe.dart';
+import 'support/bdd.dart';
+import 'support/recording_observer.dart';
+import 'support/stub_probe.dart';
 
 void main() {
   final target = ProbeTarget(uri: Uri.https('example.com'));
 
-  group('InternetConnection.checkOnce', () {
-    test('runs the configured probe through the configured policy', () async {
+  feature('InternetConnection.checkOnce', () {
+    scenario('runs the configured probe through the configured policy', () async {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -25,7 +26,7 @@ void main() {
       check(status).isA<Reachable>();
     });
 
-    test('does not populate lastStatus', () async {
+    scenario('does not populate lastStatus', () async {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -39,12 +40,12 @@ void main() {
     });
   });
 
-  group('InternetConnection constructor', () {
-    test('asserts when targets is empty (dev-time check)', () {
+  feature('InternetConnection constructor', () {
+    scenario('asserts when targets is empty (dev-time check)', () {
       check(() => InternetConnection(targets: const [])).throws<AssertionError>();
     });
 
-    test('constructs with default probe and disposes cleanly', () async {
+    scenario('constructs with default probe and disposes cleanly', () async {
       // Exercises the `probe ?? HttpProbe.head()` fallback. We never invoke
       // `checkOnce` here because the default probe would hit the public
       // internet; we only want to verify construct-and-dispose is leak-free.
@@ -53,7 +54,7 @@ void main() {
       await connection.dispose();
     });
 
-    test('checkInterval reflects the configured value', () {
+    scenario('checkInterval reflects the configured value', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -69,8 +70,8 @@ void main() {
     });
   });
 
-  group('onStatusChange', () {
-    test('emits when status kind changes between ticks', () {
+  feature('InternetConnection.onStatusChange', () {
+    scenario('emits when status kind changes between ticks', () {
       var reachable = false;
       final probe = StubProbe((target) async {
         if (reachable) {
@@ -105,7 +106,7 @@ void main() {
       });
     });
 
-    test('does not re-emit when consecutive ticks share the same kind', () {
+    scenario('does not re-emit when consecutive ticks share the same kind', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.failure(target: target, responseTime: const Duration(milliseconds: 100)),
@@ -134,7 +135,7 @@ void main() {
       });
     });
 
-    test('resets timer and lastStatus when the last subscriber cancels', () {
+    scenario('resets timer and lastStatus when the last subscriber cancels', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -162,7 +163,7 @@ void main() {
       });
     });
 
-    test('emits when ConnectionQuality flips from good to slow', () {
+    scenario('emits when ConnectionQuality flips from good to slow', () {
       var responseTime = const Duration(milliseconds: 100);
       final probe = StubProbe(
         (target) async => ProbeResult.success(target: target, responseTime: responseTime),
@@ -192,8 +193,8 @@ void main() {
     });
   });
 
-  group('slowThreshold setter', () {
-    test('mutates the threshold and applies it at the next check', () {
+  feature('InternetConnection.slowThreshold setter', () {
+    scenario('mutates the threshold and applies it at the next check', () {
       const responseTime = Duration(milliseconds: 100);
       final probe = StubProbe(
         (target) async => ProbeResult.success(target: target, responseTime: responseTime),
@@ -223,7 +224,7 @@ void main() {
       });
     });
 
-    test('preserves lastStatus so the next emission carries a non-null previous', () {
+    scenario('preserves lastStatus so the next emission carries a non-null previous', () {
       // Regression for the live-stream example: rebuilding the connection
       // on every slider release lost `_lastStatus`, causing the next
       // emission's observer payload to report `previous = null`. The
@@ -267,7 +268,7 @@ void main() {
       });
     });
 
-    test('null disables slow classification', () async {
+    scenario('null disables slow classification', () async {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 800)),
@@ -287,8 +288,8 @@ void main() {
     });
   });
 
-  group('externalRecheckTrigger', () {
-    test('forces a recheck on every emission', () {
+  feature('InternetConnection.externalRecheckTrigger', () {
+    scenario('forces a recheck on every emission', () {
       var probeCalls = 0;
       final probe = StubProbe((target) async {
         probeCalls += 1;
@@ -323,7 +324,7 @@ void main() {
       });
     });
 
-    test('swallows errors emitted on the external trigger stream', () {
+    scenario('swallows errors emitted on the external trigger stream', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
@@ -353,8 +354,8 @@ void main() {
     });
   });
 
-  group('checkInterval setter', () {
-    test('reschedules subsequent ticks at the new interval', () {
+  feature('InternetConnection.checkInterval setter', () {
+    scenario('reschedules subsequent ticks at the new interval', () {
       var probeCalls = 0;
       final probe = StubProbe((target) async {
         probeCalls += 1;

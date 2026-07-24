@@ -1,23 +1,24 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:checks/checks.dart';
 import 'package:http/http.dart' as http;
-import 'package:test/scaffolding.dart';
+
+import '../support/bdd.dart';
 
 void main() {
-  group('ProbeTarget defaults', () {
-    test('uses a 3-second timeout', () {
+  feature('ProbeTarget defaults', () {
+    scenario('uses a 3-second timeout', () {
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
       check(target.timeout).equals(const Duration(seconds: 3));
     });
 
-    test('uses an empty headers map', () {
+    scenario('uses an empty headers map', () {
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
       check(target.headers).isEmpty();
     });
 
-    test('default predicate accepts HTTP 200 only', () {
+    scenario('default predicate accepts HTTP 200 only', () {
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
       check(target.isSuccess(http.Response('', 200))).isTrue();
@@ -27,8 +28,8 @@ void main() {
     });
   });
 
-  group('ProbeTarget customisation', () {
-    test('respects a custom predicate', () {
+  feature('ProbeTarget customisation', () {
+    scenario('respects a custom predicate', () {
       bool accept2xx(http.Response r) => r.statusCode >= 200 && r.statusCode < 300;
       final target = ProbeTarget(uri: Uri.https('example.com'), isSuccess: accept2xx);
 
@@ -36,7 +37,7 @@ void main() {
       check(target.isSuccess(http.Response('', 301))).isFalse();
     });
 
-    test('forwards a custom timeout and headers', () {
+    scenario('forwards a custom timeout and headers', () {
       const customHeaders = {'Authorization': 'Bearer x'};
       final target = ProbeTarget(
         uri: Uri.https('example.com'),
@@ -49,8 +50,8 @@ void main() {
     });
   });
 
-  group('ProbeTarget.toString', () {
-    test('renders uri, timeout, and headers in stable diagnostic form', () {
+  feature('ProbeTarget.toString', () {
+    scenario('renders uri, timeout, and headers in stable diagnostic form', () {
       const customHeaders = {'X-Custom': 'value'};
       final target = ProbeTarget(
         uri: Uri.https('example.com', '/healthz'),

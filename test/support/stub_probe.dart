@@ -2,7 +2,7 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 
 /// A [ConnectivityProbe] that delegates to a caller-supplied closure.
 ///
-/// Lives under `test/_helpers/` so the production code stays free of test
+/// Lives under `test/support/` so the production code stays free of test
 /// scaffolding. Use it in policy and connection tests to short-circuit the
 /// network layer.
 ///

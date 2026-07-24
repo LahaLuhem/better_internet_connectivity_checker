@@ -4,11 +4,12 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 import 'package:checks/checks.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:test/scaffolding.dart';
+
+import '../support/bdd.dart';
 
 void main() {
-  group('HttpProbe.head', () {
-    test('returns a successful result when the predicate accepts the response', () async {
+  feature('HttpProbe.head', () {
+    scenario('returns a successful result when the predicate accepts the response', () async {
       final client = MockClient((_) async => http.Response('', 200));
       final probe = HttpProbe.head(client: client);
       final target = ProbeTarget(uri: Uri.https('example.com'));
@@ -20,7 +21,7 @@ void main() {
       check(result.target).equals(target);
     });
 
-    test('returns a failed result when the predicate rejects the response', () async {
+    scenario('returns a failed result when the predicate rejects the response', () async {
       final client = MockClient((_) async => http.Response('', 500));
       final probe = HttpProbe.head(client: client);
       final target = ProbeTarget(uri: Uri.https('example.com'));
@@ -31,7 +32,7 @@ void main() {
       check(result.error).isNull();
     });
 
-    test('captures exceptions raised by the underlying transport', () async {
+    scenario('captures exceptions raised by the underlying transport', () async {
       final boom = Exception('network down');
       final client = MockClient((_) async => throw boom);
       final probe = HttpProbe.head(client: client);
@@ -43,7 +44,7 @@ void main() {
       check(result.error).equals(boom);
     });
 
-    test('issues an HTTP HEAD request with the target URI and headers', () async {
+    scenario('issues an HTTP HEAD request with the target URI and headers', () async {
       late http.BaseRequest captured;
       final client = MockClient((request) async {
         captured = request;
@@ -64,8 +65,8 @@ void main() {
     });
   });
 
-  group('HttpProbe.get', () {
-    test('issues an HTTP GET request with the target URI and headers', () async {
+  feature('HttpProbe.get', () {
+    scenario('issues an HTTP GET request with the target URI and headers', () async {
       late http.BaseRequest captured;
       final client = MockClient((request) async {
         captured = request;
@@ -85,7 +86,7 @@ void main() {
       check(captured.headers['x-custom']).equals('yes');
     });
 
-    test('drains the response body without buffering it for the isSuccess predicate', () async {
+    scenario('drains the response body without buffering it for the isSuccess predicate', () async {
       late http.Response observed;
       final client = MockClient((_) async => http.Response('a verbose payload', 200));
       bool capture(http.Response response) {
@@ -104,7 +105,7 @@ void main() {
       check(observed.body).isEmpty();
     });
 
-    test('returns a failed result when the predicate rejects the response', () async {
+    scenario('returns a failed result when the predicate rejects the response', () async {
       final client = MockClient((_) async => http.Response('nope', 500));
       final probe = HttpProbe.get(client: client);
       final target = ProbeTarget(uri: Uri.https('example.com'));
@@ -116,8 +117,8 @@ void main() {
     });
   });
 
-  group('HttpProbe cancellation', () {
-    test('issues an AbortableRequest whose trigger fires when cancelSignal does', () async {
+  feature('HttpProbe cancellation', () {
+    scenario('issues an AbortableRequest whose trigger fires when cancelSignal does', () async {
       final capturedRequest = Completer<http.BaseRequest>();
       final responseCompleter = Completer<http.StreamedResponse>();
       final client = MockClient.streaming((request, _) {
@@ -148,7 +149,7 @@ void main() {
       responseCompleter.complete(http.StreamedResponse(const Stream.empty(), 200));
     });
 
-    test('returns a failure quickly when cancelSignal fires before a response', () async {
+    scenario('returns a failure quickly when cancelSignal fires before a response', () async {
       final client = MockClient.streaming((request, _) {
         final body = Completer<http.StreamedResponse>();
         final trigger = (request as http.AbortableRequest).abortTrigger;

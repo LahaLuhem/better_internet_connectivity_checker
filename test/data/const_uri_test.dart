@@ -1,10 +1,11 @@
 import 'package:better_internet_connectivity_checker/src/data/models/const_uri.dart';
 import 'package:checks/checks.dart';
-import 'package:test/scaffolding.dart';
+
+import '../support/bdd.dart';
 
 void main() {
-  group('ConstUri construction', () {
-    test('is const-constructible — proves the parse is deferred', () {
+  feature('ConstUri construction', () {
+    scenario('is const-constructible — proves the parse is deferred', () {
       // `Uri.parse(...)` is not a const expression, so the constructor being
       // `const` is itself the load-bearing proof that parsing happens lazily.
       // Would fail to compile if the ctor were non-const.
@@ -13,7 +14,7 @@ void main() {
       check(wrapped.scheme).equals('https');
     });
 
-    test('inherits Uri.parse permissiveness — does not validate input', () {
+    scenario('inherits Uri.parse permissiveness — does not validate input', () {
       // Documents the trade-off captured in the class dartdoc: an unconventional
       // scheme is accepted, not rejected, mirroring `Uri.parse` behaviour.
       const wrapped = ConstUri('htps://example.com');
@@ -22,8 +23,8 @@ void main() {
     });
   });
 
-  group('ConstUri accessor delegation', () {
-    test('host / scheme / path / query / port match Uri.parse', () {
+  feature('ConstUri accessor delegation', () {
+    scenario('host / scheme / path / query / port match Uri.parse', () {
       const wrapped = ConstUri('https://example.com:8443/api/v2?limit=1');
       final reference = Uri.parse('https://example.com:8443/api/v2?limit=1');
 
@@ -34,14 +35,14 @@ void main() {
       check(wrapped.port).equals(reference.port);
     });
 
-    test('toString matches Uri.parse.toString', () {
+    scenario('toString matches Uri.parse.toString', () {
       const wrapped = ConstUri('https://example.com/x');
       final reference = Uri.parse('https://example.com/x');
 
       check(wrapped.toString()).equals(reference.toString());
     });
 
-    test('replace produces a working Uri', () {
+    scenario('replace produces a working Uri', () {
       const wrapped = ConstUri('https://example.com/x');
       final replaced = wrapped.replace(path: '/y');
 
@@ -49,14 +50,14 @@ void main() {
       check(replaced.host).equals('example.com');
     });
 
-    test('resolve works against a relative reference', () {
+    scenario('resolve works against a relative reference', () {
       const base = ConstUri('https://example.com/foo/');
       final resolved = base.resolve('bar');
 
       check(resolved.toString()).equals('https://example.com/foo/bar');
     });
 
-    test('delegates the full Uri surface against a fully-featured URI', () {
+    scenario('delegates the full Uri surface against a fully-featured URI', () {
       const raw = 'https://user:pass@example.com:8443/api/v2/path?limit=1&offset=2#section';
       const wrapped = ConstUri(raw);
       final reference = Uri.parse(raw);
@@ -82,7 +83,7 @@ void main() {
       check(wrapped.data).isNull();
     });
 
-    test('normalizePath, removeFragment, resolveUri delegate correctly', () {
+    scenario('normalizePath, removeFragment, resolveUri delegate correctly', () {
       const wrapped = ConstUri('https://example.com/foo/./bar#frag');
 
       check(wrapped.normalizePath().path).equals('/foo/bar');
@@ -90,14 +91,14 @@ void main() {
       check(wrapped.resolveUri(Uri.parse('baz')).toString()).equals('https://example.com/foo/baz');
     });
 
-    test('toFilePath delegates for file URIs', () {
+    scenario('toFilePath delegates for file URIs', () {
       const wrapped = ConstUri('file:///tmp/test.txt');
       final reference = Uri.parse('file:///tmp/test.txt');
 
       check(wrapped.toFilePath()).equals(reference.toFilePath());
     });
 
-    test('data accessor returns parsed UriData for data URIs', () {
+    scenario('data accessor returns parsed UriData for data URIs', () {
       const wrapped = ConstUri('data:text/plain,Hello');
 
       check(wrapped.data).isNotNull();
@@ -105,8 +106,8 @@ void main() {
     });
   });
 
-  group('ConstUri equality', () {
-    test('two instances wrapping the same string compare equal', () {
+  feature('ConstUri equality', () {
+    scenario('two instances wrapping the same string compare equal', () {
       const a = ConstUri('https://example.com');
       const b = ConstUri('https://example.com');
 
@@ -114,7 +115,7 @@ void main() {
       check(a.hashCode).equals(b.hashCode);
     });
 
-    test('compares equal to Uri.parse of the same string in both directions', () {
+    scenario('compares equal to Uri.parse of the same string in both directions', () {
       const wrapped = ConstUri('https://example.com');
       final parsed = Uri.parse('https://example.com');
 
@@ -123,7 +124,7 @@ void main() {
       check(wrapped.hashCode).equals(parsed.hashCode);
     });
 
-    test('different strings compare unequal', () {
+    scenario('different strings compare unequal', () {
       const a = ConstUri('https://example.com');
       const b = ConstUri('https://other.com');
 
@@ -131,8 +132,8 @@ void main() {
     });
   });
 
-  group('ConstUri in hash-based collections', () {
-    test('works as a Map key alongside other Uri implementations', () {
+  feature('ConstUri in hash-based collections', () {
+    scenario('works as a Map key alongside other Uri implementations', () {
       const key = ConstUri('https://example.com');
       final lookup = Uri.parse('https://example.com');
       final map = <Uri, int>{key: 42};
@@ -140,7 +141,7 @@ void main() {
       check(map[lookup]).equals(42);
     });
 
-    test('Set deduplicates equal instances across Uri implementations', () {
+    scenario('Set deduplicates equal instances across Uri implementations', () {
       const wrapped = ConstUri('https://example.com');
       final parsed = Uri.parse('https://example.com');
       final set = <Uri>{wrapped, parsed};

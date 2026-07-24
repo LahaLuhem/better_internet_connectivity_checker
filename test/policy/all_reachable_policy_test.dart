@@ -1,15 +1,15 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:checks/checks.dart';
-import 'package:test/test.dart';
 
-import '../_helpers/stub_probe.dart';
+import '../support/bdd.dart';
+import '../support/stub_probe.dart';
 
 void main() {
   final t1 = ProbeTarget(uri: Uri.https('a.example.com'));
   final t2 = ProbeTarget(uri: Uri.https('b.example.com'));
 
-  group('AllReachablePolicy.evaluate', () {
-    test('returns Reachable only when every probe succeeds', () async {
+  feature('AllReachablePolicy', () {
+    scenario('returns Reachable only when every probe succeeds', () async {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 100)),
@@ -24,7 +24,7 @@ void main() {
       check(status).isA<Reachable>();
     });
 
-    test('returns Unreachable when any probe fails', () async {
+    scenario('returns Unreachable when any probe fails', () async {
       final probe = StubProbe((target) async {
         if (target == t1) {
           return ProbeResult.success(
@@ -48,7 +48,7 @@ void main() {
       check(unreachable.failedProbes.first.target).equals(t2);
     });
 
-    test('reports the slowest successful probe time on Reachable', () async {
+    scenario('reports the slowest successful probe time on Reachable', () async {
       final probe = StubProbe((target) async {
         final delay = target == t1
             ? const Duration(milliseconds: 100)
@@ -66,7 +66,7 @@ void main() {
       check((status as Reachable).responseTime).equals(const Duration(milliseconds: 500));
     });
 
-    test('classifies as slow when the slowest probe exceeds threshold', () async {
+    scenario('classifies as slow when the slowest probe exceeds threshold', () async {
       final probe = StubProbe((target) async {
         final delay = target == t1
             ? const Duration(milliseconds: 100)
@@ -84,8 +84,8 @@ void main() {
       check((status as Reachable).quality).equals(ConnectionQuality.slow);
     });
 
-    test('returns Unreachable with no failures for an empty target list', () async {
-      final probe = StubProbe((_) async => fail('probe must not be invoked'));
+    scenario('returns Unreachable with no failures for an empty target list', () async {
+      final probe = StubProbe((_) async => throw StateError('probe must not be invoked'));
 
       final status = await const AllReachablePolicy().evaluate(
         targets: const [],
@@ -97,7 +97,7 @@ void main() {
       check((status as Unreachable).failedProbes).isEmpty();
     });
 
-    test('does not pass a cancelSignal to its probes', () async {
+    scenario('does not pass a cancelSignal to its probes', () async {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 100)),
