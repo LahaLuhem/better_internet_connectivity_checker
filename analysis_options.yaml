@@ -1,15 +1,6 @@
 formatter:
   page_width: 100
 
-#plugins:
-#  prefer_shorthands: ^0.4.7
-#prefer_shorthands:
-#  convert_implicit_declaration: false
-
-
-
-
-
 analyzer:
   exclude:
     - "bin/cache/**"
@@ -87,7 +78,8 @@ analyzer:
 linter:
   rules:
     always_declare_return_types: true
-    always_put_control_body_on_new_line: false  # Opinionated: a trade-off for conciseness is acceptable here
+    # Opinionated: trade-off for conciseness is acceptable here
+    always_put_control_body_on_new_line: false
     always_put_required_named_parameters_first: true
     always_specify_types: false # Conflicts with avoid_types_on_closure_parameters
     always_use_package_imports: false # Conflicts with prefer_relative_imports
@@ -149,7 +141,7 @@ linter:
     depend_on_referenced_packages: true
     deprecated_consistency: true
     deprecated_member_use_from_same_package: true
-    diagnostic_describe_all_properties: false # Opinionated: a bit much for now. Better used at a package-level
+    diagnostic_describe_all_properties: true
     directives_ordering: true
     discarded_futures: true
     do_not_use_environment: true
@@ -245,6 +237,8 @@ linter:
     remove_deprecations_in_breaking_versions: true
     require_trailing_commas: false  # Made obsolete due to the new Dart formatter in 3.7
     secure_pubspec_urls: true
+    simple_directive_paths: true
+    simplify_variable_pattern: true
     sized_box_for_whitespace: true
     sized_box_shrink_expand: true
     slash_for_doc_comments: true
@@ -253,13 +247,15 @@ linter:
     sort_pub_dependencies: false
     sort_unnamed_constructors_first: true
     specify_nonobvious_local_variable_types: false  # Conflicts with omit_local_variable_types
-    specify_nonobvious_property_types: false  # Type inference by the plugin + IDE makes this obsolete
+    # Type inference by the plugin + IDE makes this obsolete
+    specify_nonobvious_property_types: false
     strict_top_level_inference: true
     switch_on_type: true
     test_types_in_equals: true
     throw_in_finally: true
     tighten_type_of_initializing_formals: true
-    type_annotate_public_apis: false  # Conflicts with omit_obvious_property_types. Type is inferred is usually correctly done
+    # Conflicts with omit_obvious_property_types. Type is inferred is usually correctly done
+    type_annotate_public_apis: false
     type_init_formals: true
     type_literal_in_constant_pattern: true
     unawaited_futures: true
@@ -369,7 +365,7 @@ dart_code_metrics:
     - binary-expression-operand-order: true
     - double-literal-format: true
     - member-ordering: false          # To be configured well
-    - missing-test-assertion: false   # Cannot use it with external test assertion libs
+    - missing-test-assertion: false   # Cannot use with extenral test assertion libs
     - newline-before-return: true
     - no-boolean-literal-compare: true
     - no-empty-block: true

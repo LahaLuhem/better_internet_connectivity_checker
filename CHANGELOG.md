@@ -6,6 +6,7 @@
 
 ### Changed
 - Use new linter mega repo
+- Bumped up Dart SDK floor to ^3.12.0
 
 ### Fixed
 - post merge fix

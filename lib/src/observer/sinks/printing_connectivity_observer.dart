@@ -29,9 +29,9 @@ final class PrintingConnectivityObserver extends ConnectivityObserver {
 
   /// Creates a [PrintingConnectivityObserver].
   ///
-  /// [name] is forwarded to [developer.log]'s `name:` — the DevTools source channel, letting consumers
+  /// [_name] is forwarded to [developer.log]'s `name:` — the DevTools source channel, letting consumers
   /// filter this package's records from their own.
-  const PrintingConnectivityObserver({String name = _defaultName}) : _name = name;
+  const PrintingConnectivityObserver({this._name = _defaultName});
 
   @override
   void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) =>

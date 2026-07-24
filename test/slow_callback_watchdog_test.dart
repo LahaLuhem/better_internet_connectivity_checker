@@ -72,9 +72,9 @@ void main() {
 
       // Under budget first: must not mark the event type as already-warned.
       watchdogWith(warnings)
-        ..measure(checkCompleted, () {
-          // Intentionally instant.
-        })
+        // Intentionally instant.
+        // ignore: no-empty-block
+        ..measure(checkCompleted, () {})
         ..measure(checkCompleted, () => sleep(const Duration(milliseconds: 20)));
 
       check(warnings).length.equals(1);
@@ -105,6 +105,8 @@ void main() {
   });
 }
 
+// Test-specific implementation
+// ignore: prefer-match-file-name
 final class _BlockingCountingObserver extends ConnectivityObserver {
   var checkCompletedCalls = 0;
 

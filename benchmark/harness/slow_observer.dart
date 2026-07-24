@@ -28,18 +28,13 @@ final class SlowObserver extends ConnectivityObserver {
   final callCounts = <String, int>{};
 
   SlowObserver({
-    Duration delay = const Duration(milliseconds: 50),
-    bool delayOnStatusChange = true,
-    bool delayOnCheckCompleted = true,
-    bool delayOnTrigger = true,
-    bool delayOnConfigChange = false,
-    bool delayOnDispose = false,
-  }) : _delay = delay,
-       _delayOnStatusChange = delayOnStatusChange,
-       _delayOnCheckCompleted = delayOnCheckCompleted,
-       _delayOnTrigger = delayOnTrigger,
-       _delayOnConfigChange = delayOnConfigChange,
-       _delayOnDispose = delayOnDispose;
+    this._delay = const Duration(milliseconds: 50),
+    this._delayOnStatusChange = true,
+    this._delayOnCheckCompleted = true,
+    this._delayOnTrigger = true,
+    this._delayOnConfigChange = false,
+    this._delayOnDispose = false,
+  });
 
   @override
   void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) {
