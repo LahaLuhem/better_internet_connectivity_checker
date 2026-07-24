@@ -5,8 +5,9 @@ import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
 
-import '_helpers/recording_observer.dart';
-import '_helpers/stub_probe.dart';
+import 'support/bdd.dart';
+import 'support/recording_observer.dart';
+import 'support/stub_probe.dart';
 
 void main() {
   final target = ProbeTarget(uri: Uri.https('example.com'));
@@ -17,8 +18,8 @@ void main() {
   ProbeResult failureResult(ProbeTarget t) =>
       ProbeResult.failure(target: t, responseTime: const Duration(milliseconds: 50));
 
-  group('ConnectivityObserver default', () {
-    test('omitted observer is silent and does not throw on any lifecycle event', () {
+  feature('ConnectivityObserver', () {
+    scenario('an omitted observer stays silent and never throws on any lifecycle event', () {
       // Exercises the private default no-op observer indirectly by running
       // a full check / emit / interval-change / dispose sequence without
       // passing one.
@@ -44,10 +45,8 @@ void main() {
         unawaited(connection.dispose());
       });
     });
-  });
 
-  group('ConnectivityObserver wiring', () {
-    test('onCheckCompleted fires after every scheduled check', () {
+    scenario('onCheckCompleted fires after every scheduled check', () {
       final probe = StubProbe((t) async => successResult(t));
 
       fakeAsync((async) {
@@ -73,7 +72,7 @@ void main() {
       });
     });
 
-    test('checkOnce does not fire onCheckCompleted', () async {
+    scenario('checkOnce does not fire onCheckCompleted', () async {
       final probe = StubProbe((t) async => successResult(t));
       final observer = RecordingObserver();
       final connection = InternetConnection(targets: [target], probe: probe);
@@ -85,7 +84,7 @@ void main() {
       check(observer.events.whereType<CheckCompleted>()).isEmpty();
     });
 
-    test('onStatusChangeEmitted fires only on kind transitions', () {
+    scenario('onStatusChangeEmitted fires only on kind transitions', () {
       var reachable = false;
       final probe = StubProbe((t) async => reachable ? successResult(t) : failureResult(t));
 
@@ -120,7 +119,7 @@ void main() {
       });
     });
 
-    test('onExternalTriggerFired fires when the trigger emits', () {
+    scenario('onExternalTriggerFired fires when the trigger emits', () {
       final probe = StubProbe((t) async => successResult(t));
       final trigger = StreamController<void>.broadcast();
       addTearDown(trigger.close);
@@ -146,7 +145,7 @@ void main() {
       });
     });
 
-    test('onExternalTriggerError forwards trigger-stream errors', () {
+    scenario('onExternalTriggerError forwards trigger-stream errors', () {
       final probe = StubProbe((t) async => successResult(t));
       final trigger = StreamController<void>.broadcast();
       addTearDown(trigger.close);
@@ -174,7 +173,7 @@ void main() {
       });
     });
 
-    test('onCheckIntervalChanged carries previous and next intervals', () {
+    scenario('onCheckIntervalChanged carries previous and next intervals', () {
       final probe = StubProbe((t) async => successResult(t));
 
       fakeAsync((async) {
@@ -198,7 +197,7 @@ void main() {
       });
     });
 
-    test('onSlowThresholdChanged carries previous and next thresholds', () {
+    scenario('onSlowThresholdChanged carries previous and next thresholds', () {
       final probe = StubProbe((t) async => successResult(t));
 
       fakeAsync((async) {
@@ -226,7 +225,7 @@ void main() {
       });
     });
 
-    test('onDispose fires exactly once across multiple dispose calls', () async {
+    scenario('onDispose fires exactly once across multiple dispose calls', () async {
       final probe = StubProbe((t) async => successResult(t));
       final observer = RecordingObserver();
       final connection = InternetConnection(targets: [target], probe: probe);
@@ -239,8 +238,8 @@ void main() {
     });
   });
 
-  group('PrintingConnectivityObserver', () {
-    test('is const-constructible with default name', () {
+  feature('PrintingConnectivityObserver', () {
+    scenario('is const-constructible with the default name and every method is safe to call', () {
       const observer = PrintingConnectivityObserver();
       check(observer).isA<PrintingConnectivityObserver>();
 
@@ -254,7 +253,7 @@ void main() {
         ..onDispose();
     });
 
-    test('accepts a custom logger name', () {
+    scenario('accepts a custom logger name', () {
       const observer = PrintingConnectivityObserver(name: 'my_app.connectivity');
 
       check(observer).isA<ConnectivityObserver>();

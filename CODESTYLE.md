@@ -24,6 +24,7 @@ heading text, so renames don't break callers.
     * [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#listunmodifiable-over-unmodifiablelistview)
     * [`part` / `part of` only when structurally needed](#part-part-of-only-when-structurally-needed)
 - [Comments & dartdoc](#comments-dartdoc)
+- [Testing](#testing)
 - [DCM rules (applied by hand)](#dcm-rules-applied-by-hand)
 - [Documentation conventions (Markdown)](#documentation-conventions-markdown)
 
@@ -385,6 +386,30 @@ the import is documentation-only, and dead-code elimination has nothing to lean 
 file's `library;` directive. Code imports stay where they are (regular `import` lines).
 The `library;` directive is required for `@docImport` to attach to anything — but
 `unnecessary_library_directive` does not fire when a docImport is present.
+
+---
+
+<a id="testing"></a>
+<!-- TOC --><a name="testing"></a>
+## Testing
+
+Tests read as a specification via the Gherkin vocabulary in
+[`test/support/bdd.dart`](./test/support/bdd.dart) — a thin, zero-dependency wrapper over
+`package:test`. Use `feature` / `scenario` / `scenarioOutline`, never bare `group` / `test`.
+
+- **One `feature` per unit under test.** A small cohesive type gets a single feature; a large
+  class with distinct capability clusters gets one feature per capability
+  (`feature('InternetConnection.onStatusChange')`, `feature('InternetConnection.checkInterval setter')`),
+  the way the sibling `hive_box_manager` splits `KeyedBox` into reads / writes / watch / lifecycle.
+- **`scenarioOutline` for table-driven cases.** When several cases vary only in input and expected
+  output, group them as a named-row `examples` map so the table reads as data, not scattered
+  literals. See [`test/status/internet_status_test.dart`](./test/status/internet_status_test.dart).
+- **Assert with `package:checks`** (`check(...)`), never the `package:matcher` `expect`. Import
+  `package:test/scaffolding.dart` (not `package:test/test.dart`, which pulls the matcher API) *only*
+  when a test needs `setUp` / `addTearDown`; `feature` / `scenario` themselves come from `bdd.dart`.
+  A test with no lifecycle hooks imports just `checks`, `bdd.dart`, and the code under test.
+- **Test support lives under [`test/support/`](./test/support/)** — the `bdd.dart` helper plus
+  doubles (`StubProbe`, `RecordingObserver`). Keep production code free of test scaffolding.
 
 ---
 

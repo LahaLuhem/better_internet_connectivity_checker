@@ -9,6 +9,8 @@ import 'package:better_internet_connectivity_checker/src/observer/slow_callback_
 import 'package:checks/checks.dart';
 import 'package:test/scaffolding.dart';
 
+import 'support/bdd.dart';
+
 void main() {
   const reachable = Reachable(responseTime: Duration(milliseconds: 5), quality: .good);
   const checkCompleted = CheckCompletedEvent(reachable);
@@ -23,8 +25,8 @@ void main() {
     logSink: warnings.add,
   );
 
-  group('SlowCallbackWatchdog', () {
-    test('fast callback does not warn and still dispatches', () {
+  feature('SlowCallbackWatchdog', () {
+    scenario('fast callback does not warn and still dispatches', () {
       final warnings = <String>[];
 
       var dispatched = false;
@@ -34,7 +36,7 @@ void main() {
       check(warnings).isEmpty();
     });
 
-    test('overrunning callback warns once with observer type and callback name', () {
+    scenario('overrunning callback warns once with observer type and callback name', () {
       final warnings = <String>[];
 
       watchdogWith(warnings).measure(checkCompleted, () => sleep(const Duration(milliseconds: 20)));
@@ -46,7 +48,7 @@ void main() {
         ..contains('Isolate.run');
     });
 
-    test('same event type never warns twice', () {
+    scenario('same event type never warns twice', () {
       final warnings = <String>[];
 
       watchdogWith(warnings)
@@ -56,7 +58,7 @@ void main() {
       check(warnings).length.equals(1);
     });
 
-    test('distinct event types warn independently', () {
+    scenario('distinct event types warn independently', () {
       final warnings = <String>[];
 
       watchdogWith(warnings)
@@ -67,7 +69,7 @@ void main() {
       check(warnings.last).contains('onStatusChangeEmitted');
     });
 
-    test("a fast pass does not consume the event type's single warning", () {
+    scenario("a fast pass does not consume the event type's single warning", () {
       final warnings = <String>[];
 
       // Under budget first: must not mark the event type as already-warned.
@@ -81,8 +83,8 @@ void main() {
     });
   });
 
-  group('attachObserver watchdog integration', () {
-    test('slow observer still receives every event through the timed path', () async {
+  feature('attachObserver watchdog', () {
+    scenario('slow observer still receives every event through the timed path', () async {
       // The warning itself goes to dart:developer (not capturable here). This pins the load-bearing part -
       // the watchdog wrapper must not swallow, reorder, or double-dispatch events.
       final controller = StreamController<ConnectivityEvent>.broadcast();

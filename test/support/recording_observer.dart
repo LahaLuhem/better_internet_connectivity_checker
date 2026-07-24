@@ -2,7 +2,7 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 
 /// A [ConnectivityObserver] that records every event it receives.
 ///
-/// Lives under `test/_helpers/` so production code stays free of test
+/// Lives under `test/support/` so production code stays free of test
 /// scaffolding. Use it to assert that [InternetConnection] fires the
 /// expected lifecycle callbacks in the expected order with the expected
 /// payloads.

@@ -1,12 +1,13 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:checks/checks.dart';
-import 'package:test/scaffolding.dart';
+
+import '../support/bdd.dart';
 
 void main() {
   final target = ProbeTarget(uri: Uri.https('example.com'));
 
-  group('ProbeResult.success', () {
-    test('marks the result as successful with no error', () {
+  feature('ProbeResult.success', () {
+    scenario('marks the result as successful with no error', () {
       final result = ProbeResult.success(
         target: target,
         responseTime: const Duration(milliseconds: 42),
@@ -19,8 +20,8 @@ void main() {
     });
   });
 
-  group('ProbeResult.failure', () {
-    test('marks the result as failed and forwards the captured error', () {
+  feature('ProbeResult.failure', () {
+    scenario('marks the result as failed and forwards the captured error', () {
       final error = Exception('boom');
       final result = ProbeResult.failure(
         target: target,
@@ -33,7 +34,7 @@ void main() {
       check(result.responseTime).equals(const Duration(milliseconds: 100));
     });
 
-    test('allows omitting the error when the failure is a predicate mismatch', () {
+    scenario('allows omitting the error when the failure is a predicate mismatch', () {
       final result = ProbeResult.failure(
         target: target,
         responseTime: const Duration(milliseconds: 100),
@@ -44,8 +45,8 @@ void main() {
     });
   });
 
-  group('ProbeResult.toString', () {
-    test('renders all fields in stable diagnostic form on success', () {
+  feature('ProbeResult.toString', () {
+    scenario('renders all fields in stable diagnostic form on success', () {
       final result = ProbeResult.success(
         target: target,
         responseTime: const Duration(milliseconds: 42),
@@ -60,7 +61,7 @@ void main() {
       );
     });
 
-    test('includes the captured error verbatim on failure', () {
+    scenario('includes the captured error verbatim on failure', () {
       final error = Exception('boom');
       final result = ProbeResult.failure(
         target: target,
