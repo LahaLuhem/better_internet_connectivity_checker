@@ -16,7 +16,7 @@ dependencies:
   connectivity_plus: ^7.3.1
   gap: ^3.0.1
   http: ^1.6.0
-  material_ui: ^0.0.2
+  material_ui: ^0.0.3+1
   platform_adaptive_widgets: ^2.1.1
   platform_icons: ^0.1.1
   pmvvm: ^4.0.1
