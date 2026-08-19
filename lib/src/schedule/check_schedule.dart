@@ -1,11 +1,14 @@
+/// @docImport 'strategies/exponential_backoff_schedule.dart';
+/// @docImport 'strategies/fixed_interval_schedule.dart';
+library;
+
 import 'models/schedule_context.dart';
-import 'strategies/fixed_interval_schedule.dart';
 
 /// Decides how long to wait before the next periodic check.
 ///
 /// The third pluggable layer, alongside `ConnectivityProbe` (how one check runs) and
 /// `ReachabilityPolicy` (how results roll up). Built-ins: [FixedIntervalSchedule] (the default,
-/// same gap every time) and `ExponentialBackoffSchedule` (widening gaps while checks keep failing).
+/// same gap every time) and [ExponentialBackoffSchedule] (widening gaps while checks keep failing).
 ///
 /// Stateless by convention, and built-ins are `const`-constructible so they can be shared. The
 /// streak arrives on [ScheduleContext], so the common cases need no state. Kept an interface rather
