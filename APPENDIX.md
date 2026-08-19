@@ -63,9 +63,9 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="three-layer-architecture"></a>
-## Three-layer architecture: probe / policy / scheduler
+## Layered architecture: probe / policy / schedule / coordinator
 
-- **Chosen:** the package splits into three independent concerns:
+- **Chosen:** the package splits into four independent concerns:
   1. **`ConnectivityProbe`** — runs one check against one `ProbeTarget`, returns one
      `ProbeResult`. The built-in `HttpProbe` (with `.head()` and `.get()` factories) is
      one implementation; others can wrap it (retry decorators) or replace it (DNS / TCP
@@ -73,18 +73,82 @@ anchor stable or grep-and-update every caller.
   2. **`ReachabilityPolicy`** — aggregates per-probe results into an `InternetStatus`.
      Built-ins: `AnyReachablePolicy` (any-of-N), `AllReachablePolicy` (all-of-N). Future
      variants (k-of-N, majority, circuit-breaker) slot in at this layer.
-  3. **`InternetConnection`** — owns scheduling (periodic timer + external-trigger
-     stream) and the de-duped broadcast status stream. It composes the other two; it
-     does not know how a probe runs or how a status is aggregated.
-- **Why:** every named future feature falls cleanly into exactly one layer.
-  Retry-with-backoff is a probe decorator. DNS probing is an alternative probe. "k-of-N"
-  is a new policy. Reusing the scheduler with a different transport touches one
-  constructor argument, not a code path. The previous monolithic class folded all three
-  into one, which made the combinatorial dispatch (`enableStrictCheck` × `slowThreshold`
-  × `customConnectivityCheck`) the wall every new feature would hit first.
+  3. **`CheckSchedule`** — decides the gap before the next periodic check, given the
+     base interval, the consecutive-failure streak, and the last status. Built-ins:
+     `FixedIntervalSchedule` (the default), `ExponentialBackoffSchedule`.
+  4. **`InternetConnection`** — owns scheduling (periodic timer + external-trigger
+     stream) and the de-duped broadcast status stream. It composes the other three; it
+     does not know how a probe runs, how a status is aggregated, or why one gap differs
+     from the last.
+- **Why:** every named future feature falls cleanly into exactly one layer. DNS probing
+  is an alternative probe. "k-of-N" is a new policy. Reusing the scheduler with a
+  different transport touches one constructor argument, not a code path. The previous
+  monolithic class folded everything into one, which made the combinatorial dispatch
+  (`enableStrictCheck` × `slowThreshold` × `customConnectivityCheck`) the wall every new
+  feature would hit first.
+- **"Retry-with-backoff is a probe decorator" was half right**, and the correction is why
+  layer 3 exists. Retrying *within* one check (probe failed, try again before calling the
+  target dead) is a probe decorator. Backing off *between* checks is not: it is terminal
+  in the first case and endless in the second, and it needs the failure history, which no
+  probe sees. The two were conflated until
+  [`why-cadence-is-its-own-seam`](#why-cadence-is-its-own-seam) split them.
 - **What this rules out:** putting probe / policy logic directly on `InternetConnection`
   (the v1 mistake), or exposing knobs (`enableStrict`, `slowConnectionConfig`) that the
   type system encodes more cleanly as strategy objects.
+
+---
+
+<a id="why-cadence-is-its-own-seam"></a>
+## Why check cadence is its own seam, and not `package:retry`
+
+- **Chosen:** a `CheckSchedule` interface at the scheduler layer, with the failure streak handed
+  in on a `ScheduleContext`. No new dependency.
+- **The distinction that drove it:** "add retries with backoff" names two different features.
+  Retrying *within* one check is terminal (give up after N and report the target dead) and needs
+  nothing but the current probe, so it decorates `ConnectivityProbe`, a seam that already existed.
+  Backing off *between* checks is endless (a monitor never stops polling) and needs the failure
+  history, which no probe or policy sees. Only the second one needed a new seam.
+- **Why not `package:retry`:** it is a good fit for the first feature and a poor one for the second.
+  The only usable member is `RetryOptions.delay()`, about five lines of arithmetic. `retry()` itself
+  rethrows once `maxAttempts` is hit, which is wrong for a checker that must keep polling. Its API
+  is exception-driven, whereas `ConnectivityProbe` is contractually non-throwing, so bridging means
+  throwing a sentinel on the normal path. And its jitter comes from a library-private `Random` with
+  no seam, which this repo's `fake_async` suite cannot pin. Adding a dependency to a package whose
+  entire graph is `http` did not pay for itself.
+- **Interop instead of dependency:** `ScheduleContext.consecutiveFailures` is exactly
+  `RetryOptions.delay()`'s argument, so a caller who already has a `RetryOptions` writes a
+  three-line `CheckSchedule` around it. README shows the snippet.
+- **A value object, not named parameters.** `ReachabilityPolicy.evaluate` takes named parameters and
+  the consistency argument pointed that way, but a cadence signature is far likelier to grow
+  (elapsed-in-state, attempts since start, a clock). Adding a named parameter to a public interface
+  method breaks every downstream implementer; adding a field to a value object does not.
+- **`checkInterval` stays the base.** The schedule transforms it rather than replacing it, so the
+  shipped setter and `CheckIntervalChangedEvent` keep their meaning, the default schedule returning
+  it verbatim is exactly the old behaviour, and reassigning it at runtime rescales the whole ladder.
+  It also makes `checkInterval` the direct analogue of the `initialDelay` knob the feature request
+  asked for.
+- **The ladder skips the first failure.** `baseInterval * multiplier^(consecutiveFailures - 1)`,
+  floored at exponent zero, so one failure retries at the base and growth starts at the second. A
+  single dropped check is usually noise, and paying a doubled delay for it is worse than paying
+  for one extra probe.
+- **No jitter yet.** `Random()` is not a constant expression, and every built-in strategy here is
+  `const`-constructible, so jitter costs either the convention or a deterministic-source seam nobody
+  has asked for. Tracked separately in issue #25.
+
+Two implementation facts worth not rediscovering:
+
+- **`Duration` cannot be asserted in a `const` constructor.** `assert(maxDelay > Duration.zero)`
+  fails const evaluation with `const_eval_type_num`, and `maxDelay.inMicroseconds > 0` fails with
+  `const_eval_property_access`. Either one turns every `const ExponentialBackoffSchedule(...)` call
+  site into a compile error. `ExponentialBackoffSchedule` therefore floors its result at the base
+  interval instead of asserting, so a `maxDelay` below the base pins the delay to the base rather
+  than returning zero and busy-looping the scheduler.
+- **The delay cap is applied as a ratio, before any `Duration` is built.** A long outage drives the
+  exponent unbounded, and `Duration * factor` handles overflow badly in two different ways:
+  `10^31` silently saturates at int64 (`2562047788:00:54`), while an infinite factor throws
+  `UnsupportedError: Infinity or NaN toInt`. Clamping the *exponent* does not fix this, because the
+  hazard is `multiplier^exponent` and the multiplier is caller-supplied. Comparing growth factor
+  against `maxDelay / baseInterval` sidesteps both, infinity included.
 
 ---
 
