@@ -11,8 +11,6 @@ import '../status/internet_status.dart';
 ///
 /// Stateless by convention, and concrete policies are `const`-constructible so they can be shared.
 /// Kept an interface, not a typedef, so state-bearing policies (e.g. a circuit breaker) can hold fields.
-// Kept as an interface (not a typedef) so stateful policies can hold fields.
-// ignore: one_member_abstracts
 abstract interface class ReachabilityPolicy {
   /// Evaluates all [targets] using [probe] and returns the rolled-up status.
   ///
