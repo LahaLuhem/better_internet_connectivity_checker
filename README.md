@@ -129,10 +129,10 @@ it — the compiler will tell you if a future variant is added.
 
 ```dart
 switch (await checker.checkOnce()) {
-case Reachable(:final responseTime, :final quality):
-print('online — $quality, ${responseTime.inMilliseconds} ms');
-case Unreachable(:final failedProbes):
-print('offline — ${failedProbes.length} probes failed');
+  case Reachable(:final responseTime, :final quality):
+    print('online — $quality, ${responseTime.inMilliseconds} ms');
+  case Unreachable(:final failedProbes):
+    print('offline — ${failedProbes.length} probes failed');
 }
 ```
 
@@ -154,9 +154,7 @@ await checker.dispose();
 Pass a `slowThreshold` to classify the `quality` field on every `Reachable` status:
 
 ```dart
-final checker = InternetConnection(
-    slowThreshold: const Duration(milliseconds: 500),
-);
+final checker = InternetConnection(slowThreshold: const Duration(milliseconds: 500));
 ```
 
 ### Custom probe targets
@@ -178,9 +176,7 @@ final checker = InternetConnection(
 ### Strict aggregation (every probe must succeed)
 
 ```dart
-final checker = InternetConnection(
-    policy: const AllReachablePolicy(),
-);
+final checker = InternetConnection(policy: const AllReachablePolicy());
 ```
 
 Recommended only with a curated probe list — any one public endpoint being down would
@@ -193,9 +189,7 @@ For proxies, middleware, or a `MockClient` in tests:
 ```dart
 import 'package:http/http.dart' as http;
 
-final checker = InternetConnection(
-    probe: HttpProbe.head(client: myHttpClient),
-);
+final checker = InternetConnection(probe: HttpProbe.head(client: myHttpClient));
 ```
 
 ### Falling back to GET
@@ -204,9 +198,7 @@ Some endpoints reject HEAD (HTTP 405) or strip caching headers on it. Swap to
 `HttpProbe.get()` per-instance:
 
 ```dart
-final checker = InternetConnection(
-    probe: HttpProbe.get(),
-);
+final checker = InternetConnection(probe: HttpProbe.get());
 ```
 
 The GET probe drains the response body from the wire but does not buffer it into
@@ -457,7 +449,7 @@ Not on the roadmap (deliberate non-features):
 
 ```bash
 dart test                                            # full test suite
-dart analyze                                         # strict-mode static analysis
+dart analyze --fatal-infos                           # strict-mode static analysis
 dart format --output=none --set-exit-if-changed .    # formatter check
 ```
 
