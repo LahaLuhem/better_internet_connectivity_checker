@@ -48,5 +48,8 @@ export 'src/probe/connectivity_probe.dart' show ConnectivityProbe;
 export 'src/probe/models/probe_result.dart' show ProbeResult;
 export 'src/probe/models/probe_target.dart' show ProbeTarget;
 export 'src/probe/transports/http_probe.dart' show HttpProbe;
+export 'src/schedule/check_schedule.dart' show CheckSchedule;
+export 'src/schedule/models/schedule_context.dart' show ScheduleContext;
+export 'src/schedule/strategies/fixed_interval_schedule.dart' show FixedIntervalSchedule;
 export 'src/status/internet_status.dart' show InternetStatus, Reachable, Unreachable;
 export 'src/status/models/connection_quality.dart' show ConnectionQuality;
