@@ -21,6 +21,10 @@ final class RecordingObserver extends ConnectivityObserver {
   void onCheckCompleted(InternetStatus result) => events.add(CheckCompleted(result: result));
 
   @override
+  void onNextCheckScheduled(Duration delay, ScheduleContext scheduleContext) =>
+      events.add(NextCheckScheduled(delay: delay, scheduleContext: scheduleContext));
+
+  @override
   void onExternalTriggerFired() => events.add(const ExternalTriggerFired());
 
   @override
@@ -63,6 +67,18 @@ final class CheckCompleted extends RecordedEvent {
 
   /// Records the [result] passed to the observer.
   const new({required this.result});
+}
+
+/// A recorded [ConnectivityObserver.onNextCheckScheduled] event.
+final class const NextCheckScheduled({
+  /// Delay the scheduler will wait before the next check.
+  required final Duration delay,
+
+  /// State the schedule was given to reach [delay].
+  required final ScheduleContext scheduleContext,
+}) extends RecordedEvent {
+  /// Records the [delay] and [scheduleContext] passed to the observer.
+  this;
 }
 
 /// A recorded [ConnectivityObserver.onExternalTriggerFired] event.

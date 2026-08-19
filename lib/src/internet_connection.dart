@@ -211,13 +211,15 @@ final class InternetConnection {
     _lastStatus = status;
     _consecutiveFailures = status is Unreachable ? _consecutiveFailures + 1 : 0;
 
-    return _schedule.nextDelay(
-      ScheduleContext(
-        baseInterval: _checkInterval,
-        consecutiveFailures: _consecutiveFailures,
-        lastStatus: status,
-      ),
+    final scheduleContext = ScheduleContext(
+      baseInterval: _checkInterval,
+      consecutiveFailures: _consecutiveFailures,
+      lastStatus: status,
     );
+    final nextDelay = _schedule.nextDelay(scheduleContext);
+    _eventSink.emit(NextCheckScheduledEvent(delay: nextDelay, scheduleContext: scheduleContext));
+
+    return nextDelay;
   }
 
   static bool _isDistinctKind(InternetStatus? previous, InternetStatus current) {

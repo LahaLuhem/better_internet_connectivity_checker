@@ -69,6 +69,7 @@ final class SlowCallbackWatchdog {
   static String _callbackNameFor(ConnectivityEvent event) => switch (event) {
     StatusEmittedEvent() => 'onStatusChangeEmitted',
     CheckCompletedEvent() => 'onCheckCompleted',
+    NextCheckScheduledEvent() => 'onNextCheckScheduled',
     ExternalTriggerFiredEvent() => 'onExternalTriggerFired',
     ExternalTriggerErrorEvent() => 'onExternalTriggerError',
     CheckIntervalChangedEvent() => 'onCheckIntervalChanged',

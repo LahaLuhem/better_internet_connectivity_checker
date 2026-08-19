@@ -8,6 +8,7 @@ library;
 import 'dart:async';
 
 import '../data/values.dart';
+import '../schedule/models/schedule_context.dart';
 import '../status/internet_status.dart';
 import 'events/connectivity_event.dart';
 import 'slow_callback_watchdog.dart';
@@ -87,6 +88,14 @@ abstract base class ConnectivityObserver {
     // No-op default; override to forward trigger-stream errors.
   }
 
+  /// Called after every internal check, reporting how long the scheduler will wait before the next one.
+  ///
+  /// [scheduleContext] is what the `CheckSchedule` was handed to reach [delay], so an override can log
+  /// the failure streak that widened the gap. As high-frequency as [onCheckCompleted].
+  void onNextCheckScheduled(Duration delay, ScheduleContext scheduleContext) {
+    // No-op default; override to trace the cadence the schedule picks.
+  }
+
   /// Called when [InternetConnection.checkInterval] is assigned.
   ///
   /// Fires even when [previous] equals [next] — the timer is reset on every assignment.
@@ -142,6 +151,10 @@ StreamSubscription<ConnectivityEvent> attachObserver(
       next,
     ),
     CheckCompletedEvent(:final result) => observer.onCheckCompleted(result),
+    NextCheckScheduledEvent(:final delay, :final scheduleContext) => observer.onNextCheckScheduled(
+      delay,
+      scheduleContext,
+    ),
     ExternalTriggerFiredEvent() => observer.onExternalTriggerFired(),
     ExternalTriggerErrorEvent(:final error, :final stackTrace) => observer.onExternalTriggerError(
       error,
