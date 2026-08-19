@@ -570,3 +570,42 @@ anchor stable or grep-and-update every caller.
   not N, and packing them onto two streams keeps subscribers' filter
   code obvious (`whereType<X>()`) rather than requiring them to learn a
   priority enum.
+
+---
+
+<a id="dependabot-automerge"></a>
+## Dependabot automerges the boring tier
+
+- **Chosen:** [`dependabot-automerge.yml`](.github/workflows/dependabot-automerge.yml) arms
+  GitHub's native auto-merge (rebase) for patch and minor bumps in `github-actions`
+  (anywhere) plus `gradle` / `pub` under `/example`. Root `pub` bumps and every major wait
+  for a human. Dependabot has no `automerge` config key of its own, so the mechanism is a
+  workflow. Ported from [`list_smith`](https://github.com/LahaLuhem/list_smith), widened by
+  the `/example` carve-out.
+- **Root `pub` stays manual:** a root-pubspec bump shifts the published package's
+  constraints and reaches every consumer's resolution, and bots are exempt from
+  [`changelog.yml`](.github/workflows/changelog.yml), so it would land on pub.dev with no
+  release note. `/example` is an unpublished demo app and `github-actions` is CI wiring;
+  neither reaches a published byte.
+- **Minor, not just patch:** [`dependabot.yml`](.github/dependabot.yml) groups minor with
+  patch, and `fetch-metadata` reports a group's *highest* step. Patch-only would skip any
+  batch holding one minor, which is most of them.
+- **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks and
+  ignores failing ones that aren't, so `main`'s ruleset must be **active** and must require
+  the CI contexts. A disabled or ruleless `Protected` turns `--auto` into "merge now". Keep
+  `required_signatures` out of it: rebase-merge emits unsigned commits, so it would block
+  every rebase merge, bot or human.
+- **Raw job names, no `*-ok` aggregates.** `list_smith` fronts each workflow with an
+  aggregate job because its lint matrix is data-driven and two of its workflows share a
+  display name. Here every job name is unique and no CI workflow carries a `paths:` filter,
+  so each reports on every PR and can back a required check directly. Bot PRs still pass
+  [`pr-conventions.yml`](.github/workflows/pr-conventions.yml)'s required contexts because
+  its jobs `if:`-skip for `dependabot[bot]`, and GitHub counts a skipped job as satisfied.
+- **`GITHUB_TOKEN`, not the changelog App.** The App sits in the ruleset's bypass list so it
+  can push `CHANGELOG.md` to `main`, and a bypass covers the ruleset whole, status checks
+  included. The cost is that a `GITHUB_TOKEN` merge triggers no further workflows, so
+  [`package.yml`](.github/workflows/package.yml)'s push-to-main run is skipped on automerged
+  PRs.
+- **`pull_request_target`** because Dependabot's `pull_request` token is read-only and arming
+  auto-merge needs write. Safe as in `changelog.yml`: the workflow loads from `main` and PR
+  code is never checked out.
