@@ -1,3 +1,3 @@
 import 'package:pmvvm/pmvvm.dart';
 
-final class HomeViewModel extends ViewModel {}
+final class HomeViewModel extends ViewModel;

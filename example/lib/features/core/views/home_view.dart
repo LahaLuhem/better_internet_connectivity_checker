@@ -14,7 +14,7 @@ import '../widgets/platform/platform_card.dart';
 import 'home_view_model.dart';
 
 class HomeView extends StatelessWidget {
-  const HomeView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -33,8 +33,7 @@ class HomeView extends StatelessWidget {
                 ),
               ),
               title: 'Live status stream',
-              description:
-                  'Subscribe to onStatusChange with connectivity_plus wired in as a recheck trigger.',
+              description: 'Subscribe to onStatusChange with connectivity_plus wired in as a recheck trigger.',
               pageBuilder: (_) => const LiveStreamView(),
             ),
             _DemoTile(
@@ -86,7 +85,7 @@ class _DemoTile extends StatelessWidget {
   final String description;
   final WidgetBuilder pageBuilder;
 
-  const _DemoTile({
+  const new({
     required this.icon,
     required this.title,
     required this.description,

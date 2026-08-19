@@ -13,7 +13,7 @@ import 'custom_targets_view_model.dart';
 import 'data/enums/probe_method.dart';
 
 class CustomTargetsView extends StatelessWidget {
-  const CustomTargetsView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -145,7 +145,7 @@ class CustomTargetsView extends StatelessWidget {
 }
 
 class _AutoSwitchInfoCard extends StatelessWidget {
-  const _AutoSwitchInfoCard();
+  const new();
 
   @override
   Widget build(BuildContext context) => PlatformCard(
@@ -176,7 +176,7 @@ class _AutoSwitchInfoCard extends StatelessWidget {
 class _ResultDetail extends StatelessWidget {
   final InternetStatus result;
 
-  const _ResultDetail({required this.result});
+  const new({required this.result});
 
   @override
   Widget build(BuildContext context) => switch (result) {

@@ -8,7 +8,7 @@ import 'status_badge.dart';
 class StatusSummary extends StatelessWidget {
   final InternetStatus internetStatus;
 
-  const StatusSummary({required this.internetStatus, super.key});
+  const new({required this.internetStatus, super.key});
 
   @override
   Widget build(BuildContext context) => PlatformCard(

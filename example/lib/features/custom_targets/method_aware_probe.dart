@@ -22,7 +22,7 @@ final class MethodAwareProbe implements ConnectivityProbe {
   final void Function(String allow)? onAllowHeader;
   final http.Client _client;
 
-  MethodAwareProbe({required this.httpMethod, this.onAllowHeader, http.Client? client})
+  new({required this.httpMethod, this.onAllowHeader, http.Client? client})
     : _client = client ?? http.Client();
 
   @override

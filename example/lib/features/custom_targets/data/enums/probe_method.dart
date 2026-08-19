@@ -4,5 +4,5 @@ enum ProbeMethod {
 
   final String label;
 
-  const ProbeMethod(this.label);
+  new(this.label);
 }

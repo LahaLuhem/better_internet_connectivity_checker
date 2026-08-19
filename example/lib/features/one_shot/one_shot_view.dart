@@ -11,7 +11,7 @@ import '../core/widgets/core_widgets.dart';
 import 'one_shot_view_model.dart';
 
 class OneShotView extends StatelessWidget {
-  const OneShotView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -51,7 +51,7 @@ class OneShotView extends StatelessWidget {
 class _ResultPanel extends StatelessWidget {
   final InternetStatus? result;
 
-  const _ResultPanel({required this.result});
+  const new({required this.result});
 
   @override
   Widget build(BuildContext context) => switch (result) {

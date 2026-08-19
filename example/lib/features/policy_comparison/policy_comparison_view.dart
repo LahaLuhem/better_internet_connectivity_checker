@@ -11,7 +11,7 @@ import '../core/widgets/core_widgets.dart';
 import 'policy_comparison_view_model.dart';
 
 class PolicyComparisonView extends StatelessWidget {
-  const PolicyComparisonView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -81,7 +81,7 @@ class _PolicyCard extends StatelessWidget {
   final String blurb;
   final InternetStatus? result;
 
-  const _PolicyCard({required this.title, required this.blurb, required this.result});
+  const new({required this.title, required this.blurb, required this.result});
 
   @override
   Widget build(BuildContext context) => PlatformCard(
@@ -104,7 +104,7 @@ class _PolicyCard extends StatelessWidget {
 class _ResultDetail extends StatelessWidget {
   final InternetStatus result;
 
-  const _ResultDetail({required this.result});
+  const new({required this.result});
 
   @override
   Widget build(BuildContext context) => switch (result) {

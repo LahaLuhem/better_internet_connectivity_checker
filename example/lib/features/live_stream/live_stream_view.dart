@@ -12,7 +12,7 @@ import '../core/widgets/core_widgets.dart';
 import 'live_stream_view_model.dart';
 
 class LiveStreamView extends StatelessWidget {
-  const LiveStreamView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -118,7 +118,7 @@ class LiveStreamView extends StatelessWidget {
 /// Colours match the status badges: orange for slow, green for good (see
 /// `status_badge.dart`).
 class _ThresholdSlider extends StatelessWidget {
-  const _ThresholdSlider({required this.viewModel, required this.sliderValueMs});
+  const new({required this.viewModel, required this.sliderValueMs});
 
   /// Visual band height. Eyeball against the slider knob diameter.
   static const _bandHeight = 20.0;

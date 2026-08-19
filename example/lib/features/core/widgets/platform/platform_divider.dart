@@ -11,7 +11,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 /// theme's colour rather than the iOS separator colour — this keeps the look
 /// native on both platforms.
 class PlatformDivider extends StatelessWidget {
-  const PlatformDivider({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => PlatformWidget(
