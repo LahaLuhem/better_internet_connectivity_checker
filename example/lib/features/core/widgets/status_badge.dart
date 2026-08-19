@@ -11,7 +11,7 @@ import 'platform/platform_chip.dart';
 class StatusBadge extends StatelessWidget {
   final InternetStatus? internetStatus;
 
-  const StatusBadge({required this.internetStatus, super.key});
+  const new({required this.internetStatus, super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -11,7 +11,7 @@ import '../core/widgets/core_widgets.dart';
 import 'failure_inspection_view_model.dart';
 
 class FailureInspectionView extends StatelessWidget {
-  const FailureInspectionView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -53,7 +53,7 @@ class FailureInspectionView extends StatelessWidget {
 class _ResultPanel extends StatelessWidget {
   final InternetStatus result;
 
-  const _ResultPanel({required this.result});
+  const new({required this.result});
 
   @override
   Widget build(BuildContext context) => switch (result) {
@@ -86,7 +86,7 @@ class _ResultPanel extends StatelessWidget {
 class _FailedProbeRow extends StatelessWidget {
   final ProbeResult probe;
 
-  const _FailedProbeRow({required this.probe});
+  const new({required this.probe});
 
   @override
   Widget build(BuildContext context) => Padding(
