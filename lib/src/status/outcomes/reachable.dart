@@ -12,17 +12,16 @@ final class Reachable extends InternetStatus {
   final ConnectionQuality quality;
 
   /// Creates a [Reachable] with the probe-derived [responseTime] and pre-computed [quality].
-  const Reachable({required this.responseTime, required this.quality});
+  const new({required this.responseTime, required this.quality});
 
   /// Convenience constructor that classifies [responseTime] against [slowThreshold].
   ///
   /// A null [slowThreshold] disables slow detection (quality always [ConnectionQuality.good]).
   /// A non-null one marks the connection [ConnectionQuality.slow] when [responseTime] exceeds it.
-  factory Reachable.fromResponseTime(Duration responseTime, {required Duration? slowThreshold}) =>
-      Reachable(
-        responseTime: responseTime,
-        quality: slowThreshold != null && responseTime > slowThreshold ? .slow : .good,
-      );
+  factory fromResponseTime(Duration responseTime, {required Duration? slowThreshold}) => Reachable(
+    responseTime: responseTime,
+    quality: slowThreshold != null && responseTime > slowThreshold ? .slow : .good,
+  );
 
   @override
   String toString() =>

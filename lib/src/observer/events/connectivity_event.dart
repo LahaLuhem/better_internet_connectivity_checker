@@ -23,5 +23,5 @@ part 'instances/status_emitted_event.dart';
 /// ```
 sealed class ConnectivityEvent {
   /// Subclasses are sealed; external code may not extend this type.
-  const ConnectivityEvent();
+  const new();
 }

@@ -12,7 +12,7 @@ final class ExternalTriggerErrorEvent extends ConnectivityEvent {
   final StackTrace stackTrace;
 
   /// Creates an external-trigger-error event carrying [error] and [stackTrace].
-  const ExternalTriggerErrorEvent(this.error, this.stackTrace);
+  const new(this.error, this.stackTrace);
 
   // Debug-only toString delegation; excluded from coverage.
   // coverage:ignore-start

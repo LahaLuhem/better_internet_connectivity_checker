@@ -22,7 +22,7 @@ const _subscriberCounts = [1, 10, 25, 50, 100];
 final class _StatusEmission extends BenchmarkBase {
   final int subscriberCount;
 
-  _StatusEmission(this.subscriberCount) : super('status_emission_n$subscriberCount');
+  new(this.subscriberCount) : super('status_emission_n$subscriberCount');
 
   late StreamController<InternetStatus> _controller;
   late List<StreamSubscription<InternetStatus>> _subscriptions;

@@ -40,7 +40,7 @@ final class EventLoopStallMeter {
   Stopwatch? _stopwatch;
   Duration _lastFire = .zero;
 
-  EventLoopStallMeter({
+  new({
     this._interval = const Duration(milliseconds: 1),
     this._stallFloor = const Duration(milliseconds: 2),
   });

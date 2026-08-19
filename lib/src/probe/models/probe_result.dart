@@ -22,7 +22,7 @@ final class ProbeResult {
   final Object? error;
 
   /// Creates a successful [ProbeResult]. [responseTime] spans request start to response completion.
-  const ProbeResult.success({required this.target, required this.responseTime})
+  const new success({required this.target, required this.responseTime})
     : isSuccess = true,
       error = null;
 
@@ -31,7 +31,7 @@ final class ProbeResult {
   /// [responseTime] is the time to failure — the timeout duration on timeout, else the time to the
   /// transport error. [error] is the caught exception, or null when the probe completed but the target's
   /// [ProbeTarget.isSuccess] predicate returned false.
-  const ProbeResult.failure({required this.target, required this.responseTime, this.error})
+  const new failure({required this.target, required this.responseTime, this.error})
     : isSuccess = false;
 
   @override

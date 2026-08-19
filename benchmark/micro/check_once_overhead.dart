@@ -15,7 +15,7 @@ import '../harness/scenario_args.dart';
 final class _CheckOnceOverhead extends AsyncBenchmarkBase {
   final InternetConnection _checker;
 
-  _CheckOnceOverhead(this._checker) : super('check_once_overhead');
+  new(this._checker) : super('check_once_overhead');
 
   @override
   Future<void> run() => _checker.checkOnce();

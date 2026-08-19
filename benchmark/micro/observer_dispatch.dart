@@ -16,7 +16,7 @@ final class _ObserverDispatch extends BenchmarkBase {
   final InternetStatus _previous;
   final InternetStatus _next;
 
-  _ObserverDispatch(this._observer, this._previous, this._next) : super('observer_dispatch');
+  new(this._observer, this._previous, this._next) : super('observer_dispatch');
 
   @override
   void run() => _observer.onStatusChangeEmitted(_previous, _next);
@@ -25,7 +25,7 @@ final class _ObserverDispatch extends BenchmarkBase {
 /// Minimal subclass — counts calls but does no work. Mirrors what a PrintingConnectivityObserver-style
 /// consumer looks like in the steady state (no expensive side effect on the hot path).
 final class _NoopCountingObserver extends ConnectivityObserver {
-  _NoopCountingObserver();
+  new();
 
   var count = 0;
 

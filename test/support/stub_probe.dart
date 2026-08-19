@@ -13,7 +13,7 @@ final class StubProbe implements ConnectivityProbe {
   final Future<ProbeResult> Function(ProbeTarget target) _respond;
   final Map<ProbeTarget, Future<void>?> _cancelSignalsByTarget = {};
 
-  StubProbe(this._respond);
+  new(this._respond);
 
   /// The `cancelSignal` passed to the most recent [probe] call for
   /// [target], or `null` if [probe] was invoked without a signal — or never

@@ -13,7 +13,7 @@ import '../reachability_policy.dart';
 /// the slow-or-not classification.
 final class AllReachablePolicy implements ReachabilityPolicy {
   /// Creates an [AllReachablePolicy].
-  const AllReachablePolicy();
+  const new();
 
   @override
   Future<InternetStatus> evaluate({

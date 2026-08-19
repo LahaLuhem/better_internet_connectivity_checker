@@ -7,7 +7,7 @@ final class CheckCompletedEvent extends ConnectivityEvent {
   final InternetStatus result;
 
   /// Creates a check-completed event carrying the check's [result].
-  const CheckCompletedEvent(this.result);
+  const new(this.result);
 
   // Debug-only toString delegation; excluded from coverage.
   // coverage:ignore-start

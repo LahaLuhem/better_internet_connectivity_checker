@@ -35,7 +35,7 @@ final class SlowCallbackWatchdog {
   ///
   /// [_observerType] names the offending subclass in the warning; [_threshold] is the per-callback budget.
   /// [logSink] overrides the [developer.log] default (a test seam, not a consumer knob).
-  SlowCallbackWatchdog({
+  new({
     required this._observerType,
     required this._threshold,
     void Function(String message)? logSink,

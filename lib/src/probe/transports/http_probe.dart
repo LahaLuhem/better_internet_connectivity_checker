@@ -29,13 +29,13 @@ final class HttpProbe implements ConnectivityProbe {
   final http.Client _client;
 
   /// Creates an [HttpProbe] that issues HTTP HEAD requests.
-  HttpProbe.head({http.Client? client}) : this._('HEAD', client);
+  new head({http.Client? client}) : this._('HEAD', client);
 
   /// Creates an [HttpProbe] that issues HTTP GET requests. The response body is drained from the wire
   /// but not loaded into memory.
-  HttpProbe.get({http.Client? client}) : this._('GET', client);
+  new get({http.Client? client}) : this._('GET', client);
 
-  HttpProbe._(this._method, http.Client? client) : _client = client ?? http.Client();
+  new _(this._method, http.Client? client) : _client = client ?? http.Client();
 
   @override
   Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) async {

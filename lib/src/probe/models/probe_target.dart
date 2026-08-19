@@ -38,7 +38,7 @@ final class ProbeTarget {
   ///
   /// [isSuccess] decides whether a response is healthy. Defaults to "HTTP 200 exactly"; tighten or
   /// loosen as needed (e.g. accept any 2xx).
-  const ProbeTarget({
+  const new({
     required this.uri,
     this.timeout = Values.defaultProbeTimeout,
     this.headers = Values.defaultProbeHeaders,

@@ -27,7 +27,7 @@ final class SlowObserver extends ConnectivityObserver {
   /// code paths it was supposed to.
   final callCounts = <String, int>{};
 
-  SlowObserver({
+  new({
     this._delay = const Duration(milliseconds: 50),
     this._delayOnStatusChange = true,
     this._delayOnCheckCompleted = true,

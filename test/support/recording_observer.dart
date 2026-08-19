@@ -8,7 +8,7 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 /// payloads.
 final class RecordingObserver extends ConnectivityObserver {
   /// Creates a [RecordingObserver] starting with an empty event log.
-  RecordingObserver();
+  new();
 
   /// Every event the observer has received, in order.
   final List<RecordedEvent> events = [];
@@ -41,7 +41,7 @@ final class RecordingObserver extends ConnectivityObserver {
 
 /// Marker base for events emitted by [RecordingObserver].
 sealed class RecordedEvent {
-  const RecordedEvent();
+  const new();
 }
 
 /// A recorded [ConnectivityObserver.onStatusChangeEmitted] event.
@@ -53,7 +53,7 @@ final class StatusChangeEmitted extends RecordedEvent {
   final InternetStatus next;
 
   /// Records the [previous] / [next] pair passed to the observer.
-  const StatusChangeEmitted({required this.previous, required this.next});
+  const new({required this.previous, required this.next});
 }
 
 /// A recorded [ConnectivityObserver.onCheckCompleted] event.
@@ -62,13 +62,13 @@ final class CheckCompleted extends RecordedEvent {
   final InternetStatus result;
 
   /// Records the [result] passed to the observer.
-  const CheckCompleted({required this.result});
+  const new({required this.result});
 }
 
 /// A recorded [ConnectivityObserver.onExternalTriggerFired] event.
 final class ExternalTriggerFired extends RecordedEvent {
   /// Trivial recorder; carries no payload.
-  const ExternalTriggerFired();
+  const new();
 }
 
 /// A recorded [ConnectivityObserver.onExternalTriggerError] event.
@@ -80,7 +80,7 @@ final class ExternalTriggerError extends RecordedEvent {
   final StackTrace stackTrace;
 
   /// Records the [error] / [stackTrace] pair passed to the observer.
-  const ExternalTriggerError({required this.error, required this.stackTrace});
+  const new({required this.error, required this.stackTrace});
 }
 
 /// A recorded [ConnectivityObserver.onCheckIntervalChanged] event.
@@ -92,7 +92,7 @@ final class CheckIntervalChanged extends RecordedEvent {
   final Duration next;
 
   /// Records the [previous] / [next] pair passed to the observer.
-  const CheckIntervalChanged({required this.previous, required this.next});
+  const new({required this.previous, required this.next});
 }
 
 /// A recorded [ConnectivityObserver.onSlowThresholdChanged] event.
@@ -106,11 +106,11 @@ final class SlowThresholdChanged extends RecordedEvent {
   final Duration? next;
 
   /// Records the [previous] / [next] pair passed to the observer.
-  const SlowThresholdChanged({required this.previous, required this.next});
+  const new({required this.previous, required this.next});
 }
 
 /// A recorded [ConnectivityObserver.onDispose] event.
 final class DisposeEvent extends RecordedEvent {
   /// Trivial recorder; carries no payload.
-  const DisposeEvent();
+  const new();
 }
