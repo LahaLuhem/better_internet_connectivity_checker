@@ -1,3 +1,6 @@
+/// @docImport 'exponential_backoff_schedule.dart';
+library;
+
 import '../check_schedule.dart';
 import '../models/schedule_context.dart';
 
@@ -7,7 +10,7 @@ import '../models/schedule_context.dart';
 /// as a healthy connection. Predictable, and the right choice when a fast recovery signal matters
 /// more than the radio cost of retrying.
 ///
-/// Swap in `ExponentialBackoffSchedule` to widen the gap while checks keep failing.
+/// Swap in [ExponentialBackoffSchedule] to widen the gap while checks keep failing.
 final class FixedIntervalSchedule implements CheckSchedule {
   /// Creates a [FixedIntervalSchedule].
   const new();

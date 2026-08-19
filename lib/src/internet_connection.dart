@@ -1,3 +1,6 @@
+/// @docImport 'schedule/strategies/exponential_backoff_schedule.dart';
+library;
+
 import 'dart:async';
 
 import 'data/values.dart';
@@ -80,7 +83,7 @@ final class InternetConnection {
   /// transport (a retry decorator, [HttpProbe.get] for HEAD-unfriendly endpoints) or inject a mock.
   ///
   /// `schedule` sets the gap before each next check. Defaults to [FixedIntervalSchedule], which keeps
-  /// `checkInterval` between every check. Pass `ExponentialBackoffSchedule` to widen the gap while
+  /// `checkInterval` between every check. Pass [ExponentialBackoffSchedule] to widen the gap while
   /// checks keep failing, at the cost of noticing recovery later.
   ///
   /// `externalRecheckTrigger` is an optional stream whose events force an immediate recheck. Typical
