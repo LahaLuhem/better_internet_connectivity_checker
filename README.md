@@ -21,6 +21,7 @@
     * [Slow-connection detection](#slow-connection-detection)
     * [Custom probe targets](#custom-probe-targets)
     * [Strict aggregation (every probe must succeed)](#strict-aggregation-every-probe-must-succeed)
+    * [Controlling the check cadence](#controlling-the-check-cadence)
     * [Injecting a custom `http.Client`](#injecting-a-custom-httpclient)
     * [Falling back to GET](#falling-back-to-get)
     * [Writing a custom `ConnectivityProbe`](#writing-a-custom-connectivityprobe)
@@ -64,6 +65,9 @@ transparent proxies, broken middleboxes, and LAN-only networks.
   rest of the package.
 - Ships **any-of-N** (default) and **all-of-N** (strict) aggregation policies; the policy
   layer is also pluggable.
+- Checks at a fixed interval by default, or backs off while the connection stays down
+  (`ExponentialBackoffSchedule`). The cadence layer is pluggable too, so an app can supply
+  its own `CheckSchedule`.
 - Exposes an `externalRecheckTrigger` hook so callers can plug in OS-level network-change
   signals (`connectivity_plus` on Flutter is the canonical wiring) without the package
   itself taking a Flutter dependency.
@@ -181,6 +185,41 @@ final checker = InternetConnection(policy: const AllReachablePolicy());
 
 Recommended only with a curated probe list — any one public endpoint being down would
 flag a working connection as unreachable under the default endpoint set.
+
+### Controlling the check cadence
+
+Every check is `checkInterval` apart by default, pass or fail. `ExponentialBackoffSchedule`
+widens the gap while checks keep failing, and snaps back the moment one succeeds:
+
+```dart
+final checker = InternetConnection(
+  checkInterval: const Duration(seconds: 10),
+  schedule: const ExponentialBackoffSchedule(maxDelay: Duration(minutes: 5)),
+);
+```
+
+`checkInterval` is the base the ladder grows from. The first failure retries at the base and
+growth starts from the second, so the above runs 10s, 10s, 20s, 40s, 80s, and on to the
+5-minute cap. Any `Reachable` result resets it, and so does an `externalRecheckTrigger` event.
+
+`NextCheckScheduledEvent` on [`events`](#logging-and-observability) reports the delay the
+schedule picked plus the failure streak behind it, which is the quickest way to see why a
+checker has gone quiet.
+
+Supply your own cadence by implementing `CheckSchedule`. Already using
+[`retry`](https://pub.dev/packages/retry)? Hand it the streak:
+
+```dart
+final class RetryOptionsSchedule implements CheckSchedule {
+  final RetryOptions options;
+
+  const RetryOptionsSchedule(this.options);
+
+  @override
+  Duration nextDelay(ScheduleContext scheduleContext) =>
+      options.delay(scheduleContext.consecutiveFailures);
+}
+```
 
 ### Injecting a custom `http.Client`
 
@@ -418,6 +457,11 @@ Deliberate non-features that may affect how you use the package:
 - **HTTP caching on probe endpoints will mask outages.** Use endpoints that respond with
   `Cache-Control: no-cache` — the defaults do. On the web platform, probe targets must
   also allow CORS for the request to reach the probe.
+- **Backing off delays recovery, by design.** While `ExponentialBackoffSchedule` is waiting,
+  a connection that comes back is not noticed until the next check, so an aggressive `maxDelay`
+  can leave an app believing it is offline for minutes. Pair backoff with an
+  `externalRecheckTrigger` and keep `maxDelay` inside the staleness you can tolerate. The
+  default schedule has no such gap.
 - **`AllReachablePolicy` is brittle with arbitrary public endpoints** — any one being
   briefly unavailable flags a working connection as offline. Use it only with a curated
   probe list (e.g. enterprise internal endpoints); see the policy's dartdoc.
@@ -433,6 +477,10 @@ Features deferred today but inside the design envelope (no API break required to
   transitions, opt-in with a buffer-size knob. This is the one genuine
   memory-vs-observability trade-off in the package; until it lands, the package keeps
   no history.
+- **Jitter on the built-in backoff schedule** — spreads retries so a fleet that dropped
+  together does not come back in lockstep. Deferred because `Random()` is not a constant
+  expression, and every built-in strategy here is `const`-constructible. Tracked in
+  [issue #25](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues/25).
 - **DNS / TCP probes as custom `ConnectivityProbe` implementations** — faster but lose
   captive-portal / TLS / transparent-proxy detection. Out of scope as defaults; valid as
   user-supplied custom probes against the existing `ConnectivityProbe` seam. See
@@ -441,7 +489,8 @@ Features deferred today but inside the design envelope (no API break required to
 Not on the roadmap (deliberate non-features):
 
 - **No performance-preset enum or perf-vs-memory slider.** The orthogonal knobs
-  (`checkInterval`, `targets`, `policy`, `probe`) already control the real trade-offs;
+  (`checkInterval`, `targets`, `policy`, `probe`, `schedule`) already control the real
+  trade-offs;
   collapsing them onto one slider loses information. Rationale in
   [`APPENDIX.md`](./APPENDIX.md#why-no-perf-preset).
 
