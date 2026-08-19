@@ -72,6 +72,37 @@ void main() {
       });
     });
 
+    scenario('onNextCheckScheduled reports the delay and the streak behind it', () {
+      final probe = StubProbe(
+        (t) async => ProbeResult.failure(target: t, responseTime: const Duration(milliseconds: 10)),
+      );
+
+      fakeAsync((async) {
+        final observer = RecordingObserver();
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          checkInterval: const Duration(seconds: 4),
+          schedule: const ExponentialBackoffSchedule(maxDelay: Duration(minutes: 1)),
+        );
+        attachObserver(connection.events, observer);
+        connection.onStatusChange.listen(noopWithVal);
+
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 4))
+          ..flushMicrotasks();
+
+        final scheduled = observer.events.whereType<NextCheckScheduled>().toList();
+        check(scheduled.map((event) => event.delay).toList())
+            .deepEquals([const Duration(seconds: 4), const Duration(seconds: 8)]);
+        check(scheduled.last.scheduleContext.consecutiveFailures).equals(2);
+        check(scheduled.last.scheduleContext.lastStatus).isA<Unreachable>();
+
+        unawaited(connection.dispose());
+      });
+    });
+
     scenario('checkOnce does not fire onCheckCompleted', () async {
       final probe = StubProbe((t) async => successResult(t));
       final observer = RecordingObserver();

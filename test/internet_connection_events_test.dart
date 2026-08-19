@@ -11,6 +11,123 @@ import 'support/stub_probe.dart';
 void main() {
   final target = ProbeTarget(uri: Uri.https('example.com'));
 
+  feature('InternetConnection.events NextCheckScheduledEvent', () {
+    scenario('reports the delay the schedule picked, once per check', () {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.failure(target: target, responseTime: const Duration(milliseconds: 10)),
+      );
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          checkInterval: const Duration(seconds: 4),
+          schedule: const ExponentialBackoffSchedule(maxDelay: Duration(minutes: 1)),
+        );
+        final events = <ConnectivityEvent>[];
+        connection.events.listen(events.add);
+        connection.onStatusChange.listen(noopWithVal);
+
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 4))
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 8))
+          ..flushMicrotasks();
+
+        final scheduled = events.whereType<NextCheckScheduledEvent>().toList();
+
+        check(scheduled.map((event) => event.delay).toList()).deepEquals([
+          const Duration(seconds: 4),
+          const Duration(seconds: 8),
+          const Duration(seconds: 16),
+        ]);
+        check(scheduled.map((event) => event.scheduleContext.consecutiveFailures).toList())
+            .deepEquals([1, 2, 3]);
+
+        unawaited(connection.dispose());
+        async.flushMicrotasks();
+      });
+    });
+
+    scenario('fires under the default fixed schedule too', () {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
+      );
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          checkInterval: const Duration(seconds: 5),
+        );
+        final events = <ConnectivityEvent>[];
+        connection.events.listen(events.add);
+        connection.onStatusChange.listen(noopWithVal);
+
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 5))
+          ..flushMicrotasks();
+
+        final scheduled = events.whereType<NextCheckScheduledEvent>().toList();
+        check(scheduled).length.equals(2);
+        check(scheduled.last.delay).equals(const Duration(seconds: 5));
+        check(scheduled.last.scheduleContext.consecutiveFailures).equals(0);
+
+        unawaited(connection.dispose());
+        async.flushMicrotasks();
+      });
+    });
+
+    scenario('pairs with CheckCompletedEvent, the check first', () {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
+      );
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          checkInterval: const Duration(seconds: 5),
+        );
+        final events = <ConnectivityEvent>[];
+        connection.events.listen(events.add);
+        connection.onStatusChange.listen(noopWithVal);
+
+        async.flushMicrotasks();
+
+        final checkIndex = events.indexWhere((event) => event is CheckCompletedEvent);
+        final scheduleIndex = events.indexWhere((event) => event is NextCheckScheduledEvent);
+
+        check(checkIndex).isGreaterOrEqual(0);
+        check(scheduleIndex).isGreaterThan(checkIndex);
+
+        unawaited(connection.dispose());
+        async.flushMicrotasks();
+      });
+    });
+
+    scenario('does not fire for checkOnce', () async {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
+      );
+      final connection = InternetConnection(targets: [target], probe: probe);
+      addTearDown(connection.dispose);
+      final events = <ConnectivityEvent>[];
+      connection.events.listen(events.add);
+
+      await connection.checkOnce();
+      await Future<void>.delayed(Duration.zero);
+
+      check(events.whereType<NextCheckScheduledEvent>()).isEmpty();
+    });
+  });
+
   feature('InternetConnection.events', () {
     scenario('emits CheckCompletedEvent for every periodic tick', () {
       final probe = StubProbe(

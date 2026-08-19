@@ -38,6 +38,7 @@ export 'src/observer/events/connectivity_event.dart'
         DisposedEvent,
         ExternalTriggerErrorEvent,
         ExternalTriggerFiredEvent,
+        NextCheckScheduledEvent,
         SlowThresholdChangedEvent,
         StatusEmittedEvent;
 export 'src/observer/sinks/printing_connectivity_observer.dart' show PrintingConnectivityObserver;
