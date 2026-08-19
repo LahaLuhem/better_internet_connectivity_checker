@@ -8,6 +8,7 @@
 ### Changed
 - Use new linter mega repo
 - Bumped up Dart SDK floor to ^3.12.0
+- \[#0\] Bumped SDK to ^3.13
 
 ### Fixed
 - post merge fix
