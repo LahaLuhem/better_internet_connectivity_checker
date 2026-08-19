@@ -11,8 +11,6 @@ import 'models/probe_target.dart';
 /// [ProbeResult.error] — so the aggregation layer always has a value. Kept an interface, not a
 /// function typedef, so state-bearing probes (retry counters, circuit breakers, mock recorders) can
 /// hold fields.
-// Kept as an interface (not a typedef) so stateful implementations can hold fields.
-// ignore: one_member_abstracts
 abstract interface class ConnectivityProbe {
   /// Probes [target] and returns the outcome.
   ///
