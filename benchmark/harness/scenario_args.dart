@@ -20,7 +20,7 @@ final class ScenarioArgs {
   final String packageVersion;
   final int durationSeconds;
 
-  const ScenarioArgs._({
+  const new _({
     required this.iterations,
     required this.outputPath,
     required this.gitSha,
@@ -34,7 +34,7 @@ final class ScenarioArgs {
 
   /// Parses the standard scenario CLI flags from [argv]. Exits the process with a non-zero code on
   /// parse failure — benchmarks are non-interactive, no point throwing an exception nobody will catch.
-  factory ScenarioArgs.parse(List<String> argv) {
+  factory parse(List<String> argv) {
     final flags = <String, String>{};
     for (var i = 0; i < argv.length; i++) {
       final arg = argv[i];

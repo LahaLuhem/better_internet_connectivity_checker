@@ -15,7 +15,7 @@ final class _ExternalTriggerLink {
   final void Function(Object error, StackTrace stackTrace) _onError;
   StreamSubscription<void>? _subscription;
 
-  _ExternalTriggerLink({required this._trigger, required this._onTrigger, required this._onError});
+  new({required this._trigger, required this._onTrigger, required this._onError});
 
   /// Subscribes to the trigger stream if not already subscribed.
   void start() {

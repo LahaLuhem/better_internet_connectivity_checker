@@ -47,7 +47,7 @@ import 'slow_callback_watchdog.dart';
 /// {@endtemplate}
 abstract base class ConnectivityObserver {
   /// Const default constructor — subclasses are encouraged to be const.
-  const ConnectivityObserver();
+  const new();
 
   // No-op defaults so subclasses override only the events they care about. Excluded from
   // coverage: exercising them needs a do-nothing subclass that adds nothing over `RecordingObserver`.

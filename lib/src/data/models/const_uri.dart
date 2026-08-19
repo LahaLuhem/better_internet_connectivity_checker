@@ -22,7 +22,7 @@ final class ConstUri implements Uri {
   final String _uri;
 
   /// Wraps a URI string, deferring `Uri.parse` until the first member access.
-  const ConstUri(this._uri);
+  const new(this._uri);
 
   Uri get _delegate => _cache.putIfAbsent(_uri, () => Uri.parse(_uri));
 

@@ -18,5 +18,5 @@ part 'outcomes/unreachable.dart';
 /// ```
 sealed class InternetStatus {
   /// Subclasses are sealed; external code may not extend this type.
-  const InternetStatus();
+  const new();
 }

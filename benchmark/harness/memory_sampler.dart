@@ -20,7 +20,7 @@ final class MemorySampler {
   final _timestamps = <DateTime>[];
   Timer? _timer;
 
-  MemorySampler({this._interval = const Duration(seconds: 1)});
+  new({this._interval = const Duration(seconds: 1)});
 
   /// Snapshot of all RSS samples (bytes) collected so far, in chronological order. Returned as an
   /// unmodifiable view.

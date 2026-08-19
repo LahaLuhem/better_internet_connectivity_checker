@@ -15,7 +15,7 @@ import '../reachability_policy.dart';
 /// If every probe fails, returns [Unreachable] carrying all the failures.
 final class AnyReachablePolicy implements ReachabilityPolicy {
   /// Creates an [AnyReachablePolicy].
-  const AnyReachablePolicy();
+  const new();
 
   @override
   Future<InternetStatus> evaluate({

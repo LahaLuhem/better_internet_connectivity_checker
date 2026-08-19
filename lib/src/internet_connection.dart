@@ -77,7 +77,7 @@ final class InternetConnection {
   ///
   /// To observe lifecycle events, subscribe to [events] or wire a `ConnectivityObserver` via the
   /// top-level `attachObserver`.
-  InternetConnection({
+  new({
     List<ProbeTarget>? targets,
     this._checkInterval = Values.defaultCheckInterval,
     this._policy = const AnyReachablePolicy(),

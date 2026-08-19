@@ -21,18 +21,18 @@ final class FakeProbe implements ConnectivityProbe {
   final List<ProbeResult>? _script;
   var _scriptIndex = 0;
 
-  FakeProbe.alwaysSuccess({this._responseTime = const Duration(milliseconds: 10)})
+  new alwaysSuccess({this._responseTime = const Duration(milliseconds: 10)})
     : _mode = _Mode.alwaysSuccess,
       _error = null,
       _script = null;
 
-  FakeProbe.alwaysFailure({
+  new alwaysFailure({
     this._responseTime = const Duration(milliseconds: 10),
     Object this._error = 'fake failure',
   }) : _mode = .alwaysFailure,
        _script = null;
 
-  FakeProbe.scripted(List<ProbeResult> script)
+  new scripted(List<ProbeResult> script)
     : assert(script.isNotEmpty, 'scripted FakeProbe needs at least one result'),
       _mode = .scripted,
       _responseTime = .zero,

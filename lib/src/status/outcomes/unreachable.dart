@@ -9,7 +9,7 @@ final class Unreachable extends InternetStatus {
   final List<ProbeResult> failedProbes;
 
   /// Creates an [Unreachable] carrying the [failedProbes] that drove the decision.
-  const Unreachable({required this.failedProbes});
+  const new({required this.failedProbes});
 
   @override
   String toString() => 'Unreachable(failedProbes: $failedProbes)';

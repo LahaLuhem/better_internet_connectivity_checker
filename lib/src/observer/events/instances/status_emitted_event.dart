@@ -9,7 +9,7 @@ final class StatusEmittedEvent extends ConnectivityEvent {
   final InternetStatus next;
 
   /// Creates an emitted-status event capturing the deduplicated transition.
-  const StatusEmittedEvent({required this.previous, required this.next});
+  const new({required this.previous, required this.next});
 
   // Debug-only toString delegation; excluded from coverage.
   // coverage:ignore-start

@@ -15,7 +15,7 @@ final class ResultWriter {
   final IOSink _sink;
   var _firstRecord = true;
 
-  ResultWriter._({
+  new _({
     required this.scenario,
     required this.sdkVersion,
     required this.packageVersion,
