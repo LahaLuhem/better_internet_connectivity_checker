@@ -18,6 +18,7 @@ heading text, so renames don't break callers.
 - [Class structure](#class-structure)
 - [Idioms](#idioms)
     * [Static dot shorthands (Dart 3.10+)](#static-dot-shorthands-dart-310)
+    * [Header-form primary constructors (Dart 3.13+)](#header-form-primary-constructors-dart-313)
     * [Collection-for / collection-if over `Iterable.map(…).toList()`](#collection-for-collection-if-over-iterablemaptolist)
     * [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
     * [`Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)`](#urihttps-urihttp-over-uriparse)
@@ -124,6 +125,9 @@ style.
 <!-- TOC --><a name="class-structure"></a>
 ## Class structure
 
+- **New value / config types declare their fields in the class header.** See
+  [Header-form primary constructors](#header-form-primary-constructors-dart-313); the rules below
+  apply unchanged to everything else.
 - **Any class with fields and constructors: fields → constructors → other members.**
   Lets a reader scan the state shape first, then how to construct it, then how to use
   it. Within constructors, unnamed first, then factories (matches
@@ -186,6 +190,64 @@ cases where the surrounding context type isn't obvious without re-reading.
 After dropping a fully-qualified prefix, the type name often disappears from the file
 entirely — remove it from any `show` clauses too. Re-running analyze surfaces
 `unused_shown_name` warnings for orphaned ones.
+
+<a id="idioms-primary-constructors"></a>
+<!-- TOC --><a name="header-form-primary-constructors-dart-313"></a>
+### Header-form primary constructors (Dart 3.13+)
+
+Declare a new value or config type's fields in the class header. Keep `const new();` for
+field-less types (interfaces, `AnyReachablePolicy`-style strategies), which have nothing to hoist.
+
+```dart
+/// Backs off exponentially while checks keep failing.
+final class const ExponentialBackoffSchedule({
+  required final double _multiplier,
+  required final Duration _maxDelay,
+}) implements CheckSchedule {
+  /// Creates an [ExponentialBackoffSchedule].
+  this : assert(_multiplier >= 1, 'multiplier must be at least 1');
+
+  /// The growth factor.
+  double get multiplier => _multiplier;
+}
+```
+
+Private field names work, and callers pass them underscore-stripped
+(`ExponentialBackoffSchedule(multiplier: 2)`), so the usual private-field-plus-public-getter shape
+survives. Header-declared fields *are* the state, so they satisfy the fields-before-constructors
+rule in [Class structure](#class-structure) by position.
+
+Five rules the analyzer enforces:
+
+- `const` goes after `class`: `final class const Foo(…)`. `const final class` will not parse.
+- **`final` or `var` is mandatory.** `({required int x})` compiles and declares no field, so every
+  use of `x` in the body fails with a confusing "undefined name".
+  `avoid_unused_constructor_parameters` is the only diagnostic that names the real cause, and CI
+  analyses with `--fatal-infos`, so it blocks. The mirror case, a declared field nothing reads, is
+  caught by `unused_field_from_primary_constructor` at warning level.
+- No initializer list in the header. Asserts go on the in-body `this :` part.
+- `public_member_api_docs` wants a doc on the constructor, so a public header-form class needs a
+  `this;` line to hang it on.
+- A `const` primary constructor cannot have a `{}` body. Semicolon only.
+
+Params are in scope in field declarations, so a field derived from one initialises there instead of
+in the initializer list, leaving `this :` for asserts alone:
+
+```dart
+final class Conn({List<ProbeTarget>? targets}) {
+  final List<ProbeTarget> _targets =
+      targets != null ? List.unmodifiable(targets) : Values.defaultProbeTargets;
+
+  /// Creates a [Conn].
+  this : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty');
+}
+```
+
+Several constructors? Keep one private primary in the header and redirect the public ones from the
+body, the way `HttpProbe.head()` / `.get()` already delegate to `HttpProbe._`.
+
+Retrofitting an existing class works throughout this package, `const` types, sealed subclasses and
+`part` files included. Land such a sweep as its own change, never folded into a feature diff.
 
 <a id="idioms-collection-literals"></a>
 <!-- TOC --><a name="collection-for-collection-if-over-iterablemaptolist"></a>
@@ -355,6 +417,13 @@ skims past it, so the one line that mattered gets skimmed too. Shorter docs get 
 **How to apply.** Cut hedges, redundant restatement, and blow-by-blow edge-case tours.
 Keep: the *why*, a non-obvious constraint, a gotcha a caller would otherwise hit. When
 trimming pushes a point out, ask whether it belongs in APPENDIX instead of the comment.
+
+**Plain words, no buzzwords.** Say what the thing does. Skip vocabulary that sounds
+technical without carrying information: *leverage*, *robust*, *seamless*, *powerful*,
+*comprehensive*, *utilize*, *it's worth noting*. Protocol and language terms stay exact
+(`AbortableRequest`, broadcast stream, microtask); the ban is on filler dressed up as
+precision. This bar covers Markdown prose too (README, APPENDIX, this file), not just
+`///` and `//`.
 
 ### Soft-wrap comments and dartdoc near 100 columns
 
