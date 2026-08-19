@@ -40,7 +40,7 @@ final class InternetConnection {
     onCancel: _handleLastCancel,
   );
   final _eventSink = _EventSink();
-  late final _scheduler = _PeriodicScheduler(interval: _checkInterval, onTick: _runScheduledCheck);
+  late final _scheduler = _PeriodicScheduler(onTick: _runScheduledCheck);
   late final _triggerLink = _ExternalTriggerLink(
     trigger: _externalTrigger,
     onTrigger: () {
@@ -131,7 +131,7 @@ final class InternetConnection {
     final previous = _checkInterval;
     _checkInterval = interval;
     _eventSink.emit(CheckIntervalChangedEvent(previous: previous, next: interval));
-    _scheduler.updateInterval(interval);
+    _scheduler.rescheduleAfter(interval);
   }
 
   /// Updates the slow-classification cutoff.
@@ -178,11 +178,12 @@ final class InternetConnection {
     _lastStatus = null;
   }
 
-  Future<void> _runScheduledCheck() async {
-    if (_disposed || !_statusController.hasListener) return;
+  /// Runs one scheduled check and returns the delay before the next one.
+  Future<Duration> _runScheduledCheck() async {
+    if (_disposed || !_statusController.hasListener) return _checkInterval;
 
     final status = await checkOnce();
-    if (_disposed || !_statusController.hasListener) return;
+    if (_disposed || !_statusController.hasListener) return _checkInterval;
 
     _eventSink.emit(CheckCompletedEvent(status));
 
@@ -191,6 +192,8 @@ final class InternetConnection {
       _statusController.add(status);
     }
     _lastStatus = status;
+
+    return _checkInterval;
   }
 
   static bool _isDistinctKind(InternetStatus? previous, InternetStatus current) {

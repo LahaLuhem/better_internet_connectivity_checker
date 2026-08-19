@@ -4,24 +4,25 @@ part of '../internet_connection.dart';
 ///
 /// Owns the [Timer] behind [InternetConnection]'s recurring checks and the loop that fires `onTick`
 /// then queues the next tick. The coordinator drives the lifecycle via [start], [stop],
-/// [updateInterval], and [dispose]. The scheduler stays dumb about what "checking" means.
+/// [rescheduleAfter], and [dispose]. The scheduler stays dumb about what "checking" means: each
+/// delay arrives as `onTick`'s return value, so it never learns why one tick's gap differs from
+/// the last's.
 ///
 /// Overlapping `onTick` invocations are deliberately allowed — the package contract
 /// (APPENDIX `why-checkOnce-not-single-flighted`) permits parallel probes when an external trigger
 /// fires mid-check.
 final class _PeriodicScheduler {
-  Duration _interval;
-  final Future<void> Function() _onTick;
+  final Future<Duration> Function() _onTick;
   Timer? _timer;
   var _running = false;
   var _disposed = false;
 
-  new({required this._interval, required this._onTick});
+  new({required this._onTick});
 
   /// Begins ticking, or resets the rescheduling clock if already running.
   ///
   /// Cancels any pending timer, invokes `onTick` once immediately, then schedules the next tick at
-  /// the current interval once that future completes. A no-op after [dispose].
+  /// the delay that future returns. A no-op after [dispose].
   void start() {
     if (_disposed) return;
 
@@ -37,16 +38,15 @@ final class _PeriodicScheduler {
     _cancelTimer();
   }
 
-  /// Replaces the tick interval, resetting the timer if running.
+  /// Re-queues the pending tick to fire after [delay] instead.
   ///
-  /// On a running scheduler, discards the in-flight rescheduling clock and queues a fresh timer at
-  /// the new [interval]. When paused or disposed it's a no-op — the interval takes effect on next [start].
-  void updateInterval(Duration interval) {
-    _interval = interval;
+  /// Discards the in-flight rescheduling clock. A no-op when paused or disposed: the next [start]
+  /// ticks immediately anyway, and every later delay comes from `onTick`.
+  void rescheduleAfter(Duration delay) {
     if (!_running || _disposed) return;
 
     _cancelTimer();
-    _timer = Timer(_interval, _onTimerFire);
+    _timer = Timer(delay, _onTimerFire);
   }
 
   /// Permanently stops the scheduler. Subsequent [start] is a no-op.
@@ -69,9 +69,9 @@ final class _PeriodicScheduler {
   }
 
   Future<void> _runTickAndReschedule() async {
-    await _onTick();
+    final nextDelay = await _onTick();
     if (!_running || _disposed) return;
 
-    _timer = Timer(_interval, _onTimerFire);
+    _timer = Timer(nextDelay, _onTimerFire);
   }
 }

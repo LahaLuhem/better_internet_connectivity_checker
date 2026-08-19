@@ -385,5 +385,38 @@ void main() {
         unawaited(connection.dispose());
       });
     });
+
+    scenario('applies an interval assigned before the first subscriber', () {
+      var probeCalls = 0;
+      final probe = StubProbe((target) async {
+        probeCalls += 1;
+
+        return ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50));
+      });
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          checkInterval: const Duration(hours: 1),
+        );
+
+        final events = <InternetStatus>[];
+
+        // Assigned while paused: no timer exists to reschedule, so the value has to be
+        // picked up when the first subscriber starts the scheduler.
+        connection
+          ..checkInterval = const Duration(seconds: 2)
+          ..onStatusChange.listen(events.add);
+
+        async.flushMicrotasks();
+        check(probeCalls).equals(1);
+
+        async.elapse(const Duration(seconds: 2));
+        check(probeCalls).equals(2);
+
+        unawaited(connection.dispose());
+      });
+    });
   });
 }
