@@ -7,6 +7,9 @@ import 'policy/strategies/any_reachable_policy.dart';
 import 'probe/connectivity_probe.dart';
 import 'probe/models/probe_target.dart';
 import 'probe/transports/http_probe.dart';
+import 'schedule/check_schedule.dart';
+import 'schedule/models/schedule_context.dart';
+import 'schedule/strategies/fixed_interval_schedule.dart';
 import 'status/internet_status.dart';
 import 'status/models/connection_quality.dart';
 
@@ -20,8 +23,8 @@ part 'internal/periodic_scheduler.dart';
 ///
 /// 1. **One-shot checks** via [checkOnce] — runs every target through the configured [ConnectivityProbe],
 ///     aggregated by the configured [ReachabilityPolicy].
-/// 2. **Status streaming** via [onStatusChange] — checks every [checkInterval] and emits the result
-///     only when its kind differs from the last emitted one.
+/// 2. **Status streaming** via [onStatusChange] — checks on the cadence the configured [CheckSchedule]
+///     sets and emits the result only when its kind differs from the last emitted one.
 /// 3. **External recheck triggers** — an emission on the constructor's `externalRecheckTrigger` stream
 ///    forces an immediate recheck. Wire `connectivity_plus` or any other network-change signal through it.
 ///
@@ -33,6 +36,7 @@ final class InternetConnection {
   Duration? _slowThreshold;
   final ReachabilityPolicy _policy;
   final ConnectivityProbe _probe;
+  final CheckSchedule _schedule;
   final Stream<void>? _externalTrigger;
 
   late final _statusController = StreamController<InternetStatus>.broadcast(
@@ -45,6 +49,7 @@ final class InternetConnection {
     trigger: _externalTrigger,
     onTrigger: () {
       _eventSink.emit(const ExternalTriggerFiredEvent());
+      _consecutiveFailures = 0;
       _scheduler.start();
     },
     onError: (error, stackTrace) {
@@ -52,6 +57,7 @@ final class InternetConnection {
     },
   );
   InternetStatus? _lastStatus;
+  var _consecutiveFailures = 0;
   var _disposed = false;
 
   /// Creates an [InternetConnection].
@@ -62,6 +68,7 @@ final class InternetConnection {
   ///
   /// `checkInterval` is the gap between periodic checks once [onStatusChange] has a listener.
   /// Defaults to [Values.defaultCheckInterval]; change it at runtime via the [_checkInterval] setter.
+  /// Under a non-fixed `schedule` this is the base the schedule derives each gap from, not the gap itself.
   ///
   /// `slowThreshold` is the response-time cutoff above which a successful probe is classified as slow.
   /// Defaults to null (no classification — every reachable status is [ConnectionQuality.good]).
@@ -72,6 +79,10 @@ final class InternetConnection {
   /// `probe` runs a single check; defaults to [HttpProbe.head]. Pass a custom probe to swap the
   /// transport (a retry decorator, [HttpProbe.get] for HEAD-unfriendly endpoints) or inject a mock.
   ///
+  /// `schedule` sets the gap before each next check. Defaults to [FixedIntervalSchedule], which keeps
+  /// `checkInterval` between every check. Pass `ExponentialBackoffSchedule` to widen the gap while
+  /// checks keep failing, at the cost of noticing recovery later.
+  ///
   /// `externalRecheckTrigger` is an optional stream whose events force an immediate recheck. Typical
   /// Flutter wiring: `Connectivity().onConnectivityChanged.map(noopWithVal)`.
   ///
@@ -81,6 +92,7 @@ final class InternetConnection {
     List<ProbeTarget>? targets,
     this._checkInterval = Values.defaultCheckInterval,
     this._policy = const AnyReachablePolicy(),
+    this._schedule = const FixedIntervalSchedule(),
     this._slowThreshold,
     ConnectivityProbe? probe,
     Stream<void>? externalRecheckTrigger,
@@ -122,7 +134,8 @@ final class InternetConnection {
 
   /// Runs one check and returns the resulting status.
   ///
-  /// Does not affect the periodic timer, the status stream, or [lastStatus].
+  /// Does not affect the periodic timer, the status stream, [lastStatus], or the failure streak the
+  /// [CheckSchedule] sees.
   Future<InternetStatus> checkOnce() =>
       _policy.evaluate(targets: _targets, probe: _probe, slowThreshold: _slowThreshold);
 
@@ -176,6 +189,7 @@ final class InternetConnection {
     unawaited(_triggerLink.stop());
 
     _lastStatus = null;
+    _consecutiveFailures = 0;
   }
 
   /// Runs one scheduled check and returns the delay before the next one.
@@ -192,8 +206,15 @@ final class InternetConnection {
       _statusController.add(status);
     }
     _lastStatus = status;
+    _consecutiveFailures = status is Unreachable ? _consecutiveFailures + 1 : 0;
 
-    return _checkInterval;
+    return _schedule.nextDelay(
+      ScheduleContext(
+        baseInterval: _checkInterval,
+        consecutiveFailures: _consecutiveFailures,
+        lastStatus: status,
+      ),
+    );
   }
 
   static bool _isDistinctKind(InternetStatus? previous, InternetStatus current) {

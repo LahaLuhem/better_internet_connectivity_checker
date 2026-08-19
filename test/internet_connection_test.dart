@@ -8,6 +8,7 @@ import 'package:test/scaffolding.dart';
 import 'support/bdd.dart';
 import 'support/recording_observer.dart';
 import 'support/stub_probe.dart';
+import 'support/stub_schedule.dart';
 
 void main() {
   final target = ProbeTarget(uri: Uri.https('example.com'));
@@ -351,6 +352,176 @@ void main() {
 
         unawaited(connection.dispose());
       });
+    });
+  });
+
+  feature('InternetConnection.schedule', () {
+    ProbeResult failFor(ProbeTarget target) =>
+        ProbeResult.failure(target: target, responseTime: const Duration(milliseconds: 10));
+
+    scenario('waits the delay the schedule returns instead of checkInterval', () {
+      var probeCalls = 0;
+      final probe = StubProbe((target) async {
+        probeCalls += 1;
+
+        return failFor(target);
+      });
+      final schedule = StubSchedule((scheduleContext) => const Duration(seconds: 30));
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          schedule: schedule,
+          checkInterval: const Duration(seconds: 5),
+        );
+        connection.onStatusChange.listen(noopWithVal);
+
+        async.flushMicrotasks();
+        check(probeCalls).equals(1);
+
+        // The base interval elapses without a tick; only the schedule's delay drives one.
+        async.elapse(const Duration(seconds: 5));
+        check(probeCalls).equals(1);
+
+        async.elapse(const Duration(seconds: 25));
+        check(probeCalls).equals(2);
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    scenario('grows the failure streak while checks keep failing', () {
+      final probe = StubProbe((target) async => failFor(target));
+      final schedule = StubSchedule((scheduleContext) => const Duration(seconds: 5));
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          schedule: schedule,
+          checkInterval: const Duration(seconds: 5),
+        );
+        connection.onStatusChange.listen(noopWithVal);
+
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 5))
+          ..elapse(const Duration(seconds: 5));
+
+        check(schedule.seenFailureStreaks).deepEquals([1, 2, 3]);
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    scenario('resets the failure streak once a check succeeds', () {
+      var reachable = false;
+      final probe = StubProbe((target) async {
+        if (reachable) {
+          return ProbeResult.success(
+            target: target,
+            responseTime: const Duration(milliseconds: 10),
+          );
+        }
+
+        return failFor(target);
+      });
+      final schedule = StubSchedule((scheduleContext) => const Duration(seconds: 5));
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          schedule: schedule,
+          checkInterval: const Duration(seconds: 5),
+        );
+        connection.onStatusChange.listen(noopWithVal);
+
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 5));
+
+        reachable = true;
+        async.elapse(const Duration(seconds: 5));
+
+        check(schedule.seenFailureStreaks).deepEquals([1, 2, 0]);
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    scenario('resets the failure streak when the external trigger fires', () {
+      final probe = StubProbe((target) async => failFor(target));
+      final schedule = StubSchedule((scheduleContext) => const Duration(seconds: 5));
+      final trigger = StreamController<void>.broadcast();
+      addTearDown(trigger.close);
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          schedule: schedule,
+          checkInterval: const Duration(seconds: 5),
+          externalRecheckTrigger: trigger.stream,
+        );
+        connection.onStatusChange.listen(noopWithVal);
+
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 5));
+
+        check(schedule.seenFailureStreaks).deepEquals([1, 2]);
+
+        trigger.add(null);
+        async.flushMicrotasks();
+
+        // Streak restarted by the trigger, so the recheck reports 1 rather than 3.
+        check(schedule.seenFailureStreaks).deepEquals([1, 2, 1]);
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    scenario('resets the failure streak when the last subscriber cancels', () {
+      final probe = StubProbe((target) async => failFor(target));
+      final schedule = StubSchedule((scheduleContext) => const Duration(seconds: 5));
+
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [target],
+          probe: probe,
+          schedule: schedule,
+          checkInterval: const Duration(seconds: 5),
+        );
+        final subscription = connection.onStatusChange.listen(noopWithVal);
+
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 5));
+
+        check(schedule.seenFailureStreaks).deepEquals([1, 2]);
+
+        unawaited(subscription.cancel());
+        connection.onStatusChange.listen(noopWithVal);
+        async.flushMicrotasks();
+
+        check(schedule.seenFailureStreaks).deepEquals([1, 2, 1]);
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    scenario('checkOnce leaves the failure streak alone', () async {
+      final probe = StubProbe((target) async => failFor(target));
+      final schedule = StubSchedule((scheduleContext) => const Duration(seconds: 5));
+      final connection = InternetConnection(targets: [target], probe: probe, schedule: schedule);
+      addTearDown(connection.dispose);
+
+      await connection.checkOnce();
+      await connection.checkOnce();
+
+      check(schedule.receivedContexts).isEmpty();
     });
   });
 
