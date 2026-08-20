@@ -5,11 +5,8 @@ import '../data/const_formatters.dart';
 import 'platform/platform_card.dart';
 import 'status_badge.dart';
 
-class StatusSummary extends StatelessWidget {
-  final InternetStatus internetStatus;
-
-  const new({required this.internetStatus, super.key});
-
+class const StatusSummary({required final InternetStatus internetStatus, super.key})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
     margin: .zero,

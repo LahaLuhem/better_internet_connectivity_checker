@@ -173,11 +173,7 @@ class _AutoSwitchInfoCard extends StatelessWidget {
   );
 }
 
-class _ResultDetail extends StatelessWidget {
-  final InternetStatus result;
-
-  const new({required this.result});
-
+class const _ResultDetail({required final InternetStatus result}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => switch (result) {
     Reachable(:final responseTime) => Text(

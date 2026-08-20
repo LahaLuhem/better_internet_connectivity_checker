@@ -48,11 +48,7 @@ class OneShotView extends StatelessWidget {
   );
 }
 
-class _ResultPanel extends StatelessWidget {
-  final InternetStatus? result;
-
-  const new({required this.result});
-
+class const _ResultPanel({required final InternetStatus? result}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => switch (result) {
     null => PlatformCard(

@@ -9,15 +9,15 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 /// Gap-plugging stand-in: `platform_adaptive_widgets` exposes no `PlatformCard` (Cupertino has no `Card` to map to),
 /// so the example owns one until the base library grows it. The child supplies its own padding,
 /// exactly as a Material [Card] expects.
-class PlatformCard extends StatelessWidget {
+class const PlatformCard({
   /// Content of the card.
-  final Widget child;
+  required final Widget child,
 
   /// Outer margin. Defaults to Material [Card]'s own default on both platforms.
-  final EdgeInsetsGeometry? margin;
+  final EdgeInsetsGeometry? margin,
 
-  const new({required this.child, this.margin, super.key});
-
+  super.key,
+}) extends StatelessWidget {
   /// Mirror of Material [Card]'s default margin, applied on the Cupertino branch
   /// (the Material branch lets [Card] apply its own when [margin] is null).
   static const _defaultMargin = EdgeInsets.all(4);

@@ -76,13 +76,13 @@ class PolicyComparisonView extends StatelessWidget {
   );
 }
 
-class _PolicyCard extends StatelessWidget {
-  final String title;
-  final String blurb;
-  final InternetStatus? result;
+class const _PolicyCard({
+  required final String title,
 
-  const new({required this.title, required this.blurb, required this.result});
+  required final String blurb,
 
+  required final InternetStatus? result,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
     child: Padding(
@@ -101,11 +101,7 @@ class _PolicyCard extends StatelessWidget {
   );
 }
 
-class _ResultDetail extends StatelessWidget {
-  final InternetStatus result;
-
-  const new({required this.result});
-
+class const _ResultDetail({required final InternetStatus result}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => switch (result) {
     Reachable(:final responseTime) => Text(
