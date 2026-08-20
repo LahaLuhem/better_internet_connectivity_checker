@@ -7,43 +7,31 @@ import '../../data/values.dart';
 ///
 /// Immutable value object carrying the caller-controlled knobs (URI, timeout, headers, and the response-acceptance predicate).
 /// Reuse across instances; there's no per-call state.
-final class ProbeTarget {
+final class const ProbeTarget({
   /// The URI to probe.
   ///
   /// Ensure the endpoint disables HTTP caching (e.g. `Cache-Control: no-cache`); a cached response
   /// masks connectivity problems by short-circuiting locally. On the web the endpoint must allow
   /// CORS for the request to reach the probe.
-  final Uri uri;
+  required final Uri uri,
 
   /// Maximum time a single probe is allowed to take.
-  final Duration timeout;
+  ///
+  /// Defaults to [Values.defaultProbeTimeout] — short enough that a stalled probe doesn't dominate
+  /// the check interval, long enough for mobile-network latency.
+  final Duration timeout = Values.defaultProbeTimeout,
 
-  /// Headers attached to the outbound probe request.
-  final Map<String, String> headers;
+  /// Headers attached to the outbound probe request. Sent verbatim.
+  final Map<String, String> headers = Values.defaultProbeHeaders,
 
   /// Predicate mapping an HTTP response to a success/failure decision.
   ///
-  /// Pass your own [ResponseAcceptor] for endpoints healthy on a non-[Values.httpStatusOk] status
-  /// (e.g. an API that pings with HTTP 204).
-  final ResponseAcceptor isSuccess;
-
-  /// Creates a [ProbeTarget].
-  ///
-  /// [uri] is probed with the method the probe chooses (the built-in probe uses HEAD).
-  ///
-  /// [timeout] caps a single probe. Defaults to [Values.defaultProbeTimeout] — short enough that a
-  /// stalled probe doesn't dominate the check interval, long enough for mobile-network latency.
-  ///
-  /// [headers] are sent verbatim. Defaults to [Values.defaultProbeHeaders] (empty).
-  ///
-  /// [isSuccess] decides whether a response is healthy. Defaults to "HTTP 200 exactly"; tighten or
-  /// loosen as needed (e.g. accept any 2xx).
-  const new({
-    required this.uri,
-    this.timeout = Values.defaultProbeTimeout,
-    this.headers = Values.defaultProbeHeaders,
-    this.isSuccess = _statusIs200,
-  });
+  /// Defaults to "HTTP 200 exactly". Pass your own [ResponseAcceptor] for endpoints healthy on a
+  /// non-[Values.httpStatusOk] status (e.g. an API that pings with HTTP 204).
+  final ResponseAcceptor isSuccess = _statusIs200,
+}) {
+  /// Creates a [ProbeTarget] probed with whatever method the probe chooses (the built-in uses HEAD).
+  this;
 
   @override
   String toString() =>
