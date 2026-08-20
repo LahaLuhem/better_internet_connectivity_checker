@@ -26,24 +26,42 @@ class ScheduleComparisonView extends StatelessWidget {
               description:
                   'Two checkers share one target and one base interval. Each row '
                   'is a NextCheckScheduledEvent: the delay the schedule asked for, '
-                  'and the failure streak behind it. Flip the switch to watch both '
-                  'ladders reset.',
+                  'and the failure streak behind it. Flip reachability to watch both '
+                  'ladders reset; flip jitter to spread the backoff rungs.',
             ),
             const Gap(16),
             ValueListenableBuilder(
-              valueListenable: viewModel.isTargetReachableListenable,
-              builder: (context, isTargetReachable, _) => PlatformListTile(
+              valueListenable: viewModel.shouldProbeReachableTargetListenable,
+              builder: (context, shouldProbeReachableTarget, _) => PlatformListTile(
                 title: const Text('Probe a reachable target'),
                 subtitle: Text(
-                  isTargetReachable
+                  shouldProbeReachableTarget
                       ? 'one.one.one.one'
                       : 'this-domain-definitely-does-not-resolve.invalid',
                 ),
                 trailing: PlatformSwitch(
-                  value: isTargetReachable,
+                  value: shouldProbeReachableTarget,
                   onChanged: (value) => viewModel.onTargetReachabilityToggled(value: value),
                 ),
-                onTap: () => viewModel.onTargetReachabilityToggled(value: !isTargetReachable),
+                onTap: () =>
+                    viewModel.onTargetReachabilityToggled(value: !shouldProbeReachableTarget),
+              ),
+            ),
+            ValueListenableBuilder(
+              valueListenable: viewModel.shouldJitterListenable,
+              builder: (context, shouldJitter, _) => PlatformListTile(
+                title: const Text('Spread the delays (jitter)'),
+                subtitle: Text(
+                  shouldJitter
+                      ? 'randomizationFactor: ${ConstScheduleComparison.demoRandomizationFactor} '
+                            '(the package default)'
+                      : 'randomizationFactor: 0 (exact delays)',
+                ),
+                trailing: PlatformSwitch(
+                  value: shouldJitter,
+                  onChanged: (value) => viewModel.onJitterToggled(value: value),
+                ),
+                onTap: () => viewModel.onJitterToggled(value: !shouldJitter),
               ),
             ),
             const Gap(16),

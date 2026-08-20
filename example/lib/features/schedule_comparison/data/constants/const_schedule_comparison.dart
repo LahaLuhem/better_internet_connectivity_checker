@@ -13,6 +13,10 @@ abstract final class ConstScheduleComparison {
   /// enough to reach [maxBackoffDelay] from [baseInterval].
   static const ladderLength = 6;
 
+  /// Spread applied when the jitter switch is on. Matches the package default, so the
+  /// rows show what a caller gets without configuring anything.
+  static const demoRandomizationFactor = 0.25;
+
   /// Fails fast on DNS, which drives the failure streak without waiting out a
   /// per-target timeout.
   static final unreachableTargets = [
