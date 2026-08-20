@@ -40,13 +40,13 @@
 
 <!-- TOC end -->
 
-`better_internet_connectivity_checker` is a pure-Dart package for **robust
-internet-connectivity checking** and **actual internet reachability** detection. The goal
-is to answer "can I actually reach the public internet right now?" — distinct from "is a
-network interface up?", which is what most OS-reported connectivity signals (and most
-existing Dart / Flutter checkers) ultimately rely on. Bridges the gap where DNS resolves
-and the OS reports connected, but HTTP traffic is silently dropped — captive portals,
-transparent proxies, broken middleboxes, and LAN-only networks.
+`better_internet_connectivity_checker` is a pure-Dart package for **internet reachability**
+detection. It answers "can I actually reach the public internet right now?", which is a
+different question from "is a network interface up?". That second one is what most
+OS-reported connectivity signals, and most existing Dart and Flutter checkers, ultimately
+rely on. This covers the gap where DNS resolves and the OS reports connected but HTTP
+traffic is silently dropped: captive portals, transparent proxies, broken middleboxes,
+LAN-only networks.
 
 <p align="center">
   <img src="doc/screenshots/1-status-stream.webp" alt="Live status stream cycling Reachable(good) → Reachable(slow) → Unreachable, de-duped to fire only on real transitions" width="320">
@@ -54,27 +54,27 @@ transparent proxies, broken middleboxes, and LAN-only networks.
 
 ## What it does
 
-- Probes one or more URIs to determine *actual* internet reachability — not just "an
-  interface is up". Catches the "DNS works but no internet" / "OS says connected but
+- Probes one or more URIs to determine *actual* internet reachability, not just "an
+  interface is up". Catches the "DNS works but no internet" and "OS says connected but
   every request times out" failure modes that interface-level checks miss.
-- Distinguishes **Reachable** / **Unreachable** with an optional **good** / **slow**
-  quality classification — slow-connection detection via a single response-time
-  threshold, no extra plumbing.
+- Distinguishes **Reachable** from **Unreachable**, with an optional **good** or **slow**
+  quality classification. Slow-connection detection is one response-time threshold, no
+  extra plumbing.
 - Streams status transitions on a broadcast stream, de-duped so the same status kind is
   not re-emitted on every periodic tick.
 - Ships a default HTTP-HEAD probe with a GET fallback (`HttpProbe.head()` /
-  `HttpProbe.get()`) for endpoints that reject HEAD; the probe layer is pluggable, so
+  `HttpProbe.get()`) for endpoints that reject HEAD. The probe layer is pluggable, so
   retry decorators, alternative transports, or test stubs slot in without touching the
   rest of the package.
-- Ships **any-of-N** (default) and **all-of-N** (strict) aggregation policies; the policy
-  layer is also pluggable.
+- Ships **any-of-N** (default) and **all-of-N** (strict) aggregation policies. The policy
+  layer is pluggable too.
 - Checks at a fixed interval by default, or backs off while the connection stays down
   (`ExponentialBackoffSchedule`). The cadence layer is pluggable too, so an app can supply
   its own `CheckSchedule`.
 - Exposes an `externalRecheckTrigger` hook so callers can plug in OS-level network-change
   signals (`connectivity_plus` on Flutter is the canonical wiring) without the package
   itself taking a Flutter dependency.
-- Pure Dart — works on CLI, server, web, and Flutter with no platform channels.
+- Pure Dart, so it works on CLI, server, web, and Flutter with no platform channels.
 
 ## Installation
 
@@ -88,7 +88,7 @@ server, or on the web.
 ## Platform setup
 
 The package is pure Dart, but the underlying OS still gates outbound network access. The
-defaults probe over HTTPS only; HTTP-only probes you wire in have extra caveats on iOS
+defaults probe over HTTPS only. HTTP-only probes you wire in have extra caveats on iOS
 and macOS.
 
 Pure-Dart CLI and server-side targets need no setup. Flutter targets do:
@@ -105,10 +105,10 @@ Add `android.permission.INTERNET` to `android/app/src/main/AndroidManifest.xml`:
 ```
 
 Flutter scaffolds this permission into the **debug** and **profile** manifest variants
-(so the tooling can attach for hot reload) but **not** into `main` — the only variant
+(so the tooling can attach for hot reload) but **not** into `main`, the only variant
 included in release builds. Without the declaration above, every probe fails immediately
-with `_ClientSocketException` in single-digit milliseconds — the OS is denying the
-socket, not a real timeout — so `flutter run --release` reports unreachable while
+with `_ClientSocketException` in single-digit milliseconds. That is the OS denying the
+socket rather than a real timeout, so `flutter run --release` reports unreachable while
 `flutter run` works.
 
 ### iOS and macOS
@@ -120,7 +120,7 @@ additionally need the `com.apple.security.network.client` entitlement in
 
 ### Web
 
-Probe targets must serve `Access-Control-Allow-Origin` matching your app's origin — see
+Probe targets must serve `Access-Control-Allow-Origin` matching your app's origin. See
 [Caveats](#caveats).
 
 ## Usage
@@ -145,7 +145,7 @@ without disturbing a running checker.
 ### Pattern-matching the sealed status
 
 `InternetStatus` is a sealed class. Exhaustive `switch` is the recommended way to consume
-it — the compiler will tell you if a future variant is added.
+it, and the compiler will tell you if a future variant is added.
 
 `Reachable` carries the winning probe's `responseTime` and a `quality` of `good` or `slow`.
 `Unreachable` carries every `ProbeResult` that failed, each with its `target`, `responseTime`,
@@ -214,8 +214,8 @@ final checker = InternetConnection(
 final checker = InternetConnection(policy: const AllReachablePolicy());
 ```
 
-Recommended only with a curated probe list — any one public endpoint being down would
-flag a working connection as unreachable under the default endpoint set.
+Recommended only with a curated probe list. Under the default endpoint set, any one public
+endpoint being down would flag a working connection as unreachable.
 
 ### Controlling the check cadence
 
@@ -267,18 +267,17 @@ final checker = InternetConnection(probe: HttpProbe.get());
 The GET probe drains the response body from the wire but does not buffer it into
 memory, so a verbose endpoint does not bloat the probe's footprint. Any custom
 `isSuccess` predicate sees an empty `response.body` regardless of what the server
-returned — inspect `statusCode` and `headers` instead.
+returned, so inspect `statusCode` and `headers` instead.
 
 ### Writing a custom `ConnectivityProbe`
 
-For probes that go beyond HTTP — DNS, TCP, a private API, or a decorator wrapping
-another probe — implement `ConnectivityProbe.probe(target, {cancelSignal})`. Honour the
+For probes that go beyond HTTP (DNS, TCP, a private API, or a decorator wrapping another
+probe), implement `ConnectivityProbe.probe(target, {cancelSignal})`. Honour the
 optional `cancelSignal` whenever your transport supports cancellation: under
 `AnyReachablePolicy` it fires the moment a sibling probe succeeds, so the in-flight
 request can release its socket at the transport layer instead of waiting out the
-per-target timeout. The built-in `HttpProbe` honours it via `http.AbortableRequest`;
-probes that cannot abort simply ignore the parameter and the policy still resolves
-correctly.
+per-target timeout. The built-in `HttpProbe` honours it via `http.AbortableRequest`. Probes
+that cannot abort just ignore the parameter, and the policy still resolves correctly.
 
 `ProbeResult` deliberately carries no protocol-specific data. When a probe needs to surface
 some (an HTTP `Allow` header, say), expose it on the probe itself via a constructor callback:
@@ -287,8 +286,8 @@ worked example.
 
 ### Wiring `connectivity_plus` (Flutter)
 
-The package does not depend on `connectivity_plus` — it accepts any `Stream<void>` as an
-external trigger. Flutter apps can wire it up themselves:
+The package does not depend on `connectivity_plus`. It accepts any `Stream<void>` as an
+external trigger, so Flutter apps can wire it up themselves:
 
 ```dart
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -301,7 +300,7 @@ final checker = InternetConnection(
 
 ### Wiring `retry` (reusing its backoff maths)
 
-The package does not depend on [`retry`](https://pub.dev/packages/retry); the built-in
+The package does not depend on [`retry`](https://pub.dev/packages/retry). The built-in
 `ExponentialBackoffSchedule` covers the same ground with no extra dependency. Reach for this only
 when an app already expresses its backoff policy as a `RetryOptions` and wants one source of truth:
 
@@ -337,14 +336,14 @@ final class RetryOptionsSchedule implements CheckSchedule {
 ### Logging and observability
 
 `InternetConnection.events` is a `Stream<ConnectivityEvent>` that fans out every
-lifecycle moment — check completions, status emissions, external triggers, configuration
-changes, and dispose — as typed, pattern-matchable values. Subscribe directly for
+lifecycle moment (check completions, status emissions, external triggers, configuration
+changes, dispose) as typed, pattern-matchable values. Subscribe directly for
 reactive pipelines, or adapt a `ConnectivityObserver` onto it via the top-level
 `attachObserver` for the classic per-method-callback style.
 
 `PrintingConnectivityObserver` is a ready-to-use default that forwards each event through
-`dart:developer`'s `log()` (integrates with Flutter DevTools' logging view; in plain Dart
-it surfaces via stdout):
+`dart:developer`'s `log()`. That integrates with Flutter DevTools' logging view, and in plain
+Dart it surfaces via stdout:
 
 ```dart
 final checker = InternetConnection();
@@ -390,17 +389,17 @@ attachObserver(checker.events, _AppConnectivityObserver(appLogger));
 Keep overrides fast. Dispatch is microtask-deferred, so a throw inside one cannot disturb
 the scheduler, but a Dart isolate is single-threaded and blocking work in an override still
 stalls every timer on it. Debug builds time each callback and warn once per event type when
-one overruns 16 ms; release and profile builds strip the watchdog. Full threading notes are
+one overruns 16 ms. Release and profile builds strip the watchdog. Full threading notes are
 on `ConnectivityObserver`'s dartdoc.
 
-Runnable examples live in [`example/`](./example/) — a Flutter demo app exercising
-one-shot checks, status streaming, both aggregation policies, slow-connection detection,
-and a custom probe.
+Runnable examples live in [`example/`](./example/), a Flutter demo app exercising one-shot
+checks, status streaming, both aggregation policies, slow-connection detection, and a custom
+probe.
 
 ## When to reach for this
 
 The Dart / Flutter ecosystem already has reachability and connectivity packages. They
-each answer a slightly different question — and the right pick depends on the question
+each answer a slightly different question, and the right pick depends on the question
 *you* are trying to answer.
 
 **Reach for this package when** your problem looks like one of these:
@@ -408,10 +407,10 @@ each answer a slightly different question — and the right pick depends on the 
 - The OS reports a Wi-Fi or cellular connection, but the app times out on every request.
 - A captive portal (hotel, airport, conference Wi-Fi) is intercepting traffic, and your
   app needs to know it's not really online.
-- You need to distinguish "slow but reachable" from "offline" — for a slow-connection
-  UI banner, a quality-aware retry policy, or analytics on degraded connections.
-- You need diagnostic output on a failed check — *which* probe failed, *what* error,
-  *how long* it took — not a bare `false`.
+- You need to distinguish "slow but reachable" from "offline", for a slow-connection UI
+  banner, a quality-aware retry policy, or analytics on degraded connections.
+- You need diagnostic output on a failed check. *Which* probe failed, *what* error, *how
+  long* it took, not a bare `false`.
 - You're on a non-Flutter Dart target (CLI, server, web) and need internet-reachability
   detection without a Flutter plugin in the dep tree.
 
@@ -419,48 +418,47 @@ each answer a slightly different question — and the right pick depends on the 
 
 - [`connectivity_plus`](https://pub.dev/packages/connectivity_plus) answers a *different*
   question: "what network type is the OS on (Wi-Fi / cellular / none)?". It does not
-  probe actual reachability — a captive portal will register as a healthy Wi-Fi
-  connection. The two packages are complementary: wire `connectivity_plus` as this
-  package's `externalRecheckTrigger` to get instant rechecks on OS network-state flips
-  (canonical wiring in [Usage](#wiring-connectivity_plus-flutter)).
+  probe actual reachability, so a captive portal registers as a healthy Wi-Fi connection.
+  The two packages are complementary: wire `connectivity_plus` as this package's
+  `externalRecheckTrigger` to get instant rechecks on OS network-state flips (canonical
+  wiring in [Usage](#wiring-connectivity_plus-flutter)).
 - [`internet_connection_checker`](https://pub.dev/packages/internet_connection_checker)
   and
   [`internet_connection_checker_plus`](https://pub.dev/packages/internet_connection_checker_plus)
   answer the *same* question this package does. They're battle-tested and a fine default
-  if you don't need slow-connection classification (missing from the `_plus` fork — see
+  if you don't need slow-connection classification (missing from the `_plus` fork, see
   [issue #71](https://github.com/OutdatedGuy/internet_connection_checker_plus/issues/71)),
-  pluggable aggregation policies, or per-probe failure diagnostics. This package layers
-  a probe / policy / scheduler architecture under the same headline feature set —
-  worth the extra surface area if you need the seams; overkill if you don't.
+  pluggable aggregation policies, or per-probe failure diagnostics. This package layers a
+  probe, policy and schedule architecture under the same headline feature set. Worth the
+  extra surface area if you need the seams, overkill if you don't.
 
-**Don't reach for this if** you only need "what network type am I on?" — use
+**Don't reach for this if** you only need "what network type am I on?". Use
 `connectivity_plus` directly and skip the per-check probe cost.
 
 ## Performance & memory
 
 What the default configuration buys you, with no further configuration:
 
-- **Race-and-cancel probes** — `AnyReachablePolicy` returns on the first success and
-  aborts in-flight siblings at the transport layer (sockets release immediately, not at
-  timeout-drain). See
+- **Race-and-cancel probes.** `AnyReachablePolicy` returns on the first success and aborts
+  in-flight siblings at the transport layer, so sockets release immediately rather than at
+  timeout-drain. See
   [`APPENDIX.md`](./APPENDIX.md#probe-cancellation-via-http-abortable).
-- **Shared `http.Client`** — connection pooling and TLS-session reuse across periodic
-  ticks, instead of a fresh socket per probe.
-- **HTTP HEAD, not GET** — no response body on the wire. See
+- **Shared `http.Client`.** Connection pooling and TLS-session reuse across periodic ticks,
+  instead of a fresh socket per probe.
+- **HTTP HEAD, not GET.** No response body on the wire. See
   [`APPENDIX.md`](./APPENDIX.md#why-http-head-default-probe)
   for why HEAD over a cheaper DNS / TCP probe.
-- **Listener-gated periodic timer** — auto-suspends when nothing is listening to
+- **Listener-gated periodic timer.** Auto-suspends when nothing is listening to
   `onStatusChange`, auto-resumes on first re-subscription. No CPU or network spend while
   the stream has no consumers.
-- **Status-kind de-duping** — two consecutive `Reachable(quality: good)` events do not
-  re-emit, so downstream `setState` / listener rebuilds fire only on real transitions.
+- **Status-kind de-duping.** Two consecutive `Reachable(quality: good)` events do not
+  re-emit, so downstream `setState` and listener rebuilds fire only on real transitions.
   Quality flips and reachability flips do re-emit.
-- **`const` defaults and `ConstUri` lazy parsing** — the default target list and its URIs
-  are compile-time constants shared process-wide; constructing
-  `InternetConnection()` with no `targets` argument allocates nothing for the target
-  list.
-- **Nothing accumulates** — an `Unreachable`'s `failedProbes` is bounded by the target
-  count, and no status history, rolling window, or per-probe cache is kept anywhere.
+- **`const` defaults and `ConstUri` lazy parsing.** The default target list and its URIs are
+  compile-time constants shared process-wide, so `InternetConnection()` with no `targets`
+  argument allocates nothing for the target list.
+- **Nothing accumulates.** An `Unreachable`'s `failedProbes` is bounded by the target count,
+  and no status history, rolling window, or per-probe cache is kept anywhere.
 
 Memory footprint per `InternetConnection` is well under 1 KB at steady state.
 
@@ -468,16 +466,16 @@ Memory footprint per `InternetConnection` is well under 1 KB at steady state.
 
 Empirical backing for the perf claims above lives in
 [`benchmark/`](https://github.com/LahaLuhem/better_internet_connectivity_checker/tree/main/benchmark)
-— a reproducible harness of AOT-compiled scenarios + micro-benches, orchestrated by a
-Python runner that aggregates with Mann-Whitney U significance tests. The committed snapshot lives in
-[`benchmark/reports/SUMMARY.md`](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/benchmark/reports/SUMMARY.md);
-methodology and reproduction steps are in
+, a reproducible harness of AOT-compiled scenarios and micro-benches, orchestrated by a
+Python runner that aggregates with Mann-Whitney U significance tests. The committed snapshot is in
+[`benchmark/reports/SUMMARY.md`](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/benchmark/reports/SUMMARY.md).
+Methodology and reproduction steps are in
 [`benchmark/README.md`](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/benchmark/README.md).
 
 Numbers and charts below are the maintainer's machine snapshot (Apple Silicon macOS,
-Dart SDK 3.13.0, N=30). They are sanity-check ballparks, not a performance contract —
-CPU, GC, OS scheduler, and thermal state vary across machines, so your absolute
-numbers WILL differ. Capture your own local baseline before claiming a regression
+Dart SDK 3.13.0, N=30). They are sanity-check ballparks, not a performance contract. CPU,
+GC, OS scheduler, and thermal state vary across machines, so your absolute numbers WILL
+differ. Capture your own local baseline before claiming a regression
 or an improvement from a code change.
 
 ![Worst-case event-loop stall per scenario, log y-axis](https://raw.githubusercontent.com/LahaLuhem/better_internet_connectivity_checker/main/benchmark/reports/headline_max_stall.png)
@@ -492,16 +490,16 @@ or an improvement from a code change.
 
 Deliberate non-features that may affect how you use the package:
 
-- **Concurrent `checkOnce()` calls are not coalesced.** Each spins a full probe fan-out;
-  there is no built-in single-flight. If your app issues many simultaneous reachability
+- **Concurrent `checkOnce()` calls are not coalesced.** Each spins a full probe fan-out,
+  with no built-in single-flight. If your app issues many simultaneous reachability
   checks, wrap your own debouncer or share one `Future`. Rationale in
   [`APPENDIX.md`](./APPENDIX.md#why-no-checkonce-coalescing).
 - **`Unreachable.failedProbes` retains caught `Exception` objects** on each
   `ProbeResult.error`. If those exceptions chain heavy transport state (TLS context,
   request bodies, custom error payloads), an `Unreachable` reference can keep that memory
-  alive. Drop the reference — or extract only what you need from it — once you're done.
+  alive. Drop the reference once you're done, or extract only what you need from it.
 - **HTTP caching on probe endpoints will mask outages.** Use endpoints that respond with
-  `Cache-Control: no-cache` — the defaults do. On the web platform, probe targets must
+  `Cache-Control: no-cache`, as the defaults do. On the web platform, probe targets must
   also allow CORS for the request to reach the probe.
 - **Backing off delays recovery, by design.** While `ExponentialBackoffSchedule` is waiting,
   a connection that comes back is not noticed until the next check, so an aggressive `maxDelay`
@@ -510,32 +508,30 @@ Deliberate non-features that may affect how you use the package:
   default schedule has no such gap. The `backoff_recovery` benchmark puts numbers on the
   trade: median 55.6 % fewer probes during an outage, for recovery noticed in ~1.3 s
   instead of ~0.3 s.
-- **`AllReachablePolicy` is brittle with arbitrary public endpoints** — any one being
-  briefly unavailable flags a working connection as offline. Use it only with a curated
-  probe list (e.g. enterprise internal endpoints); see the policy's dartdoc.
+- **`AllReachablePolicy` is brittle with arbitrary public endpoints.** Any one being briefly
+  unavailable flags a working connection as offline. Use it only with a curated probe list,
+  such as enterprise internal endpoints. See the policy's dartdoc.
 
 ## Roadmap
 
 Features deferred today but inside the design envelope (no API break required to add):
 
-- **Single-flight `checkOnce()` coalescing** — share one in-flight `Future` across
+- **Single-flight `checkOnce()` coalescing.** Share one in-flight `Future` across
   concurrent callers. Will land if real-world demand surfaces. See
   [`APPENDIX.md`](./APPENDIX.md#why-no-checkonce-coalescing).
-- **Optional status-history buffer for diagnostics** — a rolling window of recent
+- **Optional status-history buffer for diagnostics.** A rolling window of recent
   transitions, opt-in with a buffer-size knob. This is the one genuine
-  memory-vs-observability trade-off in the package; until it lands, the package keeps
-  no history.
-- **DNS / TCP probes as custom `ConnectivityProbe` implementations** — faster but lose
-  captive-portal / TLS / transparent-proxy detection. Out of scope as defaults; valid as
-  user-supplied custom probes against the existing `ConnectivityProbe` seam. See
+  memory-versus-observability trade-off in the package. Until it lands, no history is kept.
+- **DNS and TCP probes as custom `ConnectivityProbe` implementations.** Faster, but they
+  lose captive-portal, TLS and transparent-proxy detection. Out of scope as defaults, fine
+  as user-supplied probes against the existing `ConnectivityProbe` seam. See
   [`APPENDIX.md`](./APPENDIX.md#why-http-head-default-probe).
 
 Not on the roadmap (deliberate non-features):
 
-- **No performance-preset enum or perf-vs-memory slider.** The orthogonal knobs
+- **No performance-preset enum or perf-versus-memory slider.** The orthogonal knobs
   (`checkInterval`, `targets`, `policy`, `probe`, `schedule`) already control the real
-  trade-offs;
-  collapsing them onto one slider loses information. Rationale in
+  trade-offs, and collapsing them onto one slider loses information. Rationale in
   [`APPENDIX.md`](./APPENDIX.md#why-no-perf-preset).
 
 ## Testing
