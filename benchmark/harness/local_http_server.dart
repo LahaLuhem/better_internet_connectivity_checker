@@ -1,6 +1,14 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:minted_network/minted_network.dart';
+
+/// Loopback the server binds to and hands back in [LocalHttpServer.baseUri].
+///
+/// Parsed once so the literal is validated and does not appear twice, at the bind call and again
+/// in the URI. The bang is the `int.parse('42')` case: an author-controlled literal.
+final _loopback = IpAddress.tryParse('127.0.0.1')!;
+
 /// A configurable HTTP server on `127.0.0.1` for scenarios needing a real but deterministic transport —
 /// exercises the `HttpProbe` path end-to-end without the noise of DNS, TLS, packet loss, or NAT.
 /// Binds to port 0 (OS picks a free port); read [boundPort] after [start].
@@ -21,16 +29,19 @@ final class LocalHttpServer {
   var _requestCount = 0;
 
   /// The port the server is listening on. Throws if accessed before [start].
-  int get boundPort {
-    final server = _server;
-    if (server == null) throw StateError('LocalHttpServer.start() not yet awaited');
+  ///
+  /// The `-1` stands in for "not bound yet", which [Port.tryFrom] rejects along with anything else
+  /// outside the RFC 6335 band, so one branch covers both.
+  Port get boundPort {
+    final port = Port.tryFrom(_server?.port ?? -1);
+    if (port == null) throw StateError('LocalHttpServer.start() not yet awaited');
 
-    return server.port;
+    return port;
   }
 
   /// The base URI clients should target — `http://127.0.0.1:<port>`.
   /// Throws if accessed before [start].
-  Uri get baseUri => Uri.parse('http://127.0.0.1:$boundPort');
+  Uri get baseUri => Uri.http('${_loopback.value}:${boundPort.value}');
 
   /// Total HTTP requests received since [start]. Reset on [stop].
   int get requestCount => _requestCount;
@@ -38,7 +49,7 @@ final class LocalHttpServer {
   Future<void> start() async {
     if (_server != null) throw StateError('already started');
     _requestCount = 0;
-    _server = await HttpServer.bind('127.0.0.1', 0);
+    _server = await HttpServer.bind(_loopback.value, 0);
     unawaited(_serve());
   }
 
