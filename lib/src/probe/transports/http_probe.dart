@@ -24,9 +24,8 @@ import '../models/probe_target.dart';
 /// expires or the policy's `cancelSignal` fires (e.g. a sibling wins under `AnyReachablePolicy`).
 /// Clients honouring [http.Abortable] — native `IOClient`, web `BrowserClient` — abort at the
 /// transport layer; those that don't (notably `MockClient`) fall through to normal completion.
-final class HttpProbe implements ConnectivityProbe {
-  final String _method;
-  final http.Client _client;
+final class HttpProbe._(final String _method, http.Client? client) implements ConnectivityProbe {
+  final http.Client _client = client ?? http.Client();
 
   /// Creates an [HttpProbe] that issues HTTP HEAD requests.
   new head({http.Client? client}) : this._('HEAD', client);
@@ -34,8 +33,6 @@ final class HttpProbe implements ConnectivityProbe {
   /// Creates an [HttpProbe] that issues HTTP GET requests. The response body is drained from the wire
   /// but not loaded into memory.
   new get({http.Client? client}) : this._('GET', client);
-
-  new _(this._method, http.Client? client) : _client = client ?? http.Client();
 
   @override
   Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) async {
