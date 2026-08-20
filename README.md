@@ -26,6 +26,7 @@
     * [Falling back to GET](#falling-back-to-get)
     * [Writing a custom `ConnectivityProbe`](#writing-a-custom-connectivityprobe)
     * [Wiring `connectivity_plus` (Flutter)](#wiring-connectivity_plus-flutter)
+    * [Wiring `retry` (reusing its backoff maths)](#wiring-retry-reusing-its-backoff-maths)
 - [When to reach for this](#when-to-reach-for-this)
 - [Performance & memory](#performance--memory)
     * [Benchmarks](#benchmarks)
@@ -199,27 +200,20 @@ final checker = InternetConnection(
 ```
 
 `checkInterval` is the base the ladder grows from. The first failure retries at the base and
-growth starts from the second, so the above runs 10s, 10s, 20s, 40s, 80s, and on to the
-5-minute cap. Any `Reachable` result resets it, and so does an `externalRecheckTrigger` event.
+growth starts from the second, so the above runs nominally 10s, 10s, 20s, 40s, 80s, and on to
+the 5-minute cap. Any `Reachable` result resets it, and so does an `externalRecheckTrigger` event.
+
+Each delay is spread ±25 % by default (`randomizationFactor`), so a fleet that dropped together
+does not return in lockstep. `maxDelay` stays a hard ceiling and the floor moves with the factor,
+so nothing polls faster than `checkInterval * (1 - randomizationFactor)`. Set `0` for exact delays.
 
 `NextCheckScheduledEvent` on [`events`](#logging-and-observability) reports the delay the
 schedule picked plus the failure streak behind it, which is the quickest way to see why a
 checker has gone quiet.
 
-Supply your own cadence by implementing `CheckSchedule`. Already using
-[`retry`](https://pub.dev/packages/retry)? Hand it the streak:
-
-```dart
-final class RetryOptionsSchedule implements CheckSchedule {
-  final RetryOptions options;
-
-  const RetryOptionsSchedule(this.options);
-
-  @override
-  Duration nextDelay(ScheduleContext scheduleContext) =>
-      options.delay(scheduleContext.consecutiveFailures);
-}
-```
+Supply your own cadence by implementing `CheckSchedule`. If you already model backoff with
+[`retry`](https://pub.dev/packages/retry) elsewhere, see
+[Wiring `retry`](#wiring-retry-reusing-its-backoff-maths).
 
 ### Injecting a custom `http.Client`
 
@@ -276,6 +270,41 @@ final checker = InternetConnection(
     Connectivity().onConnectivityChanged.map(noopWithVal),
 );
 ```
+
+### Wiring `retry` (reusing its backoff maths)
+
+The package does not depend on [`retry`](https://pub.dev/packages/retry); the built-in
+`ExponentialBackoffSchedule` covers the same ground with no extra dependency. Reach for this only
+when an app already expresses its backoff policy as a `RetryOptions` and wants one source of truth:
+
+```dart
+import 'package:retry/retry.dart';
+
+final class RetryOptionsSchedule implements CheckSchedule {
+  final Duration maxDelay;
+
+  const RetryOptionsSchedule({required this.maxDelay});
+
+  @override
+  Duration nextDelay(ScheduleContext scheduleContext) {
+    // `delay(0)` is `Duration.zero`, which would spin the scheduler.
+    if (scheduleContext.consecutiveFailures == 0) return scheduleContext.baseInterval;
+
+    // Rebuilt per call: `delayFactor` is fixed at construction, so a `RetryOptions` held as a
+    // field would ignore a `checkInterval` reassigned at runtime. Half the base makes
+    // `delay(streak)` match this package's ladder.
+    final options = RetryOptions(
+      delayFactor: scheduleContext.baseInterval ~/ 2,
+      maxDelay: maxDelay,
+    );
+
+    return options.delay(scheduleContext.consecutiveFailures);
+  }
+}
+```
+
+`RetryOptions` brings its own ±25 % jitter, but has no multiplier knob (growth is hardcoded at
+`2^n`), and its `maxAttempts` / `retry()` go unused since a monitor never stops polling.
 
 ### Logging and observability
 
@@ -479,10 +508,6 @@ Features deferred today but inside the design envelope (no API break required to
   transitions, opt-in with a buffer-size knob. This is the one genuine
   memory-vs-observability trade-off in the package; until it lands, the package keeps
   no history.
-- **Jitter on the built-in backoff schedule** — spreads retries so a fleet that dropped
-  together does not come back in lockstep. Deferred because `Random()` is not a constant
-  expression, and every built-in strategy here is `const`-constructible. Tracked in
-  [issue #25](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues/25).
 - **DNS / TCP probes as custom `ConnectivityProbe` implementations** — faster but lose
   captive-portal / TLS / transparent-proxy detection. Out of scope as defaults; valid as
   user-supplied custom probes against the existing `ConnectivityProbe` seam. See

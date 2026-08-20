@@ -131,9 +131,14 @@ anchor stable or grep-and-update every caller.
   floored at exponent zero, so one failure retries at the base and growth starts at the second. A
   single dropped check is usually noise, and paying a doubled delay for it is worse than paying
   for one extra probe.
-- **No jitter yet.** `Random()` is not a constant expression, and every built-in strategy here is
-  `const`-constructible, so jitter costs either the convention or a deterministic-source seam nobody
-  has asked for. Tracked separately in issue #25.
+- **Jitter is on by default, at ±25 %.** `Random()` is not a constant expression, but a tear-off of
+  a top-level function is, so the default `JitterSource` is one. That keeps the strategy
+  `const`-constructible and makes the spread testable by exact value, which is the seam
+  `package:retry` lacks.
+- **The jitter floor moves with the factor**, sitting at `checkInterval * (1 - randomizationFactor)`
+  rather than at `checkInterval`. Clamping a spread base cadence back up would pin half the draws to
+  one value. It is also why the factor must stay below 1: at 1 the lowest draw reaches zero and
+  busy-loops the scheduler.
 
 Two implementation facts worth not rediscovering:
 

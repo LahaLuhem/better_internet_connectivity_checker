@@ -23,7 +23,10 @@ void main() {
           targets: [target],
           probe: probe,
           checkInterval: const Duration(seconds: 4),
-          schedule: const ExponentialBackoffSchedule(maxDelay: Duration(minutes: 1)),
+          schedule: const ExponentialBackoffSchedule(
+            maxDelay: Duration(minutes: 1),
+            randomizationFactor: 0,
+          ),
         );
         final events = <ConnectivityEvent>[];
         connection.events.listen(events.add);
