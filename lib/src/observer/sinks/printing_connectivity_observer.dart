@@ -17,7 +17,11 @@ import '../connectivity_observer.dart';
 /// Callers wanting a structured sink should subclass [ConnectivityObserver] directly.
 ///
 /// {@macro connectivity_observer_threading}
-final class PrintingConnectivityObserver extends ConnectivityObserver {
+final class const PrintingConnectivityObserver({
+  /// Forwarded to [developer.log]'s `name:` — the DevTools source channel, letting consumers
+  /// filter this package's records from their own.
+  final String _name = _defaultName,
+}) extends ConnectivityObserver {
   /// Default logger name used for every emitted record.
   static const _defaultName = 'better_internet_connectivity_checker';
 
@@ -25,13 +29,8 @@ final class PrintingConnectivityObserver extends ConnectivityObserver {
   /// so consumers piping through `package:logging` see the expected severity.
   static const _severeLevel = 900;
 
-  final String _name;
-
   /// Creates a [PrintingConnectivityObserver].
-  ///
-  /// [_name] is forwarded to [developer.log]'s `name:` — the DevTools source channel, letting consumers
-  /// filter this package's records from their own.
-  const new({this._name = _defaultName});
+  this;
 
   @override
   void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) =>
