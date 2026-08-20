@@ -4,15 +4,15 @@ part of '../connectivity_event.dart';
 ///
 /// The connection swallows the error (the trigger is best-effort and must not disturb the status stream's listeners),
 /// so this event is a subscriber's only signal that the trigger failed.
-final class ExternalTriggerErrorEvent extends ConnectivityEvent {
+final class const ExternalTriggerErrorEvent(
   /// The error raised by the external-trigger stream.
-  final Object error;
+  final Object error,
 
   /// The stack trace associated with [error].
-  final StackTrace stackTrace;
-
+  final StackTrace stackTrace,
+) extends ConnectivityEvent {
   /// Creates an external-trigger-error event carrying [error] and [stackTrace].
-  const new(this.error, this.stackTrace);
+  this;
 
   // Debug-only toString delegation; excluded from coverage.
   // coverage:ignore-start
