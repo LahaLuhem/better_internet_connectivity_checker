@@ -1,18 +1,18 @@
 part of '../internet_status.dart';
 
 /// Status indicating the active aggregation policy considers the internet reachable.
-final class Reachable extends InternetStatus {
+final class const Reachable({
   /// Time spent on the probe whose result drove this status.
   ///
   /// The winning probe's time under any-reachable; the slowest successful probe's under all-reachable,
   /// where the slowest dictates user-perceived latency and thus the [quality].
-  final Duration responseTime;
+  required final Duration responseTime,
 
   /// Whether the connection counts as slow under the active threshold.
-  final ConnectionQuality quality;
-
+  required final ConnectionQuality quality,
+}) extends InternetStatus {
   /// Creates a [Reachable] with the probe-derived [responseTime] and pre-computed [quality].
-  const new({required this.responseTime, required this.quality});
+  this;
 
   /// Convenience constructor that classifies [responseTime] against [slowThreshold].
   ///
