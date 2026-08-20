@@ -19,27 +19,27 @@ import 'events/connectivity_event.dart';
 /// Defaults to [developer.log] under the package's logger name
 /// (same channel as `PrintingConnectivityObserver`, `avoid_print`-compliant, DevTools-filterable).
 /// `logSink` is injectable as a test seam, since `developer.log` has none.
-final class SlowCallbackWatchdog {
+final class SlowCallbackWatchdog({
+  /// Names the offending subclass in the warning.
+  required final Type _observerType,
+
+  /// The per-callback budget.
+  required final Duration _threshold,
+
+  /// Overrides the [developer.log] default (a test seam, not a consumer knob).
+  void Function(String message)? logSink,
+}) {
   /// `package:logging`'s `Level.WARNING` — a performance smell, not an error, so below the
   /// trigger-error records' severity.
   static const _warningLevel = 900;
 
   static const _loggerName = 'better_internet_connectivity_checker';
 
-  final Type _observerType;
-  final Duration _threshold;
-  final void Function(String message) _logSink;
+  final void Function(String message) _logSink = logSink ?? _logToDeveloper;
   final _warnedEventTypes = <Type>{};
 
   /// Creates a watchdog for one observer attachment.
-  ///
-  /// [_observerType] names the offending subclass in the warning; [_threshold] is the per-callback budget.
-  /// [logSink] overrides the [developer.log] default (a test seam, not a consumer knob).
-  new({
-    required this._observerType,
-    required this._threshold,
-    void Function(String message)? logSink,
-  }) : _logSink = logSink ?? _logToDeveloper;
+  this;
 
   /// Runs [dispatch] for [event], timing it against the threshold.
   ///
