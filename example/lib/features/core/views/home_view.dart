@@ -91,19 +91,15 @@ class HomeView extends StatelessWidget {
   );
 }
 
-class _DemoTile extends StatelessWidget {
-  final Widget icon;
-  final String title;
-  final String description;
-  final WidgetBuilder pageBuilder;
+class const _DemoTile({
+  required final Widget icon,
 
-  const new({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.pageBuilder,
-  });
+  required final String title,
 
+  required final String description,
+
+  required final WidgetBuilder pageBuilder,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
     margin: const .symmetric(horizontal: 16, vertical: 4),

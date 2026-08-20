@@ -94,13 +94,13 @@ class ScheduleComparisonView extends StatelessWidget {
   );
 }
 
-class _LadderCard extends StatelessWidget {
-  final String title;
-  final String blurb;
-  final List<ScheduledRung> rungs;
+class const _LadderCard({
+  required final String title,
 
-  const new({required this.title, required this.blurb, required this.rungs});
+  required final String blurb,
 
+  required final List<ScheduledRung> rungs,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
     child: Padding(
@@ -121,11 +121,7 @@ class _LadderCard extends StatelessWidget {
   );
 }
 
-class _RungRow extends StatelessWidget {
-  final ScheduledRung rung;
-
-  const new({required this.rung});
-
+class const _RungRow({required final ScheduledRung rung}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     spacing: 8,

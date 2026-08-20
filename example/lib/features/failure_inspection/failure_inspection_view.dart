@@ -50,11 +50,7 @@ class FailureInspectionView extends StatelessWidget {
   );
 }
 
-class _ResultPanel extends StatelessWidget {
-  final InternetStatus result;
-
-  const new({required this.result});
-
+class const _ResultPanel({required final InternetStatus result}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => switch (result) {
     Reachable() => PlatformCard(
@@ -83,11 +79,7 @@ class _ResultPanel extends StatelessWidget {
   };
 }
 
-class _FailedProbeRow extends StatelessWidget {
-  final ProbeResult probe;
-
-  const new({required this.probe});
-
+class const _FailedProbeRow({required final ProbeResult probe}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const .symmetric(vertical: 4),

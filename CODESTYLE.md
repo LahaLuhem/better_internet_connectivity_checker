@@ -226,8 +226,11 @@ Five rules the analyzer enforces:
   analyses with `--fatal-infos`, so it blocks. The mirror case, a declared field nothing reads, is
   caught by `unused_field_from_primary_constructor` at warning level.
 - No initializer list in the header. Asserts go on the in-body `this :` part.
-- `public_member_api_docs` wants a doc on the constructor, so a public header-form class needs a
-  `this;` line to hang it on.
+- **The in-body `this` part earns its place or goes.** It exists to carry a doc or an initializer
+  list, and `unnecessary_primary_constructor_body` flags a bare `this;` that carries neither. In
+  `lib/` a public class needs one anyway, because `public_member_api_docs` wants a doc on the
+  constructor. Under a config without that lint (`example/`, say) a field-only class is just its
+  header, with no body preamble at all.
 - A `const` primary constructor cannot have a `{}` body. Semicolon only.
 
 Params are in scope in field declarations, so a field derived from one initialises there instead of

@@ -8,11 +8,8 @@ import 'package:platform_icons/platform_icons.dart';
 import '../data/constants/core_constants.dart';
 import 'platform/platform_chip.dart';
 
-class StatusBadge extends StatelessWidget {
-  final InternetStatus? internetStatus;
-
-  const new({required this.internetStatus, super.key});
-
+class const StatusBadge({required final InternetStatus? internetStatus, super.key})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (internetStatus) {
