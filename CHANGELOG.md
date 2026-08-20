@@ -4,13 +4,14 @@
 - \[#5\] sealed `ConnectivityEvent` hierarchy + public `Stream<ConnectivityEvent>` on `InternetConnection.events` for reactive lifecycle observation
 - \[#5\] `attachObserver(events, observer)` top-level helper to wire `ConnectivityObserver` onto the events stream
 - Add a debug-mode watchdog that warns when an observer callback blocks the event loop
-- Add a CheckSchedule seam with exponential backoff (Breaking: adds NextCheckScheduledEvent)
-- Add jitter to ExponentialBackoffSchedule, on by default at ±25 %
+- \[#24\] Add a CheckSchedule seam with exponential backoff (Breaking: adds NextCheckScheduledEvent)
+- \[#25\] Add jitter to ExponentialBackoffSchedule, on by default at ±25 %
 
 ### Changed
-- Use new linter mega repo
+- \[#26\] Use new linter mega repo
 - Bumped up Dart SDK floor to ^3.12.0
 - \[#0\] Bumped SDK to ^3.13
+- \[#26\] Move existing classes to header-form primary constructors
 
 ### Fixed
 - post merge fix
