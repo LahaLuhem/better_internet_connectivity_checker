@@ -51,6 +51,7 @@ SCENARIO_DURATIONS: Final[dict[str, int]] = {
     "trigger_storm": 5,  # 500 triggers at 100/sec
     "many_subscribers": 3,  # x3 sub-Ns inside the binary = ~9s actual per iter
     "long_running": 30,  # smoke; raise to 3600 for a full hour bake
+    "backoff_recovery": 14,  # 2 arms x (4.2s outage + 2.8s recovery window)
     # Micros - value is irrelevant (ignored by the binary), but listed so
     # the orchestrator passes _something_.
     "check_once_overhead": 0,

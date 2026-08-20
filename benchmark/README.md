@@ -231,9 +231,9 @@ uv run python run.py compare \
   ../results-local/after/aggregated.json
 ```
 
-### Long-running captures (N=30 full sweep, ~40 min)
+### Long-running captures (N=30 full sweep, ~45 min)
 
-A full N=30 sweep on this hardware (Apple Silicon macOS) takes ~37–40
+A full N=30 sweep on this hardware (Apple Silicon macOS) takes ~45–50
 minutes. Two operational notes for long runs:
 
 ```bash
@@ -307,33 +307,38 @@ to a local path (e.g. `../results-local/my-run/charts/`) and leave the
 committed set alone.
 
 <details>
-<summary><strong>Reference run — 2026-07-24, Apple Silicon macOS, Dart 3.12.2, N=30</strong> (maintainer's machine; your numbers WILL differ)</summary>
+<summary><strong>Reference run — 2026-08-20, Apple Silicon macOS, Dart 3.13.0, N=30</strong> (maintainer's machine; your numbers WILL differ)</summary>
 
 These figures are a sanity check, not a target. "Am I in the right ballpark?"
 not "did I beat the baseline?". Treat them as approximate.
 
 | Scenario / N | Metric | Median |
 |---|---|---|
-| **`slow_observer`** | **`max_stall_microseconds`** | **116,174 µs (~116 ms)** |
-| `slow_observer` | `blocked_duty_ratio` | 57.4 % |
-| `quiet_app` | `max_stall_microseconds` | 5,066 µs (~5 ms) |
-| `quiet_app` | `dispose_microseconds` | 6.0 µs |
-| `check_once_overhead` (micro) | `microseconds_per_check` | 0.43 µs |
+| **`slow_observer`** | **`max_stall_microseconds`** | **110,298 µs (~110 ms)** |
+| `slow_observer` | `blocked_duty_ratio` | 55.0 % |
+| `quiet_app` | `max_stall_microseconds` | 5,614 µs (~6 ms) |
+| `quiet_app` | `dispose_microseconds` | 4.5 µs |
+| `check_once_overhead` (micro) | `microseconds_per_check` | 0.39 µs |
 | `observer_dispatch` (micro) | `microseconds_per_dispatch` | 0.01 µs |
-| `status_emission` N=1 (micro) | `microseconds_per_emission` | 0.14 µs |
+| `status_emission` N=1 (micro) | `microseconds_per_emission` | 0.13 µs |
 | `status_emission` N=10 (micro) | `microseconds_per_emission` | 1.00 µs |
-| `status_emission` N=25 (micro) | `microseconds_per_emission` | 2.31 µs |
+| `status_emission` N=25 (micro) | `microseconds_per_emission` | 2.30 µs |
 | `status_emission` N=50 (micro) | `microseconds_per_emission` | 4.47 µs |
 | `status_emission` N=100 (micro) | `microseconds_per_emission` | 8.96 µs |
 | `trigger_storm` | `emissions_per_trigger` | 0.002 |
-| `many_subscribers` N=100 | `max_stall_microseconds` | 3,185 µs (~3 ms) |
+| `many_subscribers` N=100 | `max_stall_microseconds` | 4,336 µs (~4 ms) |
 | `flapping_network` (9 s) | `emission_count` | 3 (2 reachable + 1 unreachable) |
-| `long_running` (30 s smoke) | `rss_growth_bytes_per_minute` | ~0.5 MB/min |
+| `long_running` (30 s smoke) | `rss_growth_bytes_per_minute` | ~0.44 MB/min |
+| `backoff_recovery` | `fixed_outage_request_count` | 9 probes |
+| `backoff_recovery` | `backoff_outage_request_count` | 4 probes |
+| `backoff_recovery` | `probe_savings_ratio` | 55.6 % |
+| `backoff_recovery` | `fixed_recovery_latency_microseconds` | 315,016 µs (~0.3 s) |
+| `backoff_recovery` | `backoff_recovery_latency_microseconds` | 1,306,740 µs (~1.3 s) |
 
 The `slow_observer` figures capture the package's worst case under a
 deliberately-blocking synchronous observer (50 ms `sleep` per callback,
-100 ms interval): ~116 ms worst continuous stall (two callbacks in one
-microtask drain) and ~57 % of the run blocked. Both are properties of the
+100 ms interval): ~110 ms worst continuous stall (two callbacks in one
+microtask drain) and ~55 % of the run blocked. Both are properties of the
 *observer*, not something the package can dispatch its way out of — a Dart
 isolate is single-threaded. Every other scenario sits at a sub-1 %
 blocked-duty noise floor. Your machine will differ in absolute terms.

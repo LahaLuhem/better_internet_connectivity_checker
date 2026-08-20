@@ -1,6 +1,6 @@
 # Benchmark results
 
-Captured **2026-07-24** against `0.2.0` at `b27e6b9` on Dart SDK 3.12.2. N=30 iterations per scenario.
+Captured **2026-08-20** against `0.2.0` at `0a2a848` on Dart SDK 3.13.0. N=30 iterations per scenario.
 
 > Per-machine measurements. Numbers below reflect *this* machine (CPU, GC, OS scheduler, thermal state). Your numbers WILL differ - capture your own local baseline before measuring a code delta.
 
@@ -10,12 +10,13 @@ Longest single continuous window in which synchronous work blocked the event loo
 
 | Scenario | N | Median (us) | IQR (us) | Min (us) | Max (us) |
 |---|---:|---:|---:|---:|---:|
-| `flapping_network` | 30 | 4,453 | 3,374 | 0.000 | 12,808 |
-| `long_running` | 30 | 7,708 | 3,669 | 3,992 | 21,360 |
-| `many_subscribers` | 90 | 3,203 | 1,783 | 0.000 | 12,070 |
-| `quiet_app` | 30 | 5,066 | 2,403 | 3,242 | 10,537 |
-| `slow_observer` | 30 | 116,174 | 8,922 | 104,072 | 123,874 |
-| `trigger_storm` | 30 | 4,897 | 1,518 | 1,919 | 10,280 |
+| `backoff_recovery` | 30 | 6,198 | 4,804 | 1,649 | 29,570 |
+| `flapping_network` | 30 | 4,915 | 1,655 | 3,187 | 13,353 |
+| `long_running` | 30 | 12,444 | 6,743 | 5,820 | 105,012 |
+| `many_subscribers` | 90 | 5,068 | 4,203 | 1,100 | 19,206 |
+| `quiet_app` | 30 | 5,614 | 2,066 | 2,887 | 10,821 |
+| `slow_observer` | 30 | 110,298 | 3,186 | 103,052 | 119,700 |
+| `trigger_storm` | 30 | 5,606 | 4,707 | 2,645 | 16,583 |
 
 
 ![Headline max stall](headline_max_stall.png)
@@ -26,12 +27,13 @@ Longest single continuous window in which synchronous work blocked the event loo
 
 | Scenario | N | Median (%) | IQR (%) | Min (%) | Max (%) |
 |---|---:|---:|---:|---:|---:|
-| `flapping_network` | 30 | 0.37% | 0.58% | 0.00% | 1.79% |
-| `long_running` | 30 | 0.55% | 0.40% | 0.06% | 1.49% |
-| `many_subscribers` | 90 | 0.59% | 0.76% | 0.00% | 1.83% |
-| `quiet_app` | 30 | 0.49% | 0.57% | 0.07% | 1.60% |
-| `slow_observer` | 30 | 57.38% | 0.78% | 56.47% | 58.47% |
-| `trigger_storm` | 30 | 0.38% | 0.69% | 0.06% | 1.74% |
+| `backoff_recovery` | 30 | 0.20% | 0.15% | 0.07% | 8.19% |
+| `flapping_network` | 30 | 0.11% | 0.54% | 0.04% | 1.28% |
+| `long_running` | 30 | 0.86% | 1.22% | 0.32% | 14.78% |
+| `many_subscribers` | 90 | 0.80% | 0.86% | 0.04% | 2.76% |
+| `quiet_app` | 30 | 0.59% | 0.57% | 0.14% | 1.76% |
+| `slow_observer` | 30 | 55.01% | 0.37% | 54.46% | 56.28% |
+| `trigger_storm` | 30 | 0.57% | 0.77% | 0.05% | 2.21% |
 
 ## Peak resident set size per scenario
 
@@ -39,12 +41,13 @@ Peak RSS captured via `ProcessInfo.currentRss` sampled every 500 ms (every 250 m
 
 | Scenario | N | Median (MB) | IQR (MB) | Min (MB) | Max (MB) |
 |---|---:|---:|---:|---:|---:|
-| `flapping_network` | 30 | 73.05 | 9.33 | 27.73 | 73.61 |
-| `long_running` | 30 | 55.29 | 17.97 | 28.95 | 78.53 |
-| `many_subscribers` | 90 | 60.89 | 0.36 | 25.86 | 66.41 |
-| `quiet_app` | 30 | 72.95 | 0.33 | 27.67 | 72.97 |
-| `slow_observer` | 30 | 60.02 | 0.11 | 25.89 | 66.48 |
-| `trigger_storm` | 30 | 71.84 | 0.28 | 26.33 | 72.03 |
+| `backoff_recovery` | 30 | 51.99 | 2.56 | 26.89 | 60.70 |
+| `flapping_network` | 30 | 73.27 | 0.14 | 27.70 | 73.48 |
+| `long_running` | 30 | 52.13 | 7.94 | 28.88 | 72.23 |
+| `many_subscribers` | 90 | 41.91 | 19.64 | 25.88 | 66.44 |
+| `quiet_app` | 30 | 51.31 | 18.02 | 27.64 | 73.00 |
+| `slow_observer` | 30 | 60.19 | 0.16 | 25.91 | 66.62 |
+| `trigger_storm` | 30 | 70.38 | 15.39 | 26.73 | 72.73 |
 
 
 ![Memory peak RSS](memory_peak_rss.png)
@@ -55,11 +58,12 @@ Same metric as the headline chart, but with the `slow_observer` outlier excluded
 
 | Scenario | N | Median (us) | IQR (us) | Min (us) | Max (us) |
 |---|---:|---:|---:|---:|---:|
-| `flapping_network` | 30 | 4,453 | 3,374 | 0.000 | 12,808 |
-| `long_running` | 30 | 7,708 | 3,669 | 3,992 | 21,360 |
-| `many_subscribers` | 90 | 3,203 | 1,783 | 0.000 | 12,070 |
-| `quiet_app` | 30 | 5,066 | 2,403 | 3,242 | 10,537 |
-| `trigger_storm` | 30 | 4,897 | 1,518 | 1,919 | 10,280 |
+| `backoff_recovery` | 30 | 6,198 | 4,804 | 1,649 | 29,570 |
+| `flapping_network` | 30 | 4,915 | 1,655 | 3,187 | 13,353 |
+| `long_running` | 30 | 12,444 | 6,743 | 5,820 | 105,012 |
+| `many_subscribers` | 90 | 5,068 | 4,203 | 1,100 | 19,206 |
+| `quiet_app` | 30 | 5,614 | 2,066 | 2,887 | 10,821 |
+| `trigger_storm` | 30 | 5,606 | 4,707 | 2,645 | 16,583 |
 
 
 ![Scenario stability](scenario_stability.png)
@@ -70,11 +74,11 @@ From the `status_emission` micro (synchronous broadcast, isolated from the rest 
 
 | Subscribers | N | Median (us/emit) | IQR (us) |
 |---:|---:|---:|---:|
-| 1 | 30 | 0.137 | 0.002 |
-| 10 | 30 | 1.00 | 0.010 |
-| 25 | 30 | 2.31 | 0.026 |
-| 50 | 30 | 4.47 | 0.061 |
-| 100 | 30 | 8.96 | 0.174 |
+| 1 | 30 | 0.133 | 0.004 |
+| 10 | 30 | 1.00 | 0.022 |
+| 25 | 30 | 2.30 | 0.065 |
+| 50 | 30 | 4.47 | 0.112 |
+| 100 | 30 | 8.96 | 0.218 |
 
 
 ![Subscriber scaling](subscriber_scaling.png)

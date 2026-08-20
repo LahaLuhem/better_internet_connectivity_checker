@@ -429,7 +429,7 @@ methodology and reproduction steps are in
 [`benchmark/README.md`](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/benchmark/README.md).
 
 Numbers and charts below are the maintainer's machine snapshot (Apple Silicon macOS,
-Dart SDK 3.12.2, N=30). They are sanity-check ballparks, not a performance contract —
+Dart SDK 3.13.0, N=30). They are sanity-check ballparks, not a performance contract —
 CPU, GC, OS scheduler, and thermal state vary across machines, so your absolute
 numbers WILL differ. Capture your own local baseline before claiming a regression
 or an improvement from a code change.
@@ -461,7 +461,9 @@ Deliberate non-features that may affect how you use the package:
   a connection that comes back is not noticed until the next check, so an aggressive `maxDelay`
   can leave an app believing it is offline for minutes. Pair backoff with an
   `externalRecheckTrigger` and keep `maxDelay` inside the staleness you can tolerate. The
-  default schedule has no such gap.
+  default schedule has no such gap. The `backoff_recovery` benchmark puts numbers on the
+  trade: median 55.6 % fewer probes during an outage, for recovery noticed in ~1.3 s
+  instead of ~0.3 s.
 - **`AllReachablePolicy` is brittle with arbitrary public endpoints** — any one being
   briefly unavailable flags a working connection as offline. Use it only with a curated
   probe list (e.g. enterprise internal endpoints); see the policy's dartdoc.
