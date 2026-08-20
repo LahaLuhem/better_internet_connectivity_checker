@@ -9,11 +9,9 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 /// Records the `cancelSignal` it was invoked with for each [ProbeTarget],
 /// so tests can assert that a policy forwards (or omits) the signal as
 /// expected.
-final class StubProbe implements ConnectivityProbe {
-  final Future<ProbeResult> Function(ProbeTarget target) _respond;
+final class StubProbe(final Future<ProbeResult> Function(ProbeTarget target) _respond)
+    implements ConnectivityProbe {
   final Map<ProbeTarget, Future<void>?> _cancelSignalsByTarget = {};
-
-  new(this._respond);
 
   /// The `cancelSignal` passed to the most recent [probe] call for
   /// [target], or `null` if [probe] was invoked without a signal — or never

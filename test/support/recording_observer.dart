@@ -49,24 +49,24 @@ sealed class RecordedEvent {
 }
 
 /// A recorded [ConnectivityObserver.onStatusChangeEmitted] event.
-final class StatusChangeEmitted extends RecordedEvent {
+final class const StatusChangeEmitted({
   /// Status emitted before this one (null on the first emission).
-  final InternetStatus? previous;
+  required final InternetStatus? previous,
 
   /// The newly emitted status.
-  final InternetStatus next;
-
+  required final InternetStatus next,
+}) extends RecordedEvent {
   /// Records the [previous] / [next] pair passed to the observer.
-  const new({required this.previous, required this.next});
+  this;
 }
 
 /// A recorded [ConnectivityObserver.onCheckCompleted] event.
-final class CheckCompleted extends RecordedEvent {
+final class const CheckCompleted({
   /// Status produced by the completed check.
-  final InternetStatus result;
-
+  required final InternetStatus result,
+}) extends RecordedEvent {
   /// Records the [result] passed to the observer.
-  const new({required this.result});
+  this;
 }
 
 /// A recorded [ConnectivityObserver.onNextCheckScheduled] event.
@@ -88,41 +88,39 @@ final class ExternalTriggerFired extends RecordedEvent {
 }
 
 /// A recorded [ConnectivityObserver.onExternalTriggerError] event.
-final class ExternalTriggerError extends RecordedEvent {
+final class const ExternalTriggerError({
   /// Error surfaced by the external-trigger stream.
-  final Object error;
+  required final Object error,
 
   /// Stack trace accompanying [error].
-  final StackTrace stackTrace;
-
+  required final StackTrace stackTrace,
+}) extends RecordedEvent {
   /// Records the [error] / [stackTrace] pair passed to the observer.
-  const new({required this.error, required this.stackTrace});
+  this;
 }
 
 /// A recorded [ConnectivityObserver.onCheckIntervalChanged] event.
-final class CheckIntervalChanged extends RecordedEvent {
+final class const CheckIntervalChanged({
   /// Interval in effect before the change.
-  final Duration previous;
+  required final Duration previous,
 
   /// Interval in effect after the change.
-  final Duration next;
-
+  required final Duration next,
+}) extends RecordedEvent {
   /// Records the [previous] / [next] pair passed to the observer.
-  const new({required this.previous, required this.next});
+  this;
 }
 
 /// A recorded [ConnectivityObserver.onSlowThresholdChanged] event.
-final class SlowThresholdChanged extends RecordedEvent {
-  /// Threshold in effect before the change (null when slow detection was
-  /// disabled).
-  final Duration? previous;
+final class const SlowThresholdChanged({
+  /// Threshold in effect before the change (null when slow detection was disabled).
+  required final Duration? previous,
 
-  /// Threshold in effect after the change (null when slow detection is
-  /// disabled).
-  final Duration? next;
-
+  /// Threshold in effect after the change (null when slow detection is disabled).
+  required final Duration? next,
+}) extends RecordedEvent {
   /// Records the [previous] / [next] pair passed to the observer.
-  const new({required this.previous, required this.next});
+  this;
 }
 
 /// A recorded [ConnectivityObserver.onDispose] event.
