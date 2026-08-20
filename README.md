@@ -10,6 +10,7 @@
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [What it does](#what-it-does)
+- [Installation](#installation)
 - [Platform setup](#platform-setup)
     * [Android](#android)
     * [iOS and macOS](#ios-and-macos)
@@ -27,6 +28,7 @@
     * [Writing a custom `ConnectivityProbe`](#writing-a-custom-connectivityprobe)
     * [Wiring `connectivity_plus` (Flutter)](#wiring-connectivity_plus-flutter)
     * [Wiring `retry` (reusing its backoff maths)](#wiring-retry-reusing-its-backoff-maths)
+    * [Logging and observability](#logging-and-observability)
 - [When to reach for this](#when-to-reach-for-this)
 - [Performance & memory](#performance--memory)
     * [Benchmarks](#benchmarks)
@@ -73,6 +75,15 @@ transparent proxies, broken middleboxes, and LAN-only networks.
   signals (`connectivity_plus` on Flutter is the canonical wiring) without the package
   itself taking a Flutter dependency.
 - Pure Dart — works on CLI, server, web, and Flutter with no platform channels.
+
+## Installation
+
+```bash
+dart pub add better_internet_connectivity_checker
+```
+
+Requires Dart 3.13 or newer. Pure Dart, so it works the same in a Flutter app, a CLI, a
+server, or on the web.
 
 ## Platform setup
 
@@ -127,19 +138,38 @@ Future<void> main() async {
 }
 ```
 
+`checkOnce()` is standalone: it does not touch the periodic timer, the status stream,
+`lastStatus`, or the failure streak a `CheckSchedule` sees. Call it as often as you like
+without disturbing a running checker.
+
 ### Pattern-matching the sealed status
 
 `InternetStatus` is a sealed class. Exhaustive `switch` is the recommended way to consume
 it — the compiler will tell you if a future variant is added.
+
+`Reachable` carries the winning probe's `responseTime` and a `quality` of `good` or `slow`.
+`Unreachable` carries every `ProbeResult` that failed, each with its `target`, `responseTime`,
+and the `error` caught (null when the target's own predicate rejected an otherwise-fine
+response). That is enough to answer "why am I offline" without probing again:
 
 ```dart
 switch (await checker.checkOnce()) {
   case Reachable(:final responseTime, :final quality):
     print('online — $quality, ${responseTime.inMilliseconds} ms');
   case Unreachable(:final failedProbes):
-    print('offline — ${failedProbes.length} probes failed');
+    for (final probeResult in failedProbes) {
+      print(
+        '${probeResult.target.uri.host} failed after '
+        '${probeResult.responseTime.inMilliseconds} ms: '
+        '${probeResult.error ?? 'response rejected'}',
+      );
+    }
 }
 ```
+
+<p align="center">
+  <img src="doc/screenshots/2-failure-inspection.png" alt="Unreachable diagnostic view listing each failed probe with its error class and response time" width="320">
+</p>
 
 ### Listening to status changes
 
@@ -250,12 +280,10 @@ per-target timeout. The built-in `HttpProbe` honours it via `http.AbortableReque
 probes that cannot abort simply ignore the parameter and the policy still resolves
 correctly.
 
-See [`example/lib/features/custom_targets/method_aware_probe.dart`](example/lib/features/custom_targets/method_aware_probe.dart)
-for the canonical pattern: when your probe needs to surface protocol-specific response
-data (the HTTP `Allow` header on 405 responses, in this demo) that `ProbeResult`
-intentionally omits, expose it on the probe itself via a constructor callback. The
-example wires the built-in `HttpProbe.head()` / `HttpProbe.get()` as the main probe and
-falls back to `MethodAwareProbe` only on the failure-inspection path.
+`ProbeResult` deliberately carries no protocol-specific data. When a probe needs to surface
+some (an HTTP `Allow` header, say), expose it on the probe itself via a constructor callback:
+[`method_aware_probe.dart`](example/lib/features/custom_targets/method_aware_probe.dart) is the
+worked example.
 
 ### Wiring `connectivity_plus` (Flutter)
 
@@ -329,14 +357,13 @@ await subscription.cancel();          // explicit cleanup, OR
 await checker.dispose();              // closes events; the subscription cancels automatically
 ```
 
-For reactive callers that prefer streams over per-method callbacks, subscribe directly
-and filter by type:
+For reactive callers that prefer streams over per-method callbacks, subscribe directly and
+pattern-match:
 
 ```dart
-final checker = InternetConnection();
-checker.events
-    .whereType<CheckCompletedEvent>()
-    .listen((e) => log('check completed: ${e.result}'));
+checker.events.listen((event) {
+  if (event case CheckCompletedEvent(:final result)) log('check completed: $result');
+});
 ```
 
 For custom integration with an app's existing logging service, subclass
@@ -360,20 +387,11 @@ final class _AppConnectivityObserver extends ConnectivityObserver {
 attachObserver(checker.events, _AppConnectivityObserver(appLogger));
 ```
 
-Events are dispatched microtask-deferred from the frame that produced them — a thrown
-exception inside an override does **not** propagate back into the scheduler, and the
-periodic checks stay on cadence as long as an override's synchronous work per tick stays
-below the check interval. What the deferral **cannot** do is protect the event loop
-itself: a Dart isolate is single-threaded, so `sleep`, sync IO, or a busy loop inside an
-override blocks every timer and frame on the isolate for its full duration. Keep
-overrides fast; hand expensive sinks to async APIs, or move heavy computation off-isolate
-with `Isolate.run` on copied data.
-
-To catch offenders during development, `attachObserver` times every callback in debug
-builds (asserts enabled) and logs a one-shot `dart:developer` warning per event type when
-an override overruns its budget — one 60 fps frame (16 ms) by default, tunable via its
-`slowCallbackThreshold` parameter. Release and profile builds compile the watchdog out
-entirely.
+Keep overrides fast. Dispatch is microtask-deferred, so a throw inside one cannot disturb
+the scheduler, but a Dart isolate is single-threaded and blocking work in an override still
+stalls every timer on it. Debug builds time each callback and warn once per event type when
+one overruns 16 ms; release and profile builds strip the watchdog. Full threading notes are
+on `ConnectivityObserver`'s dartdoc.
 
 Runnable examples live in [`example/`](./example/) — a Flutter demo app exercising
 one-shot checks, status streaming, both aggregation policies, slow-connection detection,
@@ -441,8 +459,8 @@ What the default configuration buys you, with no further configuration:
   are compile-time constants shared process-wide; constructing
   `InternetConnection()` with no `targets` argument allocates nothing for the target
   list.
-- **Growth-bounded result lists** — `failedProbes` uses `growable: false`; no status
-  history buffer, rolling window, or per-probe cache is kept anywhere.
+- **Nothing accumulates** — an `Unreachable`'s `failedProbes` is bounded by the target
+  count, and no status history, rolling window, or per-probe cache is kept anywhere.
 
 Memory footprint per `InternetConnection` is well under 1 KB at steady state.
 
@@ -451,8 +469,7 @@ Memory footprint per `InternetConnection` is well under 1 KB at steady state.
 Empirical backing for the perf claims above lives in
 [`benchmark/`](https://github.com/LahaLuhem/better_internet_connectivity_checker/tree/main/benchmark)
 — a reproducible harness of AOT-compiled scenarios + micro-benches, orchestrated by a
-Python runner that aggregates with Mann-Whitney U significance tests over N ≥ 10
-iterations per scenario. The committed snapshot lives in
+Python runner that aggregates with Mann-Whitney U significance tests. The committed snapshot lives in
 [`benchmark/reports/SUMMARY.md`](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/benchmark/reports/SUMMARY.md);
 methodology and reproduction steps are in
 [`benchmark/README.md`](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/benchmark/README.md).
@@ -529,7 +546,7 @@ dart analyze --fatal-infos                           # strict-mode static analys
 dart format --output=none --set-exit-if-changed .    # formatter check
 ```
 
-Dart 3.10+ required (see `pubspec.yaml`).
+Dart 3.13+ required (see `pubspec.yaml`).
 
 ## Contributing
 
@@ -541,33 +558,16 @@ guidelines, and [`APPENDIX.md`](./APPENDIX.md) for the design rationale.
 
 ### Optional: AI-agent discovery symlinks
 
-The canonical text for `AGENTS.md` and `CLAUDE.md` lives under `.ai/`. The repo root
-holds **gitignored symlinks** (`AGENTS.md → .ai/AGENTS.md`,
-`CLAUDE.md → .ai/CLAUDE.md`, `example/AGENTS.md → example/.ai/AGENTS.md`,
-`benchmark/python/AGENTS.md → benchmark/python/.ai/AGENTS.md`) so coding
-agents that auto-discover root-level guidance files (Claude Code, Codex, Cursor,
-Copilot, …) find them without polluting the file tree with two extra Markdown files at
-each level. The arrangement is opt-in per contributor:
+Canonical agent guidance lives under `.ai/`. The repo root holds gitignored symlinks so
+agents that auto-discover root-level files find them without two extra Markdown files at
+each level. Opt-in, and nothing in the build, lint, or test pipeline depends on them:
 
-- **If you use a coding agent**, set the symlinks up once from the repo root:
+```bash
+ln -s .ai/AGENTS.md AGENTS.md
+ln -s .ai/CLAUDE.md CLAUDE.md
+ln -s .ai/AGENTS.md example/AGENTS.md
+ln -s .ai/AGENTS.md benchmark/python/AGENTS.md
+```
 
-  ```bash
-  ln -s .ai/AGENTS.md AGENTS.md
-  ln -s .ai/CLAUDE.md CLAUDE.md
-  ln -s .ai/AGENTS.md example/AGENTS.md
-  ln -s .ai/AGENTS.md benchmark/python/AGENTS.md
-  ```
-
-- **If you don't use one**, skip the step entirely. The canonical files under `.ai/`
-  are committed; nothing in the build, lint, or test pipeline depends on the symlinks
-  existing.
-- **If you want different agent guidance for your own workflow**, drop a real
-  `AGENTS.md` or `CLAUDE.md` at the repo root. A real file beats the symlink
-  convention — your agent reads the root file you put there instead of the canonical
-  one under `.ai/`. The committed `.ai/` copies remain the project default for
-  everyone else.
-
-The `CODESTYLE.md` files are not symlinked — they sit directly at the repo root and at
-`example/`, since style serves humans and agents alike and is not AI-specific. See
-[`APPENDIX.md`](./APPENDIX.md#ai-files-symlinked) for the rationale
-behind the `.ai/` arrangement.
+Drop a real `AGENTS.md` at the root instead if you want your own. Rationale in
+[`APPENDIX.md`](./APPENDIX.md#ai-files-symlinked).
