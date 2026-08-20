@@ -11,13 +11,10 @@ part of '../internet_connection.dart';
 /// Overlapping `onTick` invocations are deliberately allowed — the package contract
 /// (APPENDIX `why-checkOnce-not-single-flighted`) permits parallel probes when an external trigger
 /// fires mid-check.
-final class _PeriodicScheduler {
-  final Future<Duration> Function() _onTick;
+final class _PeriodicScheduler({required final Future<Duration> Function() _onTick}) {
   Timer? _timer;
   var _running = false;
   var _disposed = false;
-
-  new({required this._onTick});
 
   /// Begins ticking, or resets the rescheduling clock if already running.
   ///

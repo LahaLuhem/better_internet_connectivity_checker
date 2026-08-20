@@ -9,13 +9,12 @@ part of '../internet_connection.dart';
 ///
 /// [start] is idempotent: calling it while already subscribed does not re-subscribe. [stop] cancels
 /// and clears the subscription. A subsequent [start] re-subscribes from scratch.
-final class _ExternalTriggerLink {
-  final Stream<void>? _trigger;
-  final void Function() _onTrigger;
-  final void Function(Object error, StackTrace stackTrace) _onError;
+final class _ExternalTriggerLink({
+  required final Stream<void>? _trigger,
+  required final void Function() _onTrigger,
+  required final void Function(Object error, StackTrace stackTrace) _onError,
+}) {
   StreamSubscription<void>? _subscription;
-
-  new({required this._trigger, required this._onTrigger, required this._onError});
 
   /// Subscribes to the trigger stream if not already subscribed.
   void start() {
