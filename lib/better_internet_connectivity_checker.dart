@@ -26,7 +26,7 @@
 /// ```
 library;
 
-export 'src/data/typedefs.dart' show ResponseAcceptor;
+export 'src/data/typedefs.dart' show JitterSource, ResponseAcceptor;
 export 'src/data/values.dart' show noopWithVal;
 export 'src/internet_connection.dart' show InternetConnection;
 export 'src/observer/connectivity_observer.dart' show ConnectivityObserver, attachObserver;

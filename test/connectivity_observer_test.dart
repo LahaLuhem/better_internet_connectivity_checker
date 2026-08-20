@@ -83,7 +83,10 @@ void main() {
           targets: [target],
           probe: probe,
           checkInterval: const Duration(seconds: 4),
-          schedule: const ExponentialBackoffSchedule(maxDelay: Duration(minutes: 1)),
+          schedule: const ExponentialBackoffSchedule(
+            maxDelay: Duration(minutes: 1),
+            randomizationFactor: 0,
+          ),
         );
         attachObserver(connection.events, observer);
         connection.onStatusChange.listen(noopWithVal);

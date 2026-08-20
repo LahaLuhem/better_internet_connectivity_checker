@@ -69,7 +69,8 @@ Future<void> _runIteration(
   forceGc();
   final fixedArm = await _runArm(schedule: const FixedIntervalSchedule(), duration: armDuration);
   final backoffArm = await _runArm(
-    schedule: const ExponentialBackoffSchedule(maxDelay: _maxBackoffDelay),
+    // Jitter off: it would smear the probe counts and recovery latency across iterations.
+    schedule: const ExponentialBackoffSchedule(maxDelay: _maxBackoffDelay, randomizationFactor: 0),
     duration: armDuration,
   );
 

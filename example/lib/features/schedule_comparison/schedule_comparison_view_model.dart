@@ -50,7 +50,11 @@ final class ScheduleComparisonViewModel extends ViewModel {
     final backoffConnection = InternetConnection(
       targets: targets,
       checkInterval: ConstScheduleComparison.baseInterval,
-      schedule: const ExponentialBackoffSchedule(maxDelay: ConstScheduleComparison.maxBackoffDelay),
+      // Jitter off so the ladder reads as clean doublings; it is a separate lesson.
+      schedule: const ExponentialBackoffSchedule(
+        maxDelay: ConstScheduleComparison.maxBackoffDelay,
+        randomizationFactor: 0,
+      ),
     );
 
     _fixedConnection = fixedConnection;
