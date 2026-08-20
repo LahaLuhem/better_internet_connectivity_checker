@@ -5,6 +5,7 @@
 - \[#5\] `attachObserver(events, observer)` top-level helper to wire `ConnectivityObserver` onto the events stream
 - Add a debug-mode watchdog that warns when an observer callback blocks the event loop
 - Add a CheckSchedule seam with exponential backoff (Breaking: adds NextCheckScheduledEvent)
+- Add jitter to ExponentialBackoffSchedule, on by default at ±25 %
 
 ### Changed
 - Use new linter mega repo
