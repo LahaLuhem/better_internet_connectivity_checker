@@ -16,13 +16,11 @@
 /// - **Adds** one map lookup per accessor, plus a one-off parse on first access of a given string.
 ///
 /// Adapted from https://gist.github.com/passsy/0be2ca0e86ff11e400187f7076404678.
-final class ConstUri implements Uri {
+final class const ConstUri(final String _uri) implements Uri {
   static final _cache = <String, Uri>{};
 
-  final String _uri;
-
   /// Wraps a URI string, deferring `Uri.parse` until the first member access.
-  const new(this._uri);
+  this;
 
   Uri get _delegate => _cache.putIfAbsent(_uri, () => Uri.parse(_uri));
 
