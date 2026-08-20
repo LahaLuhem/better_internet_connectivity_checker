@@ -1,15 +1,15 @@
 part of '../connectivity_event.dart';
 
 /// Emitted when a deduplicated status transition is published to the public status stream.
-final class StatusEmittedEvent extends ConnectivityEvent {
+final class const StatusEmittedEvent({
   /// The previously emitted status, or null on the first emission of a fresh subscription.
-  final InternetStatus? previous;
+  required final InternetStatus? previous,
 
   /// The newly emitted status.
-  final InternetStatus next;
-
+  required final InternetStatus next,
+}) extends ConnectivityEvent {
   /// Creates an emitted-status event capturing the deduplicated transition.
-  const new({required this.previous, required this.next});
+  this;
 
   // Debug-only toString delegation; excluded from coverage.
   // coverage:ignore-start
