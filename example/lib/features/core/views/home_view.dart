@@ -10,6 +10,7 @@ import '/features/failure_inspection/failure_inspection_view.dart';
 import '/features/live_stream/live_stream_view.dart';
 import '/features/one_shot/one_shot_view.dart';
 import '/features/policy_comparison/policy_comparison_view.dart';
+import '/features/schedule_comparison/schedule_comparison_view.dart';
 import '../widgets/platform/platform_card.dart';
 import 'home_view_model.dart';
 
@@ -60,6 +61,17 @@ class HomeView extends StatelessWidget {
               title: 'Policy comparison',
               description: 'Run AnyReachablePolicy and AllReachablePolicy side-by-side.',
               pageBuilder: (_) => const PolicyComparisonView(),
+            ),
+            _DemoTile(
+              icon: Icon(
+                context.platformIcon(
+                  material: Icons.timer_outlined,
+                  cupertino: CupertinoIcons.timer,
+                ),
+              ),
+              title: 'Schedule comparison',
+              description: 'Watch a fixed interval and an exponential backoff ladder side-by-side.',
+              pageBuilder: (_) => const ScheduleComparisonView(),
             ),
             _DemoTile(
               icon: Icon(
