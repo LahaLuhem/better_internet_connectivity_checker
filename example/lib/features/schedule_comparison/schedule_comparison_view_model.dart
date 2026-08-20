@@ -18,17 +18,26 @@ final class ScheduleComparisonViewModel extends ViewModel {
   final _subscriptions = <StreamSubscription<void>>[];
 
   final _ladderStateNotifier = ValueNotifier<LadderState>((fixed: [], backoff: []));
-  final _isTargetReachableNotifier = ValueNotifier(false);
+  final _shouldProbeReachableTargetNotifier = ValueNotifier(false);
+  final _shouldJitterNotifier = ValueNotifier(false);
 
   @override
   void init() => _buildConnections();
 
   ValueListenable<LadderState> get ladderStateListenable => _ladderStateNotifier;
 
-  ValueListenable<bool> get isTargetReachableListenable => _isTargetReachableNotifier;
+  ValueListenable<bool> get shouldProbeReachableTargetListenable =>
+      _shouldProbeReachableTargetNotifier;
+
+  ValueListenable<bool> get shouldJitterListenable => _shouldJitterNotifier;
 
   void onTargetReachabilityToggled({required bool value}) {
-    _isTargetReachableNotifier.value = value;
+    _shouldProbeReachableTargetNotifier.value = value;
+    _buildConnections();
+  }
+
+  void onJitterToggled({required bool value}) {
+    _shouldJitterNotifier.value = value;
     _buildConnections();
   }
 
@@ -39,7 +48,7 @@ final class ScheduleComparisonViewModel extends ViewModel {
 
     _ladderStateNotifier.value = (fixed: [], backoff: []);
 
-    final targets = _isTargetReachableNotifier.value
+    final targets = _shouldProbeReachableTargetNotifier.value
         ? ConstScheduleComparison.reachableTargets
         : ConstScheduleComparison.unreachableTargets;
 
@@ -50,10 +59,13 @@ final class ScheduleComparisonViewModel extends ViewModel {
     final backoffConnection = InternetConnection(
       targets: targets,
       checkInterval: ConstScheduleComparison.baseInterval,
-      // Jitter off so the ladder reads as clean doublings; it is a separate lesson.
-      schedule: const ExponentialBackoffSchedule(
+      // Off by default so the ladder reads as clean doublings; the switch shows the spread a
+      // caller actually gets, since the package jitters by default.
+      schedule: ExponentialBackoffSchedule(
         maxDelay: ConstScheduleComparison.maxBackoffDelay,
-        randomizationFactor: 0,
+        randomizationFactor: _shouldJitterNotifier.value
+            ? ConstScheduleComparison.demoRandomizationFactor
+            : 0,
       ),
     );
 
@@ -108,7 +120,8 @@ final class ScheduleComparisonViewModel extends ViewModel {
   void dispose() {
     unawaited(_teardown());
     _ladderStateNotifier.dispose();
-    _isTargetReachableNotifier.dispose();
+    _shouldProbeReachableTargetNotifier.dispose();
+    _shouldJitterNotifier.dispose();
     super.dispose();
   }
 }
