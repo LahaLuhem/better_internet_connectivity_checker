@@ -4,6 +4,7 @@
 - \[#5\] sealed `ConnectivityEvent` hierarchy + public `Stream<ConnectivityEvent>` on `InternetConnection.events` for reactive lifecycle observation
 - \[#5\] `attachObserver(events, observer)` top-level helper to wire `ConnectivityObserver` onto the events stream
 - Add a debug-mode watchdog that warns when an observer callback blocks the event loop
+- Add a CheckSchedule seam with exponential backoff (Breaking: adds NextCheckScheduledEvent)
 
 ### Changed
 - Use new linter mega repo
