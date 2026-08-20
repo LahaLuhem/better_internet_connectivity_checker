@@ -33,14 +33,52 @@ part 'internal/periodic_scheduler.dart';
 ///
 /// Construct once per use case; there is no shared singleton, and independent instances don't interfere.
 /// Always [dispose] when finished to release the stream, timer, and trigger subscription.
-final class InternetConnection {
-  final List<ProbeTarget> _targets;
-  Duration _checkInterval;
-  Duration? _slowThreshold;
-  final ReachabilityPolicy _policy;
-  final ConnectivityProbe _probe;
-  final CheckSchedule _schedule;
-  final Stream<void>? _externalTrigger;
+final class InternetConnection({
+  /// The URIs probed on each check.
+  ///
+  /// Defaults to a curated list of public reliability endpoints (diverse operators, low cache
+  /// surface). Must be non-empty: an empty list trips a debug-mode `assert`, and release builds
+  /// fall through to `Unreachable` every check.
+  List<ProbeTarget>? targets,
+
+  /// The gap between periodic checks once [onStatusChange] has a listener.
+  ///
+  /// Change it at runtime via the [checkInterval] setter. Under a non-fixed `schedule` this is the
+  /// base the schedule derives each gap from, not the gap itself.
+  var Duration _checkInterval = Values.defaultCheckInterval,
+
+  /// The aggregation strategy. Defaults to [AnyReachablePolicy] (any-of-N).
+  final ReachabilityPolicy _policy = const AnyReachablePolicy(),
+
+  /// Sets the gap before each next check.
+  ///
+  /// Defaults to [FixedIntervalSchedule], which keeps `checkInterval` between every check. Pass
+  /// [ExponentialBackoffSchedule] to widen the gap while checks keep failing, at the cost of
+  /// noticing recovery later.
+  final CheckSchedule _schedule = const FixedIntervalSchedule(),
+
+  /// The response-time cutoff above which a successful probe is classified as slow.
+  ///
+  /// Defaults to null (no classification — every reachable status is [ConnectionQuality.good]). The
+  /// [slowThreshold] setter changes it at runtime while preserving [lastStatus], unlike rebuilding.
+  var Duration? _slowThreshold,
+
+  /// Runs a single check; defaults to [HttpProbe.head].
+  ///
+  /// Pass a custom probe to swap the transport (a retry decorator, [HttpProbe.get] for
+  /// HEAD-unfriendly endpoints) or inject a mock.
+  ConnectivityProbe? probe,
+
+  /// An optional stream whose events force an immediate recheck.
+  ///
+  /// Typical Flutter wiring: `Connectivity().onConnectivityChanged.map(noopWithVal)`.
+  Stream<void>? externalRecheckTrigger,
+}) {
+  final List<ProbeTarget> _targets = targets != null
+      ? List.unmodifiable(targets)
+      : Values.defaultProbeTargets;
+  final ConnectivityProbe _probe = probe ?? HttpProbe.head();
+  final _externalTrigger = externalRecheckTrigger;
 
   late final _statusController = StreamController<InternetStatus>.broadcast(
     onListen: _handleFirstListener,
@@ -65,44 +103,9 @@ final class InternetConnection {
 
   /// Creates an [InternetConnection].
   ///
-  /// `targets` are the URIs probed on each check. Defaults to a curated list of public reliability
-  /// endpoints (diverse operators, low cache surface). Must be non-empty. An empty list trips a debug-mode
-  /// `assert` (release builds fall through to `Unreachable` every check).
-  ///
-  /// `checkInterval` is the gap between periodic checks once [onStatusChange] has a listener.
-  /// Defaults to [Values.defaultCheckInterval]; change it at runtime via the [_checkInterval] setter.
-  /// Under a non-fixed `schedule` this is the base the schedule derives each gap from, not the gap itself.
-  ///
-  /// `slowThreshold` is the response-time cutoff above which a successful probe is classified as slow.
-  /// Defaults to null (no classification — every reachable status is [ConnectionQuality.good]).
-  /// The [_slowThreshold] setter changes it at runtime while preserving [lastStatus], unlike rebuilding.
-  ///
-  /// `policy` selects the aggregation strategy. Defaults to [AnyReachablePolicy] (any-of-N).
-  ///
-  /// `probe` runs a single check; defaults to [HttpProbe.head]. Pass a custom probe to swap the
-  /// transport (a retry decorator, [HttpProbe.get] for HEAD-unfriendly endpoints) or inject a mock.
-  ///
-  /// `schedule` sets the gap before each next check. Defaults to [FixedIntervalSchedule], which keeps
-  /// `checkInterval` between every check. Pass [ExponentialBackoffSchedule] to widen the gap while
-  /// checks keep failing, at the cost of noticing recovery later.
-  ///
-  /// `externalRecheckTrigger` is an optional stream whose events force an immediate recheck. Typical
-  /// Flutter wiring: `Connectivity().onConnectivityChanged.map(noopWithVal)`.
-  ///
   /// To observe lifecycle events, subscribe to [events] or wire a `ConnectivityObserver` via the
   /// top-level `attachObserver`.
-  new({
-    List<ProbeTarget>? targets,
-    this._checkInterval = Values.defaultCheckInterval,
-    this._policy = const AnyReachablePolicy(),
-    this._schedule = const FixedIntervalSchedule(),
-    this._slowThreshold,
-    ConnectivityProbe? probe,
-    Stream<void>? externalRecheckTrigger,
-  }) : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty'),
-       _targets = targets != null ? List.unmodifiable(targets) : Values.defaultProbeTargets,
-       _externalTrigger = externalRecheckTrigger,
-       _probe = probe ?? HttpProbe.head();
+  this : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty');
 
   /// The current periodic check interval.
   Duration get checkInterval => _checkInterval;
