@@ -15,6 +15,7 @@ void main() {
     expect(find.text('One-shot check'), findsOneWidget);
     expect(find.text('Custom targets'), findsOneWidget);
     expect(find.text('Policy comparison'), findsOneWidget);
+    expect(find.text('Schedule comparison'), findsOneWidget);
     expect(find.text('Failure inspection'), findsOneWidget);
   });
 
