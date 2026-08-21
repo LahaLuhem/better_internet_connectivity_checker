@@ -24,8 +24,12 @@ abstract final class Values {
   /// web platform — importing it would break web compilation despite the constant itself being trivial.
   static const httpStatusOk = 200;
 
-  /// Curated reliability endpoints probed by `InternetConnection` when no custom target list is supplied.
-  /// Chosen for operator diversity and low cache surface.
+  /// Public endpoints probed by `InternetConnection` when no custom target list is supplied. All
+  /// answer HEAD with 200.
+  ///
+  /// All four currently resolve to Cloudflare, so one edge incident can fail every probe at once, and
+  /// two of them allow long-lived caching. Pass your own `targets` when you need real operator spread
+  /// or strict no-cache behaviour.
   ///
   /// Safe to share because every layer is `const`: the list literal, each [ProbeTarget], and each
   /// [ConstUri] are compile-time canonical and reject mutation at runtime.
