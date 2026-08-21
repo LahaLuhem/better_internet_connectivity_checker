@@ -331,9 +331,11 @@ candidate endpoints.
   `MinimumReachablePolicy` exists. Measured: one reachable host of four gives `Reachable` under
   any-of-N and `Unreachable` under a 2-of-4 quorum, while a two-host whitelist beats that quorum too.
   All-of-N catches it but calls a healthy network offline the moment one endpoint is down.
-- **Plain-HTTP targets are trusted, invisibly.** A portal answering `200` with a login page passes the
-  default predicate, and so does a `302` to one, because the client follows redirects. The predicate
-  sees `isRedirect=false`, `statusCode=200` and the original `request.url`.
+- **A plain-HTTP target a portal answers with `200` is still trusted**, since the default predicate
+  sees a plain success. A `302` to a login page used to pass too: the client followed it and the
+  predicate saw `isRedirect=false, statusCode=200`. `ProbeTarget.followRedirects` now defaults to
+  false, so it sees `statusCode=302` and rejects. On web `BrowserClient` throws `ClientException`
+  instead, matching the verdict but not the diagnostic.
 - **Body-matching endpoints are unusable.** `HttpProbe` drains the response without buffering, so
   `response.body` is always empty and a predicate only sees the status code. Rules out Apple's
   `hotspot-detect.html`, Firefox's `success.txt` and Microsoft's `connecttest.txt`.

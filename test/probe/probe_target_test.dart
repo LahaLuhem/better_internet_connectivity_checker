@@ -18,6 +18,12 @@ void main() {
       check(target.headers).isEmpty();
     });
 
+    scenario('does not follow redirects', () {
+      final target = ProbeTarget(uri: Uri.https('example.com'));
+
+      check(target.followRedirects).isFalse();
+    });
+
     scenario('default predicate accepts HTTP 200 only', () {
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
@@ -48,10 +54,16 @@ void main() {
       check(target.timeout).equals(const Duration(seconds: 1));
       check(target.headers).deepEquals(customHeaders);
     });
+
+    scenario('forwards redirect following when opted in', () {
+      final target = ProbeTarget(uri: Uri.https('example.com'), followRedirects: true);
+
+      check(target.followRedirects).isTrue();
+    });
   });
 
   feature('ProbeTarget.toString', () {
-    scenario('renders uri, timeout, and headers in stable diagnostic form', () {
+    scenario('renders uri, timeout, redirect handling and headers in stable form', () {
       const customHeaders = {'X-Custom': 'value'};
       final target = ProbeTarget(
         uri: Uri.https('example.com', '/healthz'),
@@ -63,6 +75,7 @@ void main() {
         'ProbeTarget('
         'uri: https://example.com/healthz, '
         'timeout: 0:00:02.000000, '
+        'followRedirects: false, '
         'headers: {X-Custom: value})',
       );
     });

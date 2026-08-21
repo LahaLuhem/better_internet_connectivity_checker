@@ -22,6 +22,11 @@ final class const ProbeTarget({
   /// the check interval and long enough for mobile-network latency.
   final Duration timeout = Values.defaultProbeTimeout,
 
+  /// Whether a `3xx` response should be followed. Defaults to false, since a redirect is what a
+  /// captive portal serves and following it would report the login page as reachable. Native clients
+  /// hand the `3xx` to [isSuccess], the web throws instead, and both land as a failure.
+  final bool followRedirects = false,
+
   /// Headers attached to the outbound probe request. Sent verbatim.
   final Map<String, String> headers = Values.defaultProbeHeaders,
 
@@ -39,6 +44,7 @@ final class const ProbeTarget({
       'ProbeTarget('
       'uri: $uri, '
       'timeout: $timeout, '
+      'followRedirects: $followRedirects, '
       'headers: $headers'
       ')';
 
