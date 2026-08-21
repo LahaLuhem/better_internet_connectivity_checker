@@ -307,9 +307,11 @@ Two implementation facts worth not rediscovering:
   has to fit its attempts inside that budget. A probe called on its own, outside
   `InternetConnection`, is unbounded by design, which is why the example's `MethodAwareProbe` keeps
   its own `Future.timeout`.
-- **Not solved by this:** the socket. Aborting during a connect frees nothing, so a bounded probe
-  can leave a connection in `SYN_SENT` until the OS times it out. Tracked in
-  [#32](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues/32).
+- **Not solved by this:** the socket. Aborting needs a request to act on, so a bounded probe leaves
+  the connect in `SYN_SENT` until the OS reaps it. Only the transport can cut that, and only off the
+  web: `HttpClient.connectionTimeout` returned at 1019 ms with the socket gone, against 2014 ms and
+  one still pending for the default client. It is per-client while `timeout` is per-target, and
+  `dart:io` only, so it stays a caller's recipe rather than a default.
 
 ---
 

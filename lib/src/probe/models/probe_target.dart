@@ -18,8 +18,10 @@ final class const ProbeTarget({
   /// Cap on one probe of this target, kept by `InternetConnection` rather than by the probe itself.
   ///
   /// Covers the whole probe call, so a probe that retries internally has to fit every attempt inside
-  /// it. Defaults to [Values.defaultProbeTimeout], short enough that a stalled probe doesn't dominate
-  /// the check interval and long enough for mobile-network latency.
+  /// it. Bounds the waiting, not the socket: a connect nobody answers lingers until the OS reaps it,
+  /// which only `HttpClient.connectionTimeout` on an injected client can shorten. Defaults to
+  /// [Values.defaultProbeTimeout], short enough that a stalled probe doesn't dominate the check
+  /// interval and long enough for mobile-network latency.
   final Duration timeout = Values.defaultProbeTimeout,
 
   /// Whether a `3xx` response should be followed. Defaults to false, since a redirect is what a

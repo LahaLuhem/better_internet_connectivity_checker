@@ -274,6 +274,27 @@ import 'package:http/http.dart' as http;
 final checker = InternetConnection(probe: HttpProbe.head(client: myHttpClient));
 ```
 
+On native, a client is also the only place to cap the TCP connect itself. `ProbeTarget.timeout`
+bounds how long the probe *waits*, not how long the socket lives, so a target that drops
+packets leaves a connection in `SYN_SENT` until the OS gives up, which is over a minute on most
+platforms. `dart:io` can cut that:
+
+```dart
+import 'dart:io';
+import 'package:http/io_client.dart';
+
+final checker = InternetConnection(
+  probe: HttpProbe.head(
+    client: IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 3)),
+  ),
+);
+```
+
+Measured against a blackholed address with a 2s target timeout: the default client returns at
+2014ms and leaves the socket pending, while a 1s `connectionTimeout` returns at 1019ms with the
+socket already gone. It is per-client rather than per-target, so pick a value that suits your
+shortest target, and it is `dart:io` only, which is why the package cannot set it for you.
+
 ### Falling back to GET
 
 Some endpoints reject HEAD (HTTP 405) or strip caching headers on it. Swap to
@@ -535,6 +556,11 @@ Deliberate non-features that may affect how you use the package:
   default schedule has no such gap. The `backoff_recovery` benchmark puts numbers on the
   trade: median 55.6 % fewer probes during an outage, for recovery noticed in ~1.3 s
   instead of ~0.3 s.
+- **A timed-out probe returns on time, its socket does not.** Aborting needs a request to act
+  on, and a connect that never completed has none, so the connection sits in `SYN_SENT` until
+  the OS reaps it. One per check per dead target, so roughly
+  `os_connect_timeout / checkInterval` at a time. Cap it with `HttpClient.connectionTimeout` as
+  above if that matters to you.
 - **Captive-portal detection is a side effect of HTTPS, and it has holes.** A portal
   answering in place of a default target has no valid certificate for it, so the check
   reports `Unreachable`. Not covered: a portal whitelisting one target, where any-of-N
