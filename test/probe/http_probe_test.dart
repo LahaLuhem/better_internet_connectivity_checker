@@ -117,6 +117,34 @@ void main() {
     });
   });
 
+  feature('HttpProbe redirects', () {
+    scenario("puts the target's redirect setting on the request", () async {
+      final requests = <http.BaseRequest>[];
+      final client = MockClient((request) async {
+        requests.add(request);
+
+        return http.Response('', 200);
+      });
+      final probe = HttpProbe.head(client: client);
+
+      await probe.probe(ProbeTarget(uri: Uri.https('example.com')));
+      await probe.probe(ProbeTarget(uri: Uri.https('example.com'), followRedirects: true));
+
+      check(requests.map((request) => request.followRedirects)).deepEquals([false, true]);
+    });
+
+    scenario('fails on a redirect, since the default predicate wants 200', () async {
+      final client = MockClient(
+        (request) async => http.Response('', 302, headers: {'location': '/login'}),
+      );
+
+      final result = await HttpProbe.head(client: client)
+          .probe(ProbeTarget(uri: Uri.https('example.com')));
+
+      check(result.isSuccess).isFalse();
+    });
+  });
+
   feature('HttpProbe cancellation', () {
     scenario('issues an AbortableRequest whose trigger fires when cancelSignal does', () async {
       final capturedRequest = Completer<http.BaseRequest>();

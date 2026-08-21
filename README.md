@@ -209,6 +209,10 @@ final checker = InternetConnection(
 );
 ```
 
+Probes do not follow redirects, so a `3xx` reaches `isSuccess` and fails the default
+"exactly 200" check. A redirect is what a captive portal serves. Pass
+`followRedirects: true` on a target that legitimately redirects.
+
 ### Strict aggregation (every probe must succeed)
 
 ```dart
@@ -536,8 +540,8 @@ Deliberate non-features that may affect how you use the package:
   reports `Unreachable`. Not covered: a portal whitelisting one target, where any-of-N
   answers off that single host unless you raise the bar with
   [`MinimumReachablePolicy`](#requiring-more-than-one-target-to-answer), and plain-HTTP
-  targets you add yourself, where a portal's `200` login page and a `302` to it both pass
-  the default predicate undetectably. The verdict is never "portal", only `Unreachable`,
+  targets you add yourself, where a portal's `200` login page passes the default predicate.
+  A `302` to one does not, since probes do not follow redirects. The verdict is never "portal", only `Unreachable`,
   though `failedProbes` usually tells you which: all handshake errors means interception,
   all timeouts means dropped packets. Details in
   [`APPENDIX.md`](./APPENDIX.md#what-portal-detection-rests-on).

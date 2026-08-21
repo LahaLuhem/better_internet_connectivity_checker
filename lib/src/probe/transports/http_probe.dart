@@ -41,11 +41,10 @@ final class HttpProbe._(final String _method, http.Client? client) implements Co
     unawaited(cancelSignal?.whenComplete(abortCompleter.complete));
 
     try {
-      final request = http.AbortableRequest(
-        _method,
-        target.uri,
-        abortTrigger: abortCompleter.future,
-      )..headers.addAll(target.headers);
+      final request =
+          http.AbortableRequest(_method, target.uri, abortTrigger: abortCompleter.future)
+            ..followRedirects = target.followRedirects
+            ..headers.addAll(target.headers);
       final streamedResponse = await _client.send(request);
       await streamedResponse.stream.drain<void>();
       final response = http.Response.bytes(
