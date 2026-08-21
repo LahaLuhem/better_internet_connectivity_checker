@@ -421,6 +421,11 @@ skims past it, so the one line that mattered gets skimmed too. Shorter docs get 
 Keep: the *why*, a non-obvious constraint, a gotcha a caller would otherwise hit. When
 trimming pushes a point out, ask whether it belongs in APPENDIX instead of the comment.
 
+**A hard ceiling, because "brief" drifts.** Two short paragraphs for a class dartdoc, one for
+anything smaller, one for a README bullet. Past that, cut it or move it to APPENDIX. Reread every
+doc comment before it lands and delete each sentence a caller could have guessed from the
+signature.
+
 **Plain words, no buzzwords.** Say what the thing does. Skip vocabulary that sounds
 technical without carrying information: *leverage*, *robust*, *seamless*, *powerful*,
 *comprehensive*, *utilize*, *it's worth noting*. Protocol and language terms stay exact

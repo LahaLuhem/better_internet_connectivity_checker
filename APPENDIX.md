@@ -316,31 +316,27 @@ Two implementation facts worth not rediscovering:
 <a id="what-portal-detection-rests-on"></a>
 ## What captive-portal detection actually rests on
 
-Everything below was measured against local servers imitating each portal shape, plus a real-network
-pass over the candidate endpoints.
+All measured against local servers imitating each portal shape, plus a real-network pass over the
+candidate endpoints.
 
 - **The mechanism is HTTPS, not anything deliberate.** A portal standing in for `one.one.one.one`
-  cannot produce a certificate the client accepts, so the probe fails the handshake and the check
-  reports `Unreachable`. Measured against a local server holding a self-signed certificate for that
-  name: `HandshakeException`, verdict `Unreachable`.
+  cannot produce a certificate the client accepts. Measured against a local server holding a
+  self-signed certificate for that name: `HandshakeException`, verdict `Unreachable`.
 - **Requiring `204` does not help here, despite being the standard trick.** Android probes over plain
-  HTTP precisely so a portal *can* answer and be caught out by the status code. This package probes
-  HTTPS, where a portal cannot answer at all, so the status code never gets a chance to matter.
-  Measured: adding an HTTP `204` target to intercepted HTTPS defaults changed no verdict, and under
-  any-of-N a single plain `200` outvotes a rejected `204` target, so such a target can never veto.
-- **Whitelisting is the real hole, and it belongs to the policy layer.** If a portal lets one target
-  through before login, that target answers honestly and any-of-N reports `Reachable`. Measured: one
-  reachable host of four gives `Reachable` under any-of-N and `Unreachable` under a 2-of-4 quorum,
-  while a two-host whitelist beats that quorum as well. All-of-N catches it but calls a healthy
-  network offline the moment any single endpoint is down.
+  HTTP precisely so a portal *can* answer and be caught out by the status code. Over HTTPS a portal
+  cannot answer at all, so the code never gets to matter. Measured: adding an HTTP `204` target to
+  intercepted HTTPS defaults changed no verdict, and under any-of-N a single plain `200` outvotes a
+  rejected `204` target, so such a target can never veto.
+- **Whitelisting is the real hole, and it belongs to the policy layer**, which is why
+  `MinimumReachablePolicy` exists. Measured: one reachable host of four gives `Reachable` under
+  any-of-N and `Unreachable` under a 2-of-4 quorum, while a two-host whitelist beats that quorum too.
+  All-of-N catches it but calls a healthy network offline the moment one endpoint is down.
 - **Plain-HTTP targets are trusted, invisibly.** A portal answering `200` with a login page passes the
   default predicate, and so does a `302` to one, because the client follows redirects. The predicate
-  sees `isRedirect=false`, `statusCode=200` and the original `request.url`, so nothing in the response
-  gives it away.
-- **Body-matching endpoints are unusable.** `HttpProbe` drains the response without buffering it, so
-  `response.body` is always empty and a predicate only ever sees the status code. That rules out
-  Apple's `hotspot-detect.html`, Firefox's `success.txt` and Microsoft's `connecttest.txt`, which all
-  signal success through body text.
+  sees `isRedirect=false`, `statusCode=200` and the original `request.url`.
+- **Body-matching endpoints are unusable.** `HttpProbe` drains the response without buffering, so
+  `response.body` is always empty and a predicate only sees the status code. Rules out Apple's
+  `hotspot-detect.html`, Firefox's `success.txt` and Microsoft's `connecttest.txt`.
 
 ---
 

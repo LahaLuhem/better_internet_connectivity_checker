@@ -27,9 +27,8 @@ abstract final class Values {
   /// Public endpoints probed by `InternetConnection` when no custom target list is supplied. All
   /// answer HEAD with 200.
   ///
-  /// All four currently resolve to Cloudflare, so one edge incident can fail every probe at once, and
-  /// two of them allow long-lived caching. Pass your own `targets` when you need real operator spread
-  /// or strict no-cache behaviour.
+  /// All four resolve to Cloudflare and two allow long-lived caching, so pass your own `targets` if
+  /// you need operator spread or strict no-cache.
   ///
   /// Safe to share because every layer is `const`: the list literal, each [ProbeTarget], and each
   /// [ConstUri] are compile-time canonical and reject mutation at runtime.
