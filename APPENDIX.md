@@ -242,11 +242,12 @@ Two implementation facts worth not rediscovering:
 
 - **Chosen:** `ConnectivityProbe.probe(target, {cancelSignal})` accepts an optional
   `Future<void>?`. When it completes, the probe should abandon I/O and return a failed
-  `ProbeResult`. The built-in `HttpProbe` wires this — and its own per-target timeout
-  — into a single [`http.AbortableRequest`](https://pub.dev/documentation/http/latest/http/AbortableRequest-class.html)
+  `ProbeResult`. The built-in `HttpProbe` wires it into an
+  [`http.AbortableRequest`](https://pub.dev/documentation/http/latest/http/AbortableRequest-class.html)
   via the `abortTrigger` named parameter. `IOClient` calls `HttpClientRequest.abort()` on
   the underlying socket; `BrowserClient` calls `AbortController.abort()`. Either way the
-  TCP/TLS connection is released immediately, not after the Future-level timeout drains.
+  TCP/TLS connection is released as soon as the signal fires, rather than sitting open until
+  the deadline expires.
 - **Why an optional `Future<void>`** rather than a new `CancellationToken` type: standard
   Dart types compose cleanly. The fan-out in `AnyReachablePolicy` is one `Completer<void>`
   shared across all probes; custom probes that want to honour the signal can race against
@@ -267,17 +268,48 @@ Two implementation facts worth not rediscovering:
   future to every probe, complete it on first success or last failure. `AllReachablePolicy`
   passes nothing — every probe must complete by definition, so there is nothing to cancel.
   `InternetConnection` does not need to know about this: it asks the policy for an answer,
-  and the policy decides whether and when to release siblings.
+  and the policy decides whether and when to release siblings. The deadline wrapper below
+  adds a second, independent source on the same channel, which is how a timed-out probe is
+  told to let go even under the strict policy.
 - **Implication for the failure path:** `RequestAbortedException` is an `Exception`
   subtype (via `ClientException`), so the existing `on Exception catch (error)` clause in
-  `HttpProbe` captures it and the result lands as `ProbeResult.failure(error: …)`.
-  Aborted-by-deadline failures now surface as `RequestAbortedException` rather than
-  `TimeoutException` — a small but visible behaviour shift for any caller that
-  type-discriminates on `ProbeResult.error`.
+  `HttpProbe` captures it and the result lands as `ProbeResult.failure(error: …)`. It now
+  means one thing only, "a sibling settled the answer first", because deadline failures
+  report `TimeoutException` from the wrapper below. A caller that type-discriminates on
+  `ProbeResult.error` can finally tell the two apart.
 - **Not in scope today:** wiring `InternetConnection.dispose()` into the same cancellation
-  channel. A mid-flight policy run continues to completion when the connection is disposed
-  — bounded by the probe timeout, which now aborts cleanly. Worth revisiting if the
-  default check interval ever shrinks below the timeout, but additive when it does.
+  channel. A mid-flight policy run continues to completion when the connection is disposed,
+  bounded by the deadline wrapper below. Worth revisiting if the default check interval ever
+  shrinks below the timeout, but additive when it does.
+
+---
+
+<a id="why-the-coordinator-keeps-the-deadline"></a>
+## Why `InternetConnection` keeps the probe deadline, not the probe
+
+- **Chosen:** an internal `_DeadlineProbe` wraps whatever probe the caller configured, once, in
+  `InternetConnection`'s field initialiser. It caps each `probe()` call at `ProbeTarget.timeout`
+  with `Future.timeout` and passes the deadline down as the `cancelSignal` the probe already
+  understands.
+- **Why not leave it to the probe:** a deadline is a promise made to the caller, and a probe can
+  only make a best-effort one. `abort()` needs a request to act on, and a probe still waiting for a
+  TCP connection has none, so the call runs until the OS gives up on the connect. Measured at 75 s
+  against a blackholed address for a 2 s timeout. `Future.timeout` asks nothing of the transport, so
+  it holds either way.
+- **The evidence it sat in the wrong layer:** of the four `ConnectivityProbe` implementations in this
+  repo, one honoured `target.timeout`, and it was the example app's teaching probe rather than the
+  shipped `HttpProbe`. Every implementer had to remember the same line, and the reference
+  implementation forgot it.
+- **What it buys past the original bug:** every probe is bounded, third-party ones included, so a
+  probe that never answers can no longer hang a check. `AllReachablePolicy` waits for all of its
+  probes, so before this it would have waited forever.
+- **Cost:** `target.timeout` now covers one whole `probe()` call, so a probe that retries internally
+  has to fit its attempts inside that budget. A probe called on its own, outside
+  `InternetConnection`, is unbounded by design, which is why the example's `MethodAwareProbe` keeps
+  its own `Future.timeout`.
+- **Not solved by this:** the socket. Aborting during a connect frees nothing, so a bounded probe
+  can leave a connection in `SYN_SENT` until the OS times it out. Tracked in
+  [#32](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues/32).
 
 ---
 

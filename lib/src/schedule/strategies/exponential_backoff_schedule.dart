@@ -72,6 +72,6 @@ final class const ExponentialBackoffSchedule({
   Duration _jittered(Duration delay) {
     if (_randomizationFactor == 0) return delay;
 
-    return delay * (1 + _randomizationFactor * (_jitterSource() * 2 - 1));
+    return delay * (_randomizationFactor * (_jitterSource() * 2 - 1) + 1);
   }
 }

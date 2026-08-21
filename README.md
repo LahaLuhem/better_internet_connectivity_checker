@@ -271,13 +271,17 @@ returned, so inspect `statusCode` and `headers` instead.
 
 ### Writing a custom `ConnectivityProbe`
 
-For probes that go beyond HTTP (DNS, TCP, a private API, or a decorator wrapping another
-probe), implement `ConnectivityProbe.probe(target, {cancelSignal})`. Honour the
-optional `cancelSignal` whenever your transport supports cancellation: under
-`AnyReachablePolicy` it fires the moment a sibling probe succeeds, so the in-flight
-request can release its socket at the transport layer instead of waiting out the
-per-target timeout. The built-in `HttpProbe` honours it via `http.AbortableRequest`. Probes
-that cannot abort just ignore the parameter, and the policy still resolves correctly.
+For probes that go beyond HTTP (DNS, TCP, a private API, or a wrapper around another
+probe), implement `ConnectivityProbe.probe(target, {cancelSignal})`. You do not have to
+watch `target.timeout`: `InternetConnection` caps every probe at it and reports a
+`TimeoutException` failure when it runs out. The cap covers the whole call, so a probe that
+retries internally has to fit its attempts inside that budget.
+
+Do honour the optional `cancelSignal` whenever your transport can cancel. It fires when a
+sibling probe already settled the answer under `AnyReachablePolicy`, or when the deadline
+runs out, so the in-flight request can drop its socket instead of holding it. The built-in
+`HttpProbe` wires it to `http.AbortableRequest`. Probes that cannot abort just ignore the
+parameter, and the policy still resolves correctly.
 
 `ProbeResult` deliberately carries no protocol-specific data. When a probe needs to surface
 some (an HTTP `Allow` header, say), expose it on the probe itself via a constructor callback:
@@ -443,6 +447,9 @@ What the default configuration buys you, with no further configuration:
   in-flight siblings at the transport layer, so sockets release immediately rather than at
   timeout-drain. See
   [`APPENDIX.md`](./APPENDIX.md#probe-cancellation-via-http-abortable).
+- **Bounded checks.** Every probe is capped at its target's timeout no matter what the
+  transport does, so one dead endpoint cannot stretch the gap between checks. See
+  [`APPENDIX.md`](./APPENDIX.md#why-the-coordinator-keeps-the-deadline).
 - **Shared `http.Client`.** Connection pooling and TLS-session reuse across periodic ticks,
   instead of a fresh socket per probe.
 - **HTTP HEAD, not GET.** No response body on the wire. See

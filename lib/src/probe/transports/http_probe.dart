@@ -38,12 +38,7 @@ final class HttpProbe._(final String _method, http.Client? client) implements Co
   Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) async {
     final stopwatch = Stopwatch()..start();
     final abortCompleter = Completer<void>();
-    void triggerAbort() {
-      if (!abortCompleter.isCompleted) abortCompleter.complete();
-    }
-
-    final timeoutTimer = Timer(target.timeout, triggerAbort);
-    unawaited(cancelSignal?.whenComplete(triggerAbort));
+    unawaited(cancelSignal?.whenComplete(abortCompleter.complete));
 
     try {
       final request = http.AbortableRequest(
@@ -71,8 +66,6 @@ final class HttpProbe._(final String _method, http.Client? client) implements Co
       stopwatch.stop();
 
       return .failure(target: target, responseTime: stopwatch.elapsed, error: error);
-    } finally {
-      timeoutTimer.cancel();
     }
   }
 }

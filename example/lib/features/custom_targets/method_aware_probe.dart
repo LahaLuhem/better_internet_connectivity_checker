@@ -11,11 +11,12 @@ import 'package:http/http.dart' as http;
 /// probe itself — not on the shared result. See APPENDIX
 /// `#no-response-data-on-result` for the rationale.
 ///
-/// Intentionally minimal: the per-target timeout is honoured via
-/// `Future.timeout`, and `cancelSignal` is accepted (interface contract) but
-/// ignored — this probe only runs on the failure-inspection path, never
-/// inside a policy fan-out, so there is no sibling probe to race against.
-/// The library's [HttpProbe] is the reference implementation for full
+/// Intentionally minimal: `cancelSignal` is accepted (interface contract) but
+/// ignored, since this probe only runs on the failure-inspection path and
+/// never inside a policy fan-out, so there is no sibling to race against. It
+/// does keep the per-target timeout itself, because it is called directly
+/// rather than through [InternetConnection], and whoever calls a probe owns
+/// its deadline. The library's [HttpProbe] is the reference implementation for
 /// transport-layer abort handling.
 final class MethodAwareProbe implements ConnectivityProbe {
   final String httpMethod;
