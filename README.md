@@ -506,8 +506,9 @@ Deliberate non-features that may affect how you use the package:
   request bodies, custom error payloads), an `Unreachable` reference can keep that memory
   alive. Drop the reference once you're done, or extract only what you need from it.
 - **HTTP caching on probe endpoints will mask outages.** Use endpoints that respond with
-  `Cache-Control: no-cache`, as the defaults do. On the web platform, probe targets must
-  also allow CORS for the request to reach the probe.
+  `Cache-Control: no-cache`. Two of the current defaults do not: `pokeapi.co` sends
+  `max-age=86400` and `jsonplaceholder` sends `max-age=43200`. On the web platform, probe
+  targets must also allow CORS for the request to reach the probe.
 - **Backing off delays recovery, by design.** While `ExponentialBackoffSchedule` is waiting,
   a connection that comes back is not noticed until the next check, so an aggressive `maxDelay`
   can leave an app believing it is offline for minutes. Pair backoff with an
@@ -515,6 +516,17 @@ Deliberate non-features that may affect how you use the package:
   default schedule has no such gap. The `backoff_recovery` benchmark puts numbers on the
   trade: median 55.6 % fewer probes during an outage, for recovery noticed in ~1.3 s
   instead of ~0.3 s.
+- **Captive-portal detection is a side effect of HTTPS, and it has holes.** A portal
+  answering in place of a default target holds no valid certificate for it, so the handshake
+  fails and the check reports `Unreachable`, which is the right answer. Two things that does
+  not cover: a portal whitelisting one target before login, where any-of-N reports
+  `Reachable` off that single host, and plain-HTTP targets you configure yourself, where a
+  portal's `200` login page and a `302` to it both pass the default predicate with nothing in
+  the response to give them away. The package also never says "portal", only `Unreachable`.
+  You can usually tell the cases apart from the errors on `Unreachable.failedProbes`: every
+  probe failing with a handshake error points at interception, every one timing out points at
+  dropped packets. Mechanism and measurements in
+  [`APPENDIX.md`](./APPENDIX.md#what-portal-detection-rests-on).
 - **`AllReachablePolicy` is brittle with arbitrary public endpoints.** Any one being briefly
   unavailable flags a working connection as offline. Use it only with a curated probe list,
   such as enterprise internal endpoints. See the policy's dartdoc.
