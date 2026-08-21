@@ -81,6 +81,35 @@ void main() {
       });
     });
 
+    // The wrapper owns the deadline but must stay transparent to the policy's own signal, otherwise
+    // a sibling win would no longer release the losers until their deadline.
+    scenario('still passes the policy cancel through, well before any deadline', () {
+      fakeAsync((async) {
+        const roomySpan = Duration(seconds: 10);
+        final winningTarget = ProbeTarget(uri: Uri.https('fast.example.com'), timeout: roomySpan);
+        final hangingTarget = ProbeTarget(uri: Uri.https('slow.example.com'), timeout: roomySpan);
+        final probe = StubProbe(
+          (target) => target == winningTarget
+              ? Future.value(ProbeResult.success(target: target, responseTime: Duration.zero))
+              : Completer<ProbeResult>().future,
+        );
+        final connection = InternetConnection(
+          targets: [winningTarget, hangingTarget],
+          probe: probe,
+        );
+        unawaited(connection.checkOnce());
+        async.flushMicrotasks();
+
+        var released = false;
+        unawaited(probe.cancelSignalFor(hangingTarget)!.whenComplete(() => released = true));
+
+        async.elapse(const Duration(seconds: 1));
+        check(released).isTrue();
+
+        unawaited(connection.dispose());
+      });
+    });
+
     // Under AllReachablePolicy the policy itself passes no cancelSignal, so a completed one can only
     // have come from the deadline.
     scenario('tells the probe to let go at the deadline, even when the policy never would', () {
