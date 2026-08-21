@@ -38,8 +38,8 @@ part 'internal/periodic_scheduler.dart';
 final class InternetConnection({
   /// The URIs probed on each check.
   ///
-  /// Defaults to a curated list of public reliability endpoints (diverse operators, low cache
-  /// surface). Must be non-empty: an empty list trips a debug-mode `assert`, and release builds
+  /// Defaults to three public endpoints, one per operator, so no single provider's outage can fail
+  /// every probe. Must be non-empty: an empty list trips a debug-mode `assert`, and release builds
   /// fall through to `Unreachable` every check.
   List<ProbeTarget>? targets,
 
