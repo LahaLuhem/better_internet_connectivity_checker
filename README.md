@@ -524,10 +524,10 @@ Deliberate non-features that may affect how you use the package:
   `ProbeResult.error`. If those exceptions chain heavy transport state (TLS context,
   request bodies, custom error payloads), an `Unreachable` reference can keep that memory
   alive. Drop the reference once you're done, or extract only what you need from it.
-- **HTTP caching on probe endpoints will mask outages.** Use endpoints that respond with
-  `Cache-Control: no-cache`. Two of the current defaults do not: `pokeapi.co` sends
-  `max-age=86400` and `jsonplaceholder` sends `max-age=43200`. On the web platform, probe
-  targets must also allow CORS for the request to reach the probe.
+- **HTTP caching on probe endpoints will mask outages.** Use endpoints that answer with
+  `Cache-Control: no-cache` or `max-age=0`, as the defaults do. `dart:io` keeps no cache, so
+  this only bites on the web platform, where a target must also allow CORS for the request to
+  reach the probe at all.
 - **Backing off delays recovery, by design.** While `ExponentialBackoffSchedule` is waiting,
   a connection that comes back is not noticed until the next check, so an aggressive `maxDelay`
   can leave an app believing it is offline for minutes. Pair backoff with an

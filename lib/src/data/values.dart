@@ -24,19 +24,18 @@ abstract final class Values {
   /// web platform — importing it would break web compilation despite the constant itself being trivial.
   static const httpStatusOk = 200;
 
-  /// Public endpoints probed by `InternetConnection` when no custom target list is supplied. All
-  /// answer HEAD with 200.
+  /// Public endpoints probed by `InternetConnection` when no custom target list is supplied.
   ///
-  /// All four resolve to Cloudflare and two allow long-lived caching, so pass your own `targets` if
-  /// you need operator spread or strict no-cache.
+  /// One per operator, so no single provider's outage can fail every probe: Cloudflare, then
+  /// OpenStreetMap behind Fastly, then Open-Meteo on Hetzner. All three answer HEAD with 200, allow
+  /// CORS so the web platform works, and send no long-lived caching that could mask an outage.
   ///
   /// Safe to share because every layer is `const`: the list literal, each [ProbeTarget], and each
   /// [ConstUri] are compile-time canonical and reject mutation at runtime.
   static const defaultProbeTargets = <ProbeTarget>[
     ProbeTarget(uri: ConstUri('https://one.one.one.one')),
-    ProbeTarget(uri: ConstUri('https://icanhazip.com')),
-    ProbeTarget(uri: ConstUri('https://jsonplaceholder.typicode.com/todos/1')),
-    ProbeTarget(uri: ConstUri('https://pokeapi.co/api/v2/ability/?limit=1')),
+    ProbeTarget(uri: ConstUri('https://api.openstreetmap.org/api/0.6/capabilities')),
+    ProbeTarget(uri: ConstUri('https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0')),
   ];
 }
 
