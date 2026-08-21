@@ -1,3 +1,7 @@
+## [Unreleased]
+### Fixed
+- \[#30\] Bound every probe at ProbeTarget.timeout, whatever the transport does
+
 ## [1.0.0] - 2026-08-20
 ### Added
 - \[#4\] Benchmarking framework + snapshotting library performance
@@ -46,6 +50,7 @@
 - Sibling-probe cancellation via http.AbortableRequest: under any-of-N, in-flight probes abort at the transport layer the moment one succeeds, releasing sockets immediately instead of waiting out the per-target timeout.
 - an `externalRecheckTrigger` constructor hook forces an immediate recheck on any Stream<void> event (e.g. connectivity\_plus.onConnectivityChanged.map(noopWithVal) on Flutter) without the package itself depending on Flutter.
 
+[Unreleased]: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/1.0.0...HEAD
 [1.0.0]: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/0.2.0...1.0.0
 [0.2.0]: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/LahaLuhem/better_internet_connectivity_checker/compare/0.0.1...0.1.0
