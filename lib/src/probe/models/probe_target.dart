@@ -15,10 +15,11 @@ final class const ProbeTarget({
   /// CORS for the request to reach the probe.
   required final Uri uri,
 
-  /// Maximum time a single probe is allowed to take.
+  /// Cap on one probe of this target, kept by `InternetConnection` rather than by the probe itself.
   ///
-  /// Defaults to [Values.defaultProbeTimeout] — short enough that a stalled probe doesn't dominate
-  /// the check interval, long enough for mobile-network latency.
+  /// Covers the whole probe call, so a probe that retries internally has to fit every attempt inside
+  /// it. Defaults to [Values.defaultProbeTimeout], short enough that a stalled probe doesn't dominate
+  /// the check interval and long enough for mobile-network latency.
   final Duration timeout = Values.defaultProbeTimeout,
 
   /// Headers attached to the outbound probe request. Sent verbatim.

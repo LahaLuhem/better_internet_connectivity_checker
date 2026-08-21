@@ -41,6 +41,73 @@ void main() {
     });
   });
 
+  feature('InternetConnection probe deadline', () {
+    const timeout = Duration(seconds: 2);
+    final cappedTarget = ProbeTarget(uri: Uri.https('example.com'), timeout: timeout);
+    StubProbe neverAnswers() => StubProbe((_) => Completer<ProbeResult>().future);
+
+    scenario('caps a probe that never answers, and says why it failed', () {
+      fakeAsync((async) {
+        final connection = InternetConnection(targets: [cappedTarget], probe: neverAnswers());
+        InternetStatus? status;
+        unawaited(connection.checkOnce().then((result) => status = result));
+
+        async.elapse(timeout);
+
+        check(status).isA<Unreachable>();
+        final failure = (status! as Unreachable).failedProbes.single;
+        check(failure.error).isA<TimeoutException>();
+        check(failure.responseTime).equals(timeout);
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    scenario('caps it under every policy, not just the default one', () {
+      fakeAsync((async) {
+        final connection = InternetConnection(
+          targets: [cappedTarget],
+          probe: neverAnswers(),
+          policy: const AllReachablePolicy(),
+        );
+        InternetStatus? status;
+        unawaited(connection.checkOnce().then((result) => status = result));
+
+        async.elapse(timeout);
+
+        check(status).isA<Unreachable>();
+
+        unawaited(connection.dispose());
+      });
+    });
+
+    // Under AllReachablePolicy the policy itself passes no cancelSignal, so a completed one can only
+    // have come from the deadline.
+    scenario('tells the probe to let go at the deadline, even when the policy never would', () {
+      fakeAsync((async) {
+        final probe = neverAnswers();
+        final connection = InternetConnection(
+          targets: [cappedTarget],
+          probe: probe,
+          policy: const AllReachablePolicy(),
+        );
+        unawaited(connection.checkOnce());
+        async.flushMicrotasks();
+
+        var released = false;
+        unawaited(probe.cancelSignalFor(cappedTarget)!.whenComplete(() => released = true));
+
+        async.elapse(const Duration(seconds: 1));
+        check(released).isFalse();
+
+        async.elapse(const Duration(seconds: 1));
+        check(released).isTrue();
+
+        unawaited(connection.dispose());
+      });
+    });
+  });
+
   feature('InternetConnection constructor', () {
     scenario('asserts when targets is empty (dev-time check)', () {
       check(() => InternetConnection(targets: const [])).throws<AssertionError>();

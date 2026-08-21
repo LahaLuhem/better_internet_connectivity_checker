@@ -8,6 +8,7 @@ import 'observer/events/connectivity_event.dart';
 import 'policy/reachability_policy.dart';
 import 'policy/strategies/any_reachable_policy.dart';
 import 'probe/connectivity_probe.dart';
+import 'probe/models/probe_result.dart';
 import 'probe/models/probe_target.dart';
 import 'probe/transports/http_probe.dart';
 import 'schedule/check_schedule.dart';
@@ -16,6 +17,7 @@ import 'schedule/strategies/fixed_interval_schedule.dart';
 import 'status/internet_status.dart';
 import 'status/models/connection_quality.dart';
 
+part 'internal/deadline_probe.dart';
 part 'internal/event_sink.dart';
 part 'internal/external_trigger_link.dart';
 part 'internal/periodic_scheduler.dart';
@@ -65,8 +67,9 @@ final class InternetConnection({
 
   /// Runs a single check; defaults to [HttpProbe.head].
   ///
-  /// Pass a custom probe to swap the transport (a retry decorator, [HttpProbe.get] for
-  /// HEAD-unfriendly endpoints) or inject a mock.
+  /// Pass a custom probe to swap the transport ([HttpProbe.get] for HEAD-unfriendly endpoints, a
+  /// retry wrapper, a DNS or TCP probe) or inject a mock. Whatever you pass is capped at each
+  /// target's [ProbeTarget.timeout], so a retry wrapper has to fit its attempts inside that budget.
   ConnectivityProbe? probe,
 
   /// An optional stream whose events force an immediate recheck.
@@ -77,7 +80,7 @@ final class InternetConnection({
   final List<ProbeTarget> _targets = targets != null
       ? List.unmodifiable(targets)
       : Values.defaultProbeTargets;
-  final ConnectivityProbe _probe = probe ?? HttpProbe.head();
+  final ConnectivityProbe _probe = _DeadlineProbe(probe ?? HttpProbe.head());
   final _externalTrigger = externalRecheckTrigger;
 
   late final _statusController = StreamController<InternetStatus>.broadcast(
@@ -139,6 +142,9 @@ final class InternetConnection({
   Stream<ConnectivityEvent> get events => _eventSink.stream;
 
   /// Runs one check and returns the resulting status.
+  ///
+  /// Each probe is capped at its target's [ProbeTarget.timeout], so the check takes at most the
+  /// longest of those (the built-in policies run their probes in parallel).
   ///
   /// Does not affect the periodic timer, the status stream, [lastStatus], or the failure streak the
   /// [CheckSchedule] sees.
