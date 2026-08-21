@@ -1,4 +1,7 @@
 ## [Unreleased]
+### Changed
+- \[#31\] Add MinimumReachablePolicy and stop probes following redirects
+
 ### Fixed
 - \[#30\] Bound every probe at ProbeTarget.timeout, whatever the transport does
 
