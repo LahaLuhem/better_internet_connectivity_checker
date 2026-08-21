@@ -45,6 +45,7 @@ export 'src/observer/sinks/printing_connectivity_observer.dart' show PrintingCon
 export 'src/policy/reachability_policy.dart' show ReachabilityPolicy;
 export 'src/policy/strategies/all_reachable_policy.dart' show AllReachablePolicy;
 export 'src/policy/strategies/any_reachable_policy.dart' show AnyReachablePolicy;
+export 'src/policy/strategies/minimum_reachable_policy.dart' show MinimumReachablePolicy;
 export 'src/probe/connectivity_probe.dart' show ConnectivityProbe;
 export 'src/probe/models/probe_result.dart' show ProbeResult;
 export 'src/probe/models/probe_target.dart' show ProbeTarget;

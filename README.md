@@ -22,6 +22,7 @@
     * [Slow-connection detection](#slow-connection-detection)
     * [Custom probe targets](#custom-probe-targets)
     * [Strict aggregation (every probe must succeed)](#strict-aggregation-every-probe-must-succeed)
+    * [Requiring more than one target to answer](#requiring-more-than-one-target-to-answer)
     * [Controlling the check cadence](#controlling-the-check-cadence)
     * [Injecting a custom `http.Client`](#injecting-a-custom-httpclient)
     * [Falling back to GET](#falling-back-to-get)
@@ -216,6 +217,20 @@ final checker = InternetConnection(policy: const AllReachablePolicy());
 
 Recommended only with a curated probe list. Under the default endpoint set, any one public
 endpoint being down would flag a working connection as unreachable.
+
+### Requiring more than one target to answer
+
+```dart
+final checker = InternetConnection(policy: const MinimumReachablePolicy(minimum: 2));
+```
+
+The middle ground between the default any-of-N and the strict all-of-N. Two of four still
+calls a network online while one endpoint is down, and refuses to call it online off a
+single host, which is what a captive portal whitelisting one target looks like. A portal
+whitelisting two beats a `minimum` of two, so the number is the trade.
+
+It settles as soon as the count is decided either way and cancels the rest, so an
+`Unreachable` lists the failures that decided it rather than every target.
 
 ### Controlling the check cadence
 
@@ -517,15 +532,14 @@ Deliberate non-features that may affect how you use the package:
   trade: median 55.6 % fewer probes during an outage, for recovery noticed in ~1.3 s
   instead of ~0.3 s.
 - **Captive-portal detection is a side effect of HTTPS, and it has holes.** A portal
-  answering in place of a default target holds no valid certificate for it, so the handshake
-  fails and the check reports `Unreachable`, which is the right answer. Two things that does
-  not cover: a portal whitelisting one target before login, where any-of-N reports
-  `Reachable` off that single host, and plain-HTTP targets you configure yourself, where a
-  portal's `200` login page and a `302` to it both pass the default predicate with nothing in
-  the response to give them away. The package also never says "portal", only `Unreachable`.
-  You can usually tell the cases apart from the errors on `Unreachable.failedProbes`: every
-  probe failing with a handshake error points at interception, every one timing out points at
-  dropped packets. Mechanism and measurements in
+  answering in place of a default target has no valid certificate for it, so the check
+  reports `Unreachable`. Not covered: a portal whitelisting one target, where any-of-N
+  answers off that single host unless you raise the bar with
+  [`MinimumReachablePolicy`](#requiring-more-than-one-target-to-answer), and plain-HTTP
+  targets you add yourself, where a portal's `200` login page and a `302` to it both pass
+  the default predicate undetectably. The verdict is never "portal", only `Unreachable`,
+  though `failedProbes` usually tells you which: all handshake errors means interception,
+  all timeouts means dropped packets. Details in
   [`APPENDIX.md`](./APPENDIX.md#what-portal-detection-rests-on).
 - **`AllReachablePolicy` is brittle with arbitrary public endpoints.** Any one being briefly
   unavailable flags a working connection as offline. Use it only with a curated probe list,
