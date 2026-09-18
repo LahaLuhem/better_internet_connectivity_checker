@@ -5,6 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   # Pull-request runs cancel each other per PR; main-branch runs cancel only
