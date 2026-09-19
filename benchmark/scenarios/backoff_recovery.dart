@@ -1,10 +1,8 @@
 /// Scenario: backoff recovery.
 ///
-/// One outage-then-recovery timeline, run twice per iteration: once on the default
-/// [FixedIntervalSchedule], once on [ExponentialBackoffSchedule]. Both arms see the same local
-/// server going 503 then 200 at the same offsets, so the pair of numbers is the trade the backoff
-/// schedule actually makes: fewer probes while the connection is down, against a later recovery
-/// signal once it returns.
+/// The same outage-then-recovery timeline run twice, once on [FixedIntervalSchedule] and once on
+/// [ExponentialBackoffSchedule], against the same server at the same offsets. The pair of numbers is
+/// the trade backoff makes: fewer probes while you're down, against noticing recovery later.
 library;
 
 import 'dart:async';
@@ -20,12 +18,12 @@ import '../harness/scenario_args.dart';
 /// Base interval for both arms, so the only difference between them is the schedule.
 const _baseInterval = Duration(milliseconds: 500);
 
-/// Ceiling for the backoff arm. Two rungs above the base, so the ladder flattens inside a short
-/// outage rather than running off the end of the window.
+/// Ceiling for the backoff arm. Two rungs up, so the ladder flattens inside a short outage instead
+/// of running off the end of the window.
 const _maxBackoffDelay = Duration(seconds: 2);
 
-/// Share of one arm's wall clock spent with the server down. The rest is the window in which
-/// recovery has to be noticed, and it has to stay comfortably wider than [_maxBackoffDelay].
+/// Share of one arm's wall clock with the server down. The rest is the window recovery has to be
+/// noticed in, and it needs to stay comfortably wider than [_maxBackoffDelay].
 const _outageFraction = 0.6;
 
 typedef _ArmResult = ({

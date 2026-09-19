@@ -4,20 +4,15 @@ library;
 
 import 'models/schedule_context.dart';
 
-/// Decides how long to wait before the next periodic check.
+/// Decides how long to wait before the next check. [FixedIntervalSchedule] keeps the same gap,
+/// [ExponentialBackoffSchedule] widens it while checks keep failing. Why cadence is its own seam and
+/// not `package:retry`: [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#why-cadence-is-its-own-seam).
 ///
-/// The third pluggable layer, alongside `ConnectivityProbe` (how one check runs) and
-/// `ReachabilityPolicy` (how results roll up). Built-ins: [FixedIntervalSchedule] (the default,
-/// same gap every time) and [ExponentialBackoffSchedule] (widening gaps while checks keep failing).
-///
-/// Stateless by convention, and built-ins are `const`-constructible so they can be shared. The
-/// streak arrives on [ScheduleContext], so the common cases need no state. Kept an interface rather
-/// than a typedef so a schedule that *does* need state can hold fields, e.g. one counting
-/// `Reachable(slow)` as a failure, which [ScheduleContext.consecutiveFailures] deliberately does not.
+/// The failure streak comes in on [ScheduleContext], so the usual cases need no state of their own.
+/// It's an interface rather than a typedef for the ones that do, like a schedule that counts a
+/// slow-but-reachable result as a failure, which [ScheduleContext.consecutiveFailures] doesn't.
 abstract interface class CheckSchedule {
-  /// Returns the delay before the next check, given the state after the one that just finished.
-  ///
-  /// Called once per scheduled check. Must return a non-negative [Duration]; a zero delay busy-loops
-  /// the scheduler.
+  /// The gap before the next check, asked once per scheduled check. Keep it above zero, or the
+  /// scheduler busy-loops.
   Duration nextDelay(ScheduleContext scheduleContext);
 }

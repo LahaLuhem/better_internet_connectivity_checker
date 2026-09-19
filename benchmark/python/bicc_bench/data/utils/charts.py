@@ -32,7 +32,7 @@ from bicc_bench.data.dtos.result_record import ResultRecord, flatten_records
 
 
 def set_default_theme() -> None:
-    """Apply the shared seaborn theme. Idempotent; cmd_X calls once at start."""
+    """Apply the shared seaborn theme. Idempotent, and cmd_X calls it once at start."""
     sns.set_theme(style="whitegrid", context="paper", palette=CHART_PALETTE)
 
 

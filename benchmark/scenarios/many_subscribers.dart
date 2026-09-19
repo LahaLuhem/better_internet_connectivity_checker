@@ -1,10 +1,7 @@
 /// Scenario: many subscribers.
 ///
-/// Runs three sub-scenarios in sequence with N ∈ {1, 10, 100} subscribers on `onStatusChange`, each
-/// emitting its own JSON record (shared scenario name; `subscriber_count` is the pivot). With `--iterations K`,
-/// that's K × 3 records per invocation.
-///
-/// Captures the per-subscriber broadcast cost, which should scale linearly with N.
+/// 3 runs, at 1, 10 and 100 subscribers on `onStatusChange`, 1 JSON record each with
+/// `subscriber_count` as the pivot. The per-subscriber broadcast cost should scale linearly.
 library;
 
 import 'dart:async';

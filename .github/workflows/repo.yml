@@ -27,7 +27,7 @@ jobs:
         with:
           sdk: stable
       # Format scans files in place; no pub-get needed. The setup-dart composite
-      # is reserved for jobs that need resolved dependencies — skipping it here
+      # is reserved for jobs that need resolved dependencies, so skipping it here
       # saves ~10-30s per run.
       - run: dart format --output=none --set-exit-if-changed .
 

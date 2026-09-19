@@ -1,19 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-/// Periodically samples `ProcessInfo.currentRss` to track resident set size over a run. RSS is the
-/// OS-reported physical memory the process holds — coarser than per-instance heap, but the right
-/// signal for leak detection over long runs.
+/// Samples `ProcessInfo.currentRss` on a timer, to watch resident memory across a run. Coarser than
+/// heap size, but it's the right signal for spotting a leak.
 ///
-/// ```dart
-/// final sampler = MemorySampler(interval: Duration(seconds: 1))..start();
-/// // ... run scenario ...
-/// sampler.stop();
-/// final samples = sampler.samples; // List<int> of RSS bytes
-/// ```
-///
-/// Defaults to 1 s sampling. Faster is cheap (`currentRss` is a `getrusage` syscall) but noisier.
-/// Slower misses short-lived spikes.
+/// 1 second by default. Faster is cheap, `currentRss` is just a `getrusage` syscall, but noisier.
+/// Slower misses short spikes.
 final class MemorySampler {
   final Duration _interval;
   final _samples = <int>[];
@@ -22,40 +14,36 @@ final class MemorySampler {
 
   new({this._interval = const Duration(seconds: 1)});
 
-  /// Snapshot of all RSS samples (bytes) collected so far, in chronological order. Returned as an
-  /// unmodifiable view.
+  /// Every RSS sample so far, in bytes, oldest first.
   List<int> get samples => List.unmodifiable(_samples);
 
   /// Timestamps matching [samples] one-to-one.
   List<DateTime> get timestamps => List.unmodifiable(_timestamps);
 
-  /// Peak RSS observed across all samples, in bytes. Returns 0 if no samples have been collected.
+  /// Highest RSS seen, in bytes. Zero when nothing has been sampled.
   int get peakRss => _samples.isEmpty ? 0 : _samples.reduce((a, b) => a > b ? a : b);
 
-  /// Minimum RSS observed. Useful as the "idle" baseline for a quiet scenario.
+  /// Lowest RSS seen, which makes a decent idle baseline.
   int get minRss => _samples.isEmpty ? 0 : _samples.reduce((a, b) => a < b ? a : b);
 
-  /// RSS delta between the first and last sample. Positive = growth (potential leak). Near-zero = steady state.
+  /// Last sample minus the first. Climbing means growth, which means a possible leak.
   int get rssDelta => _samples.length < 2 ? 0 : _samples.last - _samples.first;
 
-  /// Starts periodic sampling. Throws if already started — call [stop] first to reuse the same sampler
-  /// instance.
-  ///
-  /// Samples immediately on start so there's at least one data point even for very short scenarios.
+  /// Starts sampling, taking one straight away so even a very short run has a data point. Throws if
+  /// it's already running, so [stop] first to reuse one.
   void start() {
     if (_timer != null) throw StateError('MemorySampler already started');
     _take();
     _timer = Timer.periodic(_interval, (_) => _take());
   }
 
-  /// Stops sampling. Idempotent — safe to call multiple times.
+  /// Stops sampling. Safe to call twice.
   void stop() {
     _timer?.cancel();
     _timer = null;
   }
 
-  /// Forces an immediate sample outside the periodic schedule. Useful for capturing RSS at known
-  /// interesting moments (e.g. right after `InternetConnection` construction).
+  /// Takes a sample right now, off-schedule, for a known interesting moment.
   void sampleNow() => _take();
 
   void _take() {

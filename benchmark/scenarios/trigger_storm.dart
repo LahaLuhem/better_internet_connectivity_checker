@@ -1,11 +1,10 @@
 /// Scenario: trigger storm.
 ///
-/// External recheck trigger fires 100 times per second for the configured duration. Mirrors the worst-case
-/// mobile scenario where `connectivity_plus` emits rapid OS-level network-change events (e.g. wifi handoff oscillation).
+/// The external trigger fires 100 times a second, which is what a phone flapping between wifi and
+/// cell looks like coming out of `connectivity_plus`.
 ///
-/// Measures whether the scheduler coalesces / debounces these correctly — the contract is that an
-/// in-flight check is not preempted, and the next scheduled tick is reset on each trigger. Excessive
-/// emissions or per-trigger work indicates a coalescing regression.
+/// The contract: an in-flight check isn't preempted, and each trigger resets the next scheduled tick.
+/// A pile of extra emissions means coalescing regressed.
 library;
 
 import 'dart:async';
@@ -57,7 +56,7 @@ Future<void> _runIteration(
   var emissionCount = 0;
   final subscription = checker.onStatusChange.listen((_) => emissionCount++);
 
-  // 100 triggers per second = one trigger every 10 ms.
+  // 100 triggers per second = 1 trigger every 10 ms.
   var triggerCount = 0;
   final stormTimer = Timer.periodic(const Duration(milliseconds: 10), (_) {
     triggerController.add(null);
@@ -85,7 +84,7 @@ Future<void> _runIteration(
       'trigger_fire_count': triggerCount,
       'emission_count': emissionCount,
       // The ratio surfaces whether triggers are coalesced (low ratio) or
-      // each trigger does work end-to-end (ratio ≈ 1 — a regression).
+      // each trigger does work end-to-end (ratio ≈ 1, a regression).
       'emissions_per_trigger': emissionCount / (triggerCount == 0 ? 1 : triggerCount),
       'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,
       'total_blocked_microseconds': stallMeter.totalBlocked.inMicroseconds,

@@ -1,15 +1,13 @@
 part of '../connectivity_event.dart';
 
-/// Emitted after every internal check completes, whether or not the result changed the emitted status.
-/// Mirrors the periodic timer's cadence plus any trigger-driven rechecks.
+/// An internal check finished, whether or not it moved the status. 1 per tick, plus 1 per
+/// trigger.
 final class const CheckCompletedEvent(
-  /// The status produced by the completed check.
+  /// What the check came back with.
   final InternetStatus result,
 ) extends ConnectivityEvent {
-  /// Creates a check-completed event carrying the check's [result].
+  /// Creates a [CheckCompletedEvent].
   this;
-
-  // Debug-only toString delegation; excluded from coverage.
   // coverage:ignore-start
   @override
   String toString() => 'CheckCompletedEvent(result: $result)';

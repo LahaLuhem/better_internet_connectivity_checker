@@ -3,21 +3,14 @@ import 'dart:async';
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:http/http.dart' as http;
 
-/// Inline [ConnectivityProbe] that fires one HTTP request with [httpMethod]
-/// and surfaces the response's `Allow` header (when present) via
-/// [onAllowHeader]. Demonstrates the *only* lesson the built-in [HttpProbe]
-/// cannot teach: [ProbeResult] is intentionally protocol-agnostic, so
-/// HTTP-specific data (status codes, headers, …) has to be exposed on the
-/// probe itself — not on the shared result. See APPENDIX
-/// `#no-response-data-on-result` for the rationale.
+/// Fires one request with [httpMethod] and hands the response's `Allow` header to [onAllowHeader].
 ///
-/// Intentionally minimal: `cancelSignal` is accepted (interface contract) but
-/// ignored, since this probe only runs on the failure-inspection path and
-/// never inside a policy fan-out, so there is no sibling to race against. It
-/// does keep the per-target timeout itself, because it is called directly
-/// rather than through [InternetConnection], and whoever calls a probe owns
-/// its deadline. The library's [HttpProbe] is the reference implementation for
-/// transport-layer abort handling.
+/// Shows the one thing [HttpProbe] can't: [ProbeResult] carries no HTTP-specific fields, so anything
+/// protocol-shaped has to hang off the probe instead. See [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#no-response-data-on-result).
+///
+/// Deliberately bare. `cancelSignal` is ignored, since this only runs on the failure-inspection path
+/// and never inside a policy fan-out, so there's no sibling to race. It does keep the timeout itself,
+/// because it's called directly rather than through [InternetConnection].
 final class MethodAwareProbe implements ConnectivityProbe {
   final String httpMethod;
   final void Function(String allow)? onAllowHeader;

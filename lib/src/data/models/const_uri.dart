@@ -1,25 +1,18 @@
-// Logically immutable (`final` class, `final` field, `const` constructor) but can't carry
-// `@immutable`: that annotation ships only in `package:meta`, a dep we avoid to keep the runtime
-// pubspec at one entry (pure-Dart, minimal-dep posture).
+// Immutable in practice, but `@immutable` lives in `package:meta` and the runtime pubspec stays at
+// one dependency.
 // ignore_for_file: avoid_equals_and_hash_code_on_mutable_classes
 
-/// A `const`-constructible wrapper around [Uri] that defers parsing until first member access.
+/// A [Uri] you can put in a `const`, by holding the string and parsing it on first use.
 ///
-/// `Uri.parse(...)` isn't a `const` expression, so [Uri]s can't sit in `const` constructors or
-/// literals. [ConstUri] holds the raw string at compile time and parses lazily on first access,
-/// caching process-wide so instances of the same string share one parsed [Uri].
-///
-/// Trade-offs vs. `Uri.https(...)` / `Uri.parse(...)`:
-/// - **Gains** `const` construction — enclosing value types can become `const` and canonicalise.
-/// - **Loses** eager validation — a malformed URI surfaces only on first access, and `Uri.parse` is
-///   permissive anyway (most typos parse "successfully" with the wrong scheme rather than throwing).
-/// - **Adds** one map lookup per accessor, plus a one-off parse on first access of a given string.
+/// `Uri.parse` isn't a const expression, so this keeps the raw string until someone reads a member,
+/// then caches the parse process-wide. What it costs you: a malformed URI only blows up on first
+/// access, and every accessor pays a map lookup.
 ///
 /// Adapted from https://gist.github.com/passsy/0be2ca0e86ff11e400187f7076404678.
 final class const ConstUri(final String _uri) implements Uri {
   static final _cache = <String, Uri>{};
 
-  /// Wraps a URI string, deferring `Uri.parse` until the first member access.
+  /// Wraps a URI string. Nothing is parsed until you read a member.
   this;
 
   Uri get _delegate => _cache.putIfAbsent(_uri, () => Uri.parse(_uri));

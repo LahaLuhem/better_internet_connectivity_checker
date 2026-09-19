@@ -3,42 +3,31 @@ import 'package:http/http.dart' as http;
 import '../../data/typedefs.dart';
 import '../../data/values.dart';
 
-/// A single internet-reachability target — what to probe and what counts as success.
-///
-/// Immutable value object carrying the caller-controlled knobs (URI, timeout, headers, and the response-acceptance predicate).
-/// Reuse across instances; there's no per-call state.
+/// One thing to probe, plus what counts as success. No per-call state, so reuse them freely.
 final class const ProbeTarget({
-  /// The URI to probe.
-  ///
-  /// Ensure the endpoint disables HTTP caching (e.g. `Cache-Control: no-cache`); a cached response
-  /// masks connectivity problems by short-circuiting locally. On the web the endpoint must allow
-  /// CORS for the request to reach the probe.
+  /// Where to probe. Pick an endpoint that turns caching off, or a cached response answers locally
+  /// and hides a real outage. On the web it has to allow CORS too.
   required final Uri uri,
 
-  /// Cap on one probe of this target, kept by `InternetConnection` rather than by the probe itself.
+  /// Cap on one probe of this target, covering the whole call, so a probe that retries has to fit
+  /// every attempt inside it.
   ///
-  /// Covers the whole probe call, so a probe that retries internally has to fit every attempt inside
-  /// it. Bounds the waiting, not the socket: a connect nobody answers lingers until the OS reaps it,
-  /// which only `HttpClient.connectionTimeout` on an injected client can shorten. Defaults to
-  /// [Values.defaultProbeTimeout], short enough that a stalled probe doesn't dominate the check
-  /// interval and long enough for mobile-network latency.
+  /// It bounds the waiting, not the socket. A connect nobody answers hangs about until the OS reaps
+  /// it, and only `HttpClient.connectionTimeout` on your own client shortens that.
   final Duration timeout = Values.defaultProbeTimeout,
 
-  /// Whether a `3xx` response should be followed. Defaults to false, since a redirect is what a
-  /// captive portal serves and following it would report the login page as reachable. Native clients
-  /// hand the `3xx` to [isSuccess], the web throws instead, and both land as a failure.
+  /// Follow a `3xx`? Off by default, because that redirect is usually a captive portal's login page,
+  /// and following it would call the portal "online". See [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#what-portal-detection-rests-on).
   final bool followRedirects = false,
 
-  /// Headers attached to the outbound probe request. Sent verbatim.
+  /// Headers on the outgoing request, sent as-is.
   final Map<String, String> headers = Values.defaultProbeHeaders,
 
-  /// Predicate mapping an HTTP response to a success/failure decision.
-  ///
-  /// Defaults to "HTTP 200 exactly". Pass your own [ResponseAcceptor] for endpoints healthy on a
-  /// non-[Values.httpStatusOk] status (e.g. an API that pings with HTTP 204).
+  /// Decides whether a response counts as success. Defaults to exactly HTTP 200, so pass your own
+  /// [ResponseAcceptor] for an endpoint that pings with, say, a 204.
   final ResponseAcceptor isSuccess = _statusIs200,
 }) {
-  /// Creates a [ProbeTarget] probed with whatever method the probe chooses (the built-in uses HEAD).
+  /// Creates a [ProbeTarget]. The probe picks the method, and the built-in one uses HEAD.
   this;
 
   @override

@@ -5,7 +5,7 @@ import '../support/bdd.dart';
 
 void main() {
   feature('ConstUri construction', () {
-    scenario('is const-constructible — proves the parse is deferred', () {
+    scenario('is const-constructible, which proves the parse is deferred', () {
       // `Uri.parse(...)` is not a const expression, so the constructor being
       // `const` is itself the load-bearing proof that parsing happens lazily.
       // Would fail to compile if the ctor were non-const.
@@ -14,7 +14,7 @@ void main() {
       check(wrapped.scheme).equals('https');
     });
 
-    scenario('inherits Uri.parse permissiveness — does not validate input', () {
+    scenario('inherits Uri.parse permissiveness, so it does not validate input', () {
       // Documents the trade-off captured in the class dartdoc: an unconventional
       // scheme is accepted, not rejected, mirroring `Uri.parse` behaviour.
       const wrapped = ConstUri('htps://example.com');

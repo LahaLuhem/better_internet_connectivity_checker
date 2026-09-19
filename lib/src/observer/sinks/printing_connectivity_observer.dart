@@ -1,32 +1,23 @@
-// Omitted from coverage via `lcov --remove '*/printing_connectivity_observer.dart'` in
-// `.github/workflows/package.yml`: every method is a single-line forwarder to `dart:developer`'s
-// `log()` with no branching or state, and `developer.log` has no test seam
-// (testing it would capture VM-service events or assert "didn't throw" — no signal). Same principle
-// as `benchmark/python/`'s `[tool.coverage.run] omit`. Adding another smoke-only file? Append a
-// matching `--remove` glob to the workflow step.
+// Dropped from coverage by an `lcov --remove` glob in `.github/workflows/package.yml`: every method
+// is a one-line forward to `developer.log`, which has no test seam. Adding another smoke-only file?
+// Add a matching glob there.
 
 import 'dart:developer' as developer;
 
 import '../../status/internet_status.dart';
 import '../connectivity_observer.dart';
 
-/// A [ConnectivityObserver] that writes every event to [developer.log] under a configurable name.
-///
-/// Chosen over `print()` to stay `avoid_print`-compliant and integrate with Flutter DevTools' logging view.
-/// In plain Dart (CLI, server, web) [developer.log] still surfaces via stdout.
-/// Callers wanting a structured sink should subclass [ConnectivityObserver] directly.
+/// Writes every event to [developer.log], which turns up in DevTools' logging view and on stdout
+/// everywhere else. Want something structured? Subclass [ConnectivityObserver] yourself.
 ///
 /// {@macro connectivity_observer_threading}
 final class const PrintingConnectivityObserver({
-  /// Forwarded to [developer.log]'s `name:` — the DevTools source channel, letting consumers
-  /// filter this package's records from their own.
+  /// Goes to [developer.log]'s `name:`, so you can filter this package's records out from your own.
   final String _name = _defaultName,
 }) extends ConnectivityObserver {
-  /// Default logger name used for every emitted record.
   static const _defaultName = 'better_internet_connectivity_checker';
 
-  /// Severity forwarded to [developer.log] for trigger errors — `package:logging`'s `Level.SEVERE`,
-  /// so consumers piping through `package:logging` see the expected severity.
+  /// Severity passed to [developer.log] for trigger errors.
   static const _severeLevel = 900;
 
   /// Creates a [PrintingConnectivityObserver].

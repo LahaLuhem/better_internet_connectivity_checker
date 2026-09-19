@@ -1,9 +1,5 @@
-/// A thin, zero-dependency Gherkin vocabulary over `package:test`.
-///
-/// The value is the shape, not a framework: [feature] and [scenario] make the system under test and
-/// its expected behaviour read as a specification, and [scenarioOutline] drives one system under test
-/// from a table of named examples, so the input values stay grouped as clear parameters instead of
-/// scattered through the test body.
+/// A thin Gherkin vocabulary over `package:test`, no dependencies. The point is the shape: tests
+/// that read as a specification rather than a pile of `group` and `test` calls.
 library;
 
 import 'dart:async';
@@ -13,17 +9,15 @@ import 'package:test/scaffolding.dart';
 /// Groups the scenarios describing one unit under test. Reads as `Feature: <description>` in output.
 void feature(String description, void Function() body) => group('Feature: $description', body);
 
-/// One behaviour of the unit under test, as a single test. Reads as `Scenario: <description>`;
-/// [body] is the Given/When/Then flow.
+/// One behaviour of the unit under test. Reads as `Scenario: <description>`, and [body] is the
+/// Given/When/Then flow.
 void scenario(String description, FutureOr<void> Function() body) =>
     test('Scenario: $description', body);
 
-/// A scenario exercised once per row of an examples table.
+/// A scenario run once per row of an examples table.
 ///
-/// [examples] maps each row's name (what makes the case interesting) to its data: a record grouping
-/// the input parameters with the expected outcome, so the cases read as a table rather than scattered
-/// literals. [outline] receives each row and exercises the system under test, and becomes one test per
-/// row, so a failure names the row that broke.
+/// [examples] maps each row's name to a record of its inputs and expected outcome, so the cases read
+/// as a table. Each row becomes its own test, so a failure names the row that broke.
 void scenarioOutline<Row>(
   String description, {
   required Map<String, Row> examples,

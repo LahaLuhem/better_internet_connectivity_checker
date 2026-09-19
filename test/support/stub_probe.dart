@@ -1,21 +1,15 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
-/// A [ConnectivityProbe] that delegates to a caller-supplied closure.
+/// A [ConnectivityProbe] backed by a closure, for short-circuiting the network in tests.
 ///
-/// Lives under `test/support/` so the production code stays free of test
-/// scaffolding. Use it in policy and connection tests to short-circuit the
-/// network layer.
-///
-/// Records the `cancelSignal` it was invoked with for each [ProbeTarget],
-/// so tests can assert that a policy forwards (or omits) the signal as
-/// expected.
+/// Remembers the `cancelSignal` it got per [ProbeTarget], so a test can check the policy forwarded
+/// it (or didn't).
 final class StubProbe(final Future<ProbeResult> Function(ProbeTarget target) _respond)
     implements ConnectivityProbe {
   final Map<ProbeTarget, Future<void>?> _cancelSignalsByTarget = {};
 
-  /// The `cancelSignal` passed to the most recent [probe] call for
-  /// [target], or `null` if [probe] was invoked without a signal — or never
-  /// invoked — for that target.
+  /// The `cancelSignal` from the last [probe] call for [target]. Null if there wasn't one, and also
+  /// null if [target] was never probed.
   Future<void>? cancelSignalFor(ProbeTarget target) => _cancelSignalsByTarget[target];
 
   @override

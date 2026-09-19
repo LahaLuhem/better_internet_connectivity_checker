@@ -11,11 +11,9 @@ abstract final class ConstDurations {
   /// Initial `slowThreshold` shown in the Live-stream demo.
   static const defaultLiveStreamSlowThreshold = Duration(milliseconds: 300);
 
-  /// Maximum `slowThreshold` selectable on the Live-stream slider. The
-  /// minimum is implicitly zero (the off state — no slow detection).
+  /// Maximum `slowThreshold` on the Live-stream slider. The minimum is zero, which is the off state.
   static const maxSelectableLiveStreamSlowThreshold = Duration(seconds: 2);
 
-  /// Shorter per-target timeout configured on one of the Failure-inspection
-  /// probes to illustrate per-target timeout customisation.
+  /// Deliberately short timeout on one Failure-inspection probe, to show per-target customising.
   static const failureInspectionShortProbeTimeout = Duration(milliseconds: 500);
 }

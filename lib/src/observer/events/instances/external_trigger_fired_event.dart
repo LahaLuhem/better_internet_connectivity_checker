@@ -1,11 +1,9 @@
 part of '../connectivity_event.dart';
 
-/// Emitted when the connection's external-recheck stream fires, causing an out-of-band recheck.
+/// The external-recheck stream fired, so a check is about to run off-cadence.
 final class ExternalTriggerFiredEvent extends ConnectivityEvent {
-  /// Creates an external-trigger-fired event.
+  /// Creates an [ExternalTriggerFiredEvent].
   const new();
-
-  // Debug-only toString delegation; excluded from coverage.
   // coverage:ignore-start
   @override
   String toString() => 'ExternalTriggerFiredEvent()';
