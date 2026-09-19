@@ -1,19 +1,16 @@
 part of '../connectivity_event.dart';
 
-/// Emitted when the connection's periodic check interval is reassigned.
-///
-/// Fires even when [previous] equals [next] — the underlying timer is reset on every assignment.
+/// The periodic check interval was reassigned. Fires even when nothing changed, because every
+/// assignment resets the timer.
 final class const CheckIntervalChangedEvent({
-  /// The interval in effect before the assignment.
+  /// The interval before.
   required final Duration previous,
 
-  /// The new interval.
+  /// The interval after.
   required final Duration next,
 }) extends ConnectivityEvent {
-  /// Creates a check-interval-changed event capturing the transition.
+  /// Creates a [CheckIntervalChangedEvent].
   this;
-
-  // Debug-only toString delegation; excluded from coverage.
   // coverage:ignore-start
   @override
   String toString() => 'CheckIntervalChangedEvent(previous: $previous, next: $next)';

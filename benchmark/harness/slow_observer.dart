@@ -2,19 +2,14 @@ import 'dart:io';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
-/// A [ConnectivityObserver] that synchronously blocks for a configurable duration on every callback —
-/// simulating a slow logger, metrics push, or any expensive side-effect a real consumer might wire in.
+/// Blocks the isolate for a fixed time on every callback, standing in for a slow logger or a metrics
+/// push. 50 ms by default, and scenarios can vary it or switch off individual methods.
 ///
-/// Dispatch is microtask-deferred since the event-bus refactor, but a Dart isolate is single-threaded:
-/// synchronous work inside an override blocks the event loop for its full duration regardless of which
-/// queue dispatched it. This class exists to make that cost observable and measurable — the per-callback
-/// delay should reappear as `max_stall_microseconds`, and the delay-to-interval ratio as `blocked_duty_ratio`.
+/// Microtask dispatch doesn't save you from this. One isolate means one thread, so sync work in an
+/// override parks the event loop for as long as it runs, whichever queue delivered it. The point is
+/// to make that cost land in the numbers, as `max_stall_microseconds` and `blocked_duty_ratio`.
 ///
-/// The blocking is genuine `sleep` (from `dart:io`), not a busy-wait — so CPU usage stays low, but
-/// the event loop is paused exactly like a slow synchronous logger would pause it.
-///
-/// Default: 50 ms delay on every callback. Constructor knobs let scenarios vary the delay or disable
-/// per-method delays selectively.
+/// A real `sleep`, not a busy-wait, so CPU stays low while the loop sits there.
 final class SlowObserver extends ConnectivityObserver {
   final Duration _delay;
   final bool _delayOnStatusChange;

@@ -1,14 +1,11 @@
 part of '../internet_connection.dart';
 
-/// Puts a hard stop on how long one probe may run.
+/// Puts a hard stop on how long one probe may run, whether or not the probe plays along.
 ///
-/// [ProbeTarget.timeout] is a promise made to the caller, so it can't be left to each probe to keep.
-/// A probe still waiting for a TCP connection has no request to abort yet, so it runs until the OS
-/// gives up on the connect, which is over a minute on most platforms. Wrapping every probe from the
-/// outside bounds it whether or not the probe cooperates.
-///
-/// The deadline is passed down as a `cancelSignal` too, so a probe that *can* stop early drops its socket
-/// instead of leaving it dangling.
+/// A probe still waiting on a TCP connect has no request to abort yet, so left to itself it runs
+/// until the OS gives up, which is over a minute on most platforms. The deadline also goes down as a
+/// `cancelSignal`, so a probe that can stop early drops its socket instead of sitting on it. Why
+/// this lives here and not in the probe: [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#why-the-coordinator-keeps-the-deadline).
 final class _DeadlineProbe(final ConnectivityProbe _inner) implements ConnectivityProbe {
   @override
   Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) {

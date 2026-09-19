@@ -1,37 +1,29 @@
 import '../probe/models/probe_target.dart';
 import 'models/const_uri.dart';
 
-/// Internal default values for the package's own classes.
-///
-/// Grouped in an `abstract final` class so call sites read `Values.defaultX` — the prefix makes the
-/// origin obvious. Not exported; consumers configure these via constructor arguments.
+/// Defaults for the package's own classes. Not exported, so configure these through constructor
+/// arguments instead.
 abstract final class Values {
-  /// Default periodic check interval used by `InternetConnection` when no `checkInterval` argument
-  /// is provided.
+  /// `InternetConnection.checkInterval`'s default.
   static const defaultCheckInterval = Duration(seconds: 10);
 
-  /// Default per-probe timeout used by [ProbeTarget] when no `timeout` argument is provided.
+  /// [ProbeTarget.timeout]'s default.
   static const defaultProbeTimeout = Duration(seconds: 3);
 
-  /// Default budget for one observer callback before `attachObserver`'s debug-mode watchdog warns
-  /// about it. One 60 fps frame — the canonical "this just dropped a frame" line.
+  /// One 60 fps frame, which is where `attachObserver`'s watchdog starts calling a callback slow.
   static const defaultSlowCallbackThreshold = Duration(milliseconds: 16);
 
-  /// Default (empty) header map used by [ProbeTarget] when no `headers` argument is provided.
+  /// [ProbeTarget.headers]'s default.
   static const defaultProbeHeaders = <String, String>{};
 
-  /// HTTP 200 (OK) status code. Defined locally because `dart:io.HttpStatus` is unavailable on the
-  /// web platform — importing it would break web compilation despite the constant itself being trivial.
+  /// HTTP 200. Spelled out here because `dart:io`'s `HttpStatus` doesn't exist on the web.
   static const httpStatusOk = 200;
 
-  /// Public endpoints probed by `InternetConnection` when no custom target list is supplied.
+  /// What `InternetConnection` probes when you don't hand it any targets.
   ///
-  /// One per operator, so no single provider's outage can fail every probe: Cloudflare, then
-  /// OpenStreetMap behind Fastly, then Open-Meteo on Hetzner. All three answer HEAD with 200, allow
-  /// CORS so the web platform works, and send no long-lived caching that could mask an outage.
-  ///
-  /// Safe to share because every layer is `const`: the list literal, each [ProbeTarget], and each
-  /// [ConstUri] are compile-time canonical and reject mutation at runtime.
+  /// 3 operators rather than 3 URLs on one, so a single provider's outage can't fail the
+  /// lot: Cloudflare, OpenStreetMap behind Fastly, Open-Meteo on Hetzner. All 3 answer HEAD with
+  /// 200, allow CORS, and send nothing cacheable that could mask an outage.
   static const defaultProbeTargets = <ProbeTarget>[
     ProbeTarget(uri: ConstUri('https://one.one.one.one')),
     ProbeTarget(uri: ConstUri('https://api.openstreetmap.org/api/0.6/capabilities')),
@@ -39,11 +31,9 @@ abstract final class Values {
   ];
 }
 
-/// Consumer that accepts any single argument and returns void.
-///
-/// Drops into `void Function(T)` slots where the value is discarded — e.g. `Stream<X>` to
-/// `Stream<void>` via `.map(noopWithVal)`, or an inert listener that just keeps a broadcast alive.
-// Empty body is the point (no-op); a getter (not a top-level final) sidesteps
-// `prefer_function_declarations_over_variables`.
+/// Takes anything, does nothing. Mostly for turning a `Stream<X>` into a `Stream<void>` with
+/// `.map(noopWithVal)`.
+// A getter rather than a top-level final, which sidesteps
+// `prefer_function_declarations_over_variables`. The empty body is the whole point.
 // ignore: no-empty-block
 void Function(Object?) get noopWithVal => (_) {};

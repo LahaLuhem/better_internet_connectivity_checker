@@ -1,5 +1,4 @@
-// no-op defaults are the design — subclasses override only the events they care about.
-// See class-level dartdoc.
+// Empty bodies are the design: subclasses override only the events they care about.
 // ignore_for_file: no-empty-block
 
 /// @docImport '../internet_connection.dart';
@@ -13,14 +12,11 @@ import '../status/internet_status.dart';
 import 'events/connectivity_event.dart';
 import 'slow_callback_watchdog.dart';
 
-/// Lifecycle observer for [InternetConnection].
+/// Hook for logging or telemetry: subclass it, override the events you want, hand it to
+/// [attachObserver]. Anything you don't override is an empty body that costs nothing.
 ///
-/// Wires diagnostics, telemetry, or logging into the checker without re-formatting domain events.
-/// Subclass it, override only the events you care about, and attach it via the top-level [attachObserver].
-/// Unoverridden events cost nothing — a no-op default body, no formatting or allocation, since the domain object is already built.
-///
-/// Extend, don't implement: `abstract base` lets future minor releases add new lifecycle events
-/// (shipping with no-op defaults) without breaking existing subclasses.
+/// Extend it, don't implement it. `abstract base` is what lets new events ship in a minor release
+/// without breaking your subclass.
 ///
 /// ```dart
 /// final class _MyObserver extends ConnectivityObserver {
@@ -28,118 +24,74 @@ import 'slow_callback_watchdog.dart';
 ///   final void Function(String) _log;
 ///
 ///   @override
-///   void onStatusChangeEmitted(InternetStatus previous, InternetStatus next) =>
+///   void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) =>
 ///       _log('connectivity: $previous -> $next');
 /// }
 /// ```
 ///
 /// {@template connectivity_observer_threading}
-/// Wired through [attachObserver], callbacks fire from the [ConnectivityEvent] stream, microtask-deferred
-/// from the frame that produced the event. The deferral does **not** insulate the event loop from
-/// synchronous work in an override: a Dart isolate is single-threaded, so `sleep`, sync IO, or a busy
-/// loop blocks every timer, stream, and (in Flutter) frame on the isolate for its full duration.
-/// The check scheduler stays on cadence only while per-tick observer work stays below the check interval.
-/// Past that, checks are delayed too.
-///
-/// Keep overrides fast. For an expensive sink, hand the event to async machinery (a buffered `StreamController`, an async logging API)
-/// or offload heavy work with `Isolate.run` on copied data. In debug builds, [attachObserver] times
-/// each callback and warns once per event type when an override overruns its budget — see its
-/// `slowCallbackThreshold`.
+/// Callbacks arrive a microtask after the event, which buys you nothing against blocking. One
+/// isolate means one thread: a `sleep`, a sync file read or a busy loop inside an override freezes
+/// every timer, stream and frame on it. Keep overrides quick, or hand the heavy part to
+/// `Isolate.run`. Debug builds warn when one overruns, see [attachObserver]'s `slowCallbackThreshold`.
 /// {@endtemplate}
 abstract base class ConnectivityObserver {
-  /// Const default constructor — subclasses are encouraged to be const.
+  /// Creates a [ConnectivityObserver]. Make subclasses const where you can.
   const new();
 
-  // No-op defaults so subclasses override only the events they care about. Excluded from
-  // coverage: exercising them needs a do-nothing subclass that adds nothing over `RecordingObserver`.
+  // Nothing to cover: exercising these needs a do-nothing subclass that adds nothing over
+  // `RecordingObserver`.
   // coverage:ignore-start
 
-  /// Called when [InternetConnection.onStatusChange] emits a deduplicated status transition.
-  ///
-  /// [previous] is null on the first emission of a fresh subscription (the scheduler clears its
-  /// memory between subscriber lifetimes, so a resubscription starts null again). This fires only
-  /// for emissions consumers actually see, not every check — use [onCheckCompleted] for per-tick visibility.
-  void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) {
-    // No-op default; override to observe deduped status transitions.
-  }
+  /// A status change reached [InternetConnection.onStatusChange]. Only fires for what subscribers
+  /// actually see, so reach for [onCheckCompleted] if you want every tick. [previous] is null on the
+  /// first one of a fresh subscription.
+  void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) {}
 
-  /// Called after every internal check completes — periodic ticks and trigger-driven rechecks
-  /// alike — whether or not the result changed the emitted status.
-  ///
-  /// Does **not** fire for [InternetConnection.checkOnce]: that path is caller-driven and the caller
-  /// already has the result. High-frequency (once per [InternetConnection.checkInterval] tick plus once per trigger),
-  /// so it suits verbose per-tick tracing.
-  void onCheckCompleted(InternetStatus result) {
-    // No-op default; override for per-tick check tracing.
-  }
+  /// An internal check finished, whether or not it moved the status. Once per tick plus once per
+  /// trigger, so this is the noisy one. Skipped for [InternetConnection.checkOnce], where you're
+  /// handed the result anyway.
+  void onCheckCompleted(InternetStatus result) {}
 
-  /// Called when the `externalRecheckTrigger` stream fires, causing an out-of-band recheck.
-  ///
-  /// Fires before the resulting check runs; pair with [onCheckCompleted] to time the recheck.
-  void onExternalTriggerFired() {
-    // No-op default; override to trace external trigger events.
-  }
+  /// The `externalRecheckTrigger` stream fired, just before the recheck it causes. Pair it with
+  /// [onCheckCompleted] to time that recheck.
+  void onExternalTriggerFired() {}
 
-  /// Called when the `externalRecheckTrigger` stream surfaces an error.
-  ///
-  /// [InternetConnection] swallows the error (the trigger is best-effort and must not disturb the status stream),
-  /// so this callback is a consumer's only signal that the trigger failed.
-  void onExternalTriggerError(Object error, StackTrace stackTrace) {
-    // No-op default; override to forward trigger-stream errors.
-  }
+  /// The `externalRecheckTrigger` stream errored. [InternetConnection] swallows it to keep the status
+  /// stream alive, so this is your only sign the trigger broke.
+  void onExternalTriggerError(Object error, StackTrace stackTrace) {}
 
-  /// Called after every internal check, reporting how long the scheduler will wait before the next one.
-  ///
-  /// [scheduleContext] is what the `CheckSchedule` was handed to reach [delay], so an override can log
-  /// the failure streak that widened the gap. As high-frequency as [onCheckCompleted].
-  void onNextCheckScheduled(Duration delay, ScheduleContext scheduleContext) {
-    // No-op default; override to trace the cadence the schedule picks.
-  }
+  /// How long until the next check, decided right after the last one. [scheduleContext] is what the
+  /// schedule saw, so you can log the failure streak that widened the gap. As noisy as
+  /// [onCheckCompleted].
+  void onNextCheckScheduled(Duration delay, ScheduleContext scheduleContext) {}
 
-  /// Called when [InternetConnection.checkInterval] is assigned.
-  ///
-  /// Fires even when [previous] equals [next] — the timer is reset on every assignment.
-  void onCheckIntervalChanged(Duration previous, Duration next) {
-    // No-op default; override to trace interval reconfigurations.
-  }
+  /// [InternetConnection.checkInterval] was assigned. Fires even when nothing changed, because every
+  /// assignment resets the timer.
+  void onCheckIntervalChanged(Duration previous, Duration next) {}
 
-  /// Called when [InternetConnection.slowThreshold] is assigned.
-  ///
-  /// Either bound may be null (slow classification disabled). Fires even when [previous] equals [next].
-  void onSlowThresholdChanged(Duration? previous, Duration? next) {
-    // No-op default; override to trace slow-threshold reconfigurations.
-  }
+  /// [InternetConnection.slowThreshold] was assigned. Either side can be null, meaning slow detection
+  /// was off. Fires even when nothing changed.
+  void onSlowThresholdChanged(Duration? previous, Duration? next) {}
 
-  /// Called once when [InternetConnection.dispose] finishes tearing down the timer, trigger subscription,
-  /// and status stream. Idempotent: later `dispose` calls do not re-invoke it.
-  void onDispose() {
-    // No-op default; override to observe checker teardown.
-  }
+  /// [InternetConnection.dispose] finished tearing everything down. Fires once, however many times
+  /// `dispose` is called.
+  void onDispose() {}
   // coverage:ignore-end
 }
 
-/// Bridges a stream of [ConnectivityEvent]s to a [ConnectivityObserver].
+/// Points [observer] at [events], routing each one to its matching `onXyz` callback.
 ///
-/// Subscribes [observer] to [events], dispatching each typed event to the matching `onXyz` callback.
-/// Returns the [StreamSubscription] to cancel explicitly, or let the source stream close
-/// (e.g. [InternetConnection.dispose] closes [InternetConnection.events]) to auto-cancel. Multiple
-/// observers can attach to one stream; each call gets an independent broadcast subscription.
+/// Cancel the returned subscription yourself, or let [InternetConnection.dispose] close the stream
+/// and do it for you. Attach as many observers to one stream as you like.
 ///
 /// ```dart
-/// final connection = InternetConnection(...);
 /// final subscription = attachObserver(connection.events, PrintingConnectivityObserver());
-/// await subscription.cancel();   // explicit cleanup, OR
-/// await connection.dispose();    // implicit — closes events, cancelling the subscription
+/// await subscription.cancel(); // or connection.dispose(), which closes events and cancels for you
 /// ```
 ///
-/// The dispatch switch is exhaustive over the sealed [ConnectivityEvent] hierarchy, so adding an event
-/// without its `onXyz` callback is a compile-time error here rather than a silent no-op.
-///
-/// In debug builds every callback is timed; the first to overrun [slowCallbackThreshold] logs a one-shot
-/// `dart:developer` warning per event type naming the offending override. Synchronous work in a callback
-/// blocks the isolate's event loop for its full duration (see the threading notes on [ConnectivityObserver]),
-/// so the default budget is one 60 fps frame ([Values.defaultSlowCallbackThreshold]), where jank starts.
-/// Release and profile builds strip the watchdog. Dispatch is direct and unmeasured.
+/// Debug builds time each callback and warn once per event type when one runs past
+/// [slowCallbackThreshold], a 60 fps frame by default. Release and profile builds skip the timing.
 StreamSubscription<ConnectivityEvent> attachObserver(
   Stream<ConnectivityEvent> events,
   ConnectivityObserver observer, {
@@ -171,8 +123,7 @@ StreamSubscription<ConnectivityEvent> attachObserver(
     DisposedEvent() => observer.onDispose(),
   };
 
-  // Reassigned inside the assert so the watchdog lives only where asserts run (debug, tests).
-  // Release keeps the bare dispatch.
+  // Assigned inside the assert, so the watchdog only exists where asserts run. Release gets `dispatch`.
   var handleEvent = dispatch;
   assert(() {
     final watchdog = SlowCallbackWatchdog(

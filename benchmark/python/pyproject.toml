@@ -9,7 +9,7 @@
 #     uv run ruff check .              # lint
 #     uv run ruff format .             # format
 #
-# `uv.lock` is checked into the repo for reproducible runs — perf claims are
+# `uv.lock` is checked into the repo for reproducible runs, because perf claims are
 # only defensible if the analysis stack is pinned.
 
 [project]
@@ -18,11 +18,11 @@ version = "0.1.0"
 description = "Benchmark orchestration + analysis for better_internet_connectivity_checker."
 requires-python = ">=3.10"
 
-# Runtime deps — used by run.py to orchestrate scenarios and analyse JSON.
+# Runtime deps, used by run.py to orchestrate scenarios and analyse JSON.
 dependencies = [
     "numpy>=1.26,<3.0",
     "scipy>=1.11,<2.0",
-    # polars (Rust-backed) over pandas — faster on the result-set sizes we'll
+    # polars (Rust-backed) over pandas, faster on the result-set sizes we'll
     # produce, cleaner expression API for aggregations, and the lazy frame
     # model makes large-baseline diffs cheap. Analysis stays in polars; the
     # chart script converts to pandas only at the seaborn boundary.
@@ -30,10 +30,10 @@ dependencies = [
     "matplotlib>=3.8,<4.0",
     # seaborn gives publication-quality stats plots (box, violin, point with
     # CI) for ~zero boilerplate vs raw matplotlib. Pulls pandas transitively
-    # — that's accepted only because seaborn requires it; do not use pandas
+    # That's accepted only because seaborn requires it. Do not use pandas
     # outside the chart-rendering helpers in run.py.
     "seaborn>=0.13,<1.0",
-    # pyarrow is needed for polars.DataFrame.to_pandas() — that conversion is
+    # pyarrow is needed for polars.DataFrame.to_pandas(), and that conversion is
     # the bridge between our polars-based analysis and seaborn's pandas-only
     # plotting API. Without pyarrow, to_pandas() raises ModuleNotFoundError.
     "pyarrow>=15.0,<22.0",
@@ -93,17 +93,17 @@ target-version = "py310"
 
 [tool.ruff.lint]
 # Selection mirrors what's standard for a small typed Python utility:
-#   E   — pycodestyle errors (PEP 8 enforcement)
-#   F   — pyflakes (undefined names, unused imports, etc.)
-#   I   — isort (import ordering)
-#   B   — bugbear (likely bugs)
-#   UP  — pyupgrade (modern syntax for the pinned Python version)
-#   SIM — flake8-simplify (cleaner control flow)
-#   N   — pep8-naming
-#   RUF — ruff-specific rules
+#   E   pycodestyle errors (PEP 8 enforcement)
+#   F   pyflakes (undefined names, unused imports, etc.)
+#   I   isort (import ordering)
+#   B   bugbear (likely bugs)
+#   UP  pyupgrade (modern syntax for the pinned Python version)
+#   SIM flake8-simplify (cleaner control flow)
+#   N   pep8-naming
+#   RUF ruff-specific rules
 select = ["E", "F", "I", "B", "UP", "SIM", "N", "RUF"]
 
 [tool.ruff.format]
-# Match ruff's own defaults — black-compatible. Explicit for readers.
+# Match ruff's own defaults, black-compatible. Explicit for readers.
 quote-style = "double"
 indent-style = "space"

@@ -1,6 +1,6 @@
 # Custom
 .fvm/
-# The example app is an application, not a library — commit its lockfile so CI
+# The example app is an application, not a library, so commit its lockfile so CI
 # resolves to the same versions. Overrides the root .gitignore's `pubspec.lock`
 # (which is correct for the library itself but cascades into this subdir).
 !pubspec.lock

@@ -1,13 +1,12 @@
-# `benchmark/python/` — agent brief
+# `benchmark/python/`: agent brief
 
 Tool-agnostic brief for any coding agent (Copilot, Cursor, Codex, Claude Code,
-…) working in the Python orchestrator. The parent project is a pure Dart
-package; this directory is the only Python surface and exists purely as
-maintainer-only tooling (excluded from `dart pub publish`).
+…) working in the Python orchestrator. The parent project is a pure Dart package, so this is the
+only Python surface, and it's maintainer-only tooling (excluded from `dart pub publish`).
 
 ## Style: Python as strongly typed
 
-House rules — Python written closer to typed Dart than to dynamic-Python idiom:
+House rules. Python written closer to typed Dart than to dynamic-Python idiom:
 
 - **Annotate every function signature and every module-level constant.**
   No bare `def foo(x)`. No bare `FOO = 10`.
@@ -20,9 +19,9 @@ House rules — Python written closer to typed Dart than to dynamic-Python idiom
   are the exception, not the default.
 - **Return concrete types, not `Any`.** If you reach for `Any`, justify it
   in a comment immediately above the annotation. (Example here: `ResultRecord
-  = dict[str, Any]` in [`bicc_bench/data/dtos/result_record.py`](../bicc_bench/data/dtos/result_record.py)
-  — JSON decoding is inherently dynamic, and we validate at boundaries rather
-  than ceremony with TypedDict.)
+  = dict[str, Any]` in [`bicc_bench/data/dtos/result_record.py`](../bicc_bench/data/dtos/result_record.py),
+  because JSON decoding is inherently dynamic and we validate at boundaries rather than doing
+  ceremony with TypedDict.)
 - **No Java patterns.** No getters/setters, no interface-per-class, no
   "Abstract…Factory". Use protocols / dataclasses / TypedDicts only when
   they add clarity, never as ceremony.
@@ -30,8 +29,8 @@ House rules — Python written closer to typed Dart than to dynamic-Python idiom
 - **Abbreviations, not initialisms, for domain terms.** Write
   `parser_compare` not `p_cmp`, `iteration_count` not `iter_cnt`. Universal
   CS / OS / stats abbreviations (`json`, `gc`, `rss`, `aot`, `iqr`,
-  `Mann-Whitney U`) are fine — the rule targets *project-invented* shorthand,
-  not established terminology.
+  `Mann-Whitney U`) are fine. The rule targets *project-invented* shorthand, not established
+  terminology.
 
 ## Tooling
 
@@ -68,7 +67,7 @@ benchmark/python/
 │           ├── io.py           # source discovery + JSON load + filter
 │           ├── charts.py       # 4 report + 4 paired + forest plot
 │           └── markdown.py     # SUMMARY.md / COMPARE.md + value_formatter
-└── tests/                      # pytest; one test_<module>.py per source module
+└── tests/                      # pytest, one test_<module>.py per source module
 ```
 
 ### Conventions
@@ -76,12 +75,12 @@ benchmark/python/
   package. Functions stay underscore-prefixed only when they're purely
   module-local (e.g. `_print_compare_table` in `subcommands/compare.py`,
   `_compile_one` in `subcommands/build.py`, `_forest_colour` in `charts.py`).
-- **One value class per file under `data/dtos/`** — keeps the data-class
-  hierarchy flat and obvious to navigate.
-- **Subcommands import helpers from `data/utils/`**; helpers never import
-  from `subcommands/`. Acyclic.
-- **`config.py` imports nothing from `bicc_bench`** — it's the leaf module
-  everything else can depend on.
+- **One value class per file under `data/dtos/`**, which keeps the data-class hierarchy flat and
+  obvious to navigate.
+- **Subcommands import helpers from `data/utils/`**, and helpers never import from
+  `subcommands/`. Acyclic.
+- **`config.py` imports nothing from `bicc_bench`**, being the leaf module everything else can
+  depend on.
 
 ## Tests
 
@@ -91,37 +90,34 @@ benchmark/python/
 - Shared fixtures live in [`tests/conftest.py`](../tests/conftest.py) -
   synthetic `ResultRecord` lists, not on-disk fixture JSON files.
 - **Test the deterministic surface**: math, formatting, table rendering,
-  CLI arg parsing. Skip chart PNG comparison (brittle); the end-to-end
-  smoke run covers chart rendering.
+  CLI arg parsing. Skip chart PNG comparison, which is brittle. The end-to-end smoke run covers
+  chart rendering.
 - **Coverage scope** is configured in [`pyproject.toml`](../pyproject.toml)
   under `[tool.coverage.run]`. `charts.py` and `subcommands/*` are
-  `omit`-ed because they are smoke-only by design — they don't appear in
-  either the numerator OR the denominator. Everything else (config,
+  `omit`-ed because they're smoke-only by design, so they appear in neither the numerator nor the
+  denominator. Everything else (config,
   data/dtos, data/utils minus charts) sits inside the scope and is
   expected to be unit-tested. **CI gate is 95%** (`--cov-fail-under=95`
   in [`.github/workflows/benchmark.yml`](../../../.github/workflows/benchmark.yml)).
   If you add a new module that is ALSO smoke-only, append it to the
-  `omit` list with a one-line rationale; do not lower the gate to
-  accommodate untested code.
+  `omit` list with a one-line rationale. Do not lower the gate to accommodate untested code.
 
 ## Before claiming done
 
 Definition-of-done for any Python change in this directory:
 
-- [ ] `uv run pytest` — all tests passing.
-- [ ] `uv run ruff check .` — clean.
-- [ ] `uv run ruff format --check .` — clean.
+- [ ] `uv run pytest`, all tests passing.
+- [ ] `uv run ruff check .`, clean.
+- [ ] `uv run ruff format --check .`, clean.
 - [ ] Type annotations on every function signature + module constant you
-      added or changed. Mypy not currently wired in — ruff doesn't type-check
-      yet (RUF rules cover style only). If the type stack grows, add `pyright`
-      or `mypy` here.
+      added or changed. Mypy isn't wired in, and ruff doesn't type-check yet (RUF rules cover
+      style only). If the type stack grows, add `pyright` or `mypy` here.
 - [ ] If you added or changed a runtime dep: `uv sync` was re-run and
       `uv.lock` is staged.
-- [ ] **Tests for new logic** in `data/utils/` or `data/dtos/`. Subcommand
-      modules are integration-tested via the end-to-end smoke; unit tests
-      target the pure helpers.
+- [ ] **Tests for new logic** in `data/utils/` or `data/dtos/`. Subcommand modules are
+      integration-tested via the end-to-end smoke, and unit tests target the pure helpers.
 - [ ] **Coverage ≥ 95%** on the in-scope surface. `uv run pytest` prints
-      the table locally; CI gate enforces. Don't add new code to
+      the table locally, and the CI gate enforces it. Don't add new code to
       `data/utils/` or `data/dtos/` without a matching `tests/test_<module>.py`.
 
 ## Hard rules

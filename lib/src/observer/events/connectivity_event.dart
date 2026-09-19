@@ -10,20 +10,9 @@ part 'instances/next_check_scheduled_event.dart';
 part 'instances/slow_threshold_changed_event.dart';
 part 'instances/status_emitted_event.dart';
 
-/// Lifecycle event surfaced by the diagnostic stream of an `InternetConnection`.
-///
-/// Sealed so subscribers can pattern-match exhaustively:
-///
-/// ```dart
-/// switch (event) {
-///   case StatusEmittedEvent(:final previous, :final next):
-///     log('status: $previous -> $next');
-///   case CheckCompletedEvent(:final result):
-///     log('check: $result');
-///   // ... and so on
-/// }
-/// ```
+/// One thing that happened inside an `InternetConnection`. Sealed, so a `switch` over them is
+/// exhaustive and the compiler nags you when a new one lands.
 sealed class ConnectivityEvent {
-  /// Subclasses are sealed; external code may not extend this type.
+  /// Creates a [ConnectivityEvent].
   const new();
 }

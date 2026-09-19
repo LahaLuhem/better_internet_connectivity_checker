@@ -1,12 +1,9 @@
-/// Micro-benchmark: cost of one `StreamController.add(InternetStatus)` with N listeners.
+/// Micro-benchmark: one `StreamController.add(InternetStatus)` at N listeners. No probe, no
+/// scheduler, no observer. Three subscriber counts per iteration, pivoted on `subscriber_count`.
 ///
-/// Measures the broadcast-stream emission path in isolation — no probe, scheduler, or observer.
-/// With `--iterations K`, emits `K × 3` records (three subscriber counts per iteration. `subscriber_count` is the pivot).
-///
-/// Uses a **synchronous** broadcast (`sync: true`) deliberately. Production `InternetConnection` uses
-/// async-default broadcast, where the producer's cost is constant in N — measuring that here would
-/// give the same number three times. Sync delivery forces in-line fan-out, so cost scales with N and
-/// the per-subscriber delivery cost becomes visible.
+/// Synchronous broadcast on purpose. Production uses the async default, where the producer's cost
+/// doesn't move with N, so measuring that here would print the same number 3 times. Sync delivery
+/// fans out in line, which is what makes the per-subscriber cost visible.
 library;
 
 import 'dart:async';
@@ -39,7 +36,7 @@ final class _StatusEmission extends BenchmarkBase {
 
   @override
   void teardown() {
-    // BenchmarkBase.teardown is sync — fire-and-forget the cancellations.
+    // BenchmarkBase.teardown is sync, so fire-and-forget the cancellations.
     for (final sub in _subscriptions) {
       unawaited(sub.cancel());
     }

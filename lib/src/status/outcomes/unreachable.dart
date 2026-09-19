@@ -1,14 +1,12 @@
 part of '../internet_status.dart';
 
-/// Status indicating the active aggregation policy considers the internet unreachable.
+/// The policy reckons the internet is unreachable.
 final class const Unreachable({
-  /// The probes that failed during the check.
-  ///
-  /// Empty only when no probes ran (a degenerate config the checker's constructor rejects at build time).
-  /// Useful for logging the cause without re-running probes.
+  /// The probes that failed, so you can log why without running them again. Only ever empty when no
+  /// probes ran at all, which the constructor rejects.
   required final List<ProbeResult> failedProbes,
 }) extends InternetStatus {
-  /// Creates an [Unreachable] carrying the [failedProbes] that drove the decision.
+  /// Creates an [Unreachable].
   this;
 
   @override

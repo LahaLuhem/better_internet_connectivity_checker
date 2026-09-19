@@ -27,7 +27,7 @@ class OneShotView extends StatelessWidget {
               description:
                   'Runs a single check against the default probe targets and '
                   'returns a sealed InternetStatus. The pattern-match below is '
-                  'exhaustive — adding a future variant would be a compile error.',
+                  'exhaustive, so adding a future variant would be a compile error.',
             ),
             const Gap(16),
             AsyncIconActionButton(
@@ -85,7 +85,7 @@ class const _ResultPanel({required final InternetStatus? result}) extends Statel
           children: [
             StatusBadge(internetStatus: result),
             Text(
-              '${failedProbes.length} probe(s) failed — see the '
+              '${failedProbes.length} probe(s) failed, see the '
               'Failure-inspection demo for full diagnostics.',
             ),
           ],

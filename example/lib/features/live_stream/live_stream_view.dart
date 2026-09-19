@@ -70,7 +70,7 @@ class LiveStreamView extends StatelessWidget {
                         children: [
                           Text(
                             sliderValueMs <= 0
-                                ? 'Disabled — every reachable status reports good.'
+                                ? 'Disabled, so every reachable status reports good.'
                                 : 'Above ${sliderValueMs.round()} ms a probe is classified as slow.',
                           ),
                           const Gap(4),
@@ -110,34 +110,20 @@ class LiveStreamView extends StatelessWidget {
   }
 }
 
-/// Slider with an "expected slow" → "expected good" gradient band behind
-/// it. The band is flat orange below the [_errorBandLowerStop], flat
-/// green above the [_errorBandUpperStop], and smoothly transitions
-/// between in the middle — visually honest about where the actual
-/// quality flip is likely to land given probe response-time variance.
-/// Colours match the status badges: orange for slow, green for good (see
-/// `status_badge.dart`).
+/// Slider sitting on a band that fades orange (expect slow) to green (expect good), because probe
+/// response times wobble and so does the real flip point. Same colours as the status badges.
 class _ThresholdSlider extends StatelessWidget {
   const new({required this.viewModel, required this.sliderValueMs});
 
   /// Visual band height. Eyeball against the slider knob diameter.
   static const _bandHeight = 20.0;
 
-  /// Lower edge of the response-time "error band", expressed as a
-  /// fraction of the slider's 0–[ConstDurations.maxSelectableLiveStreamSlowThreshold]
-  /// range. Below this, response time is confidently above the threshold
-  /// → `slow`.
-  ///
-  /// Estimate: the configured `/delay/1` probe targets nominally respond
-  /// in 1000 ms; TLS / TCP overhead and network jitter add variance.
-  /// Casual sampling lands the faster of the two between 800 ms and
-  /// 1200 ms, so the band brackets 1000 ms ± 200 ms ≈ 40 %–60 % of the
-  /// 0–2000 ms slider range.
+  /// Where the band stops being solidly "slow", as a fraction of the slider range. The `delay/1`
+  /// targets nominally take 1000 ms, and eyeballing puts the faster one between 800 and 1200, so the
+  /// fuzzy middle is 40% to 60% of the 0-2000 ms range.
   static const _errorBandLowerStop = 0.4;
 
-  /// Upper edge of the error band — 60 % of the slider range = 1200 ms.
-  /// Above this, response time is confidently below the threshold →
-  /// `good`. See [_errorBandLowerStop] for the variance estimate.
+  /// Where it starts being solidly "good". See [_errorBandLowerStop] for where the numbers come from.
   static const _errorBandUpperStop = 0.6;
 
   final LiveStreamViewModel viewModel;

@@ -1,3 +1,4 @@
+/// @docImport 'observer/connectivity_observer.dart';
 /// @docImport 'schedule/strategies/exponential_backoff_schedule.dart';
 library;
 
@@ -22,59 +23,36 @@ part 'internal/event_sink.dart';
 part 'internal/external_trigger_link.dart';
 part 'internal/periodic_scheduler.dart';
 
-/// Coordinates internet-connectivity checks.
+/// Runs the checks and hands you the results.
 ///
-/// Owns three responsibilities:
-///
-/// 1. **One-shot checks** via [checkOnce] — runs every target through the configured [ConnectivityProbe],
-///     aggregated by the configured [ReachabilityPolicy].
-/// 2. **Status streaming** via [onStatusChange] — checks on the cadence the configured [CheckSchedule]
-///     sets and emits the result only when its kind differs from the last emitted one.
-/// 3. **External recheck triggers** — an emission on the constructor's `externalRecheckTrigger` stream
-///    forces an immediate recheck. Wire `connectivity_plus` or any other network-change signal through it.
-///
-/// Construct once per use case; there is no shared singleton, and independent instances don't interfere.
-/// Always [dispose] when finished to release the stream, timer, and trigger subscription.
+/// [checkOnce] for a one-off answer, [onStatusChange] for a stream that keeps checking on its own.
+/// No singleton here, so build one per use case, and [dispose] it when you're done.
 final class InternetConnection({
-  /// The URIs probed on each check.
-  ///
-  /// Defaults to three public endpoints, one per operator, so no single provider's outage can fail
-  /// every probe. Must be non-empty: an empty list trips a debug-mode `assert`, and release builds
-  /// fall through to `Unreachable` every check.
+  /// What to probe on each check. Defaults to 3 endpoints on 3 different operators, so one
+  /// provider having a bad day can't fail the lot. Must not be empty.
   List<ProbeTarget>? targets,
 
-  /// The gap between periodic checks once [onStatusChange] has a listener.
-  ///
-  /// Change it at runtime via the [checkInterval] setter. Under a non-fixed `schedule` this is the
-  /// base the schedule derives each gap from, not the gap itself.
+  /// Gap between periodic checks, once [onStatusChange] has a listener. Under a non-fixed `schedule`
+  /// this is the base each gap grows from rather than the gap itself.
   var Duration _checkInterval = Values.defaultCheckInterval,
 
-  /// The aggregation strategy. Defaults to [AnyReachablePolicy] (any-of-N).
+  /// How probe results roll up into one verdict. Defaults to [AnyReachablePolicy], any-of-N.
   final ReachabilityPolicy _policy = const AnyReachablePolicy(),
 
-  /// Sets the gap before each next check.
-  ///
-  /// Defaults to [FixedIntervalSchedule], which keeps `checkInterval` between every check. Pass
-  /// [ExponentialBackoffSchedule] to widen the gap while checks keep failing, at the cost of
-  /// noticing recovery later.
+  /// Picks the gap before each next check. Defaults to [FixedIntervalSchedule]. Swap in
+  /// [ExponentialBackoffSchedule] to back off while checks keep failing.
   final CheckSchedule _schedule = const FixedIntervalSchedule(),
 
-  /// The response-time cutoff above which a successful probe is classified as slow.
-  ///
-  /// Defaults to null (no classification — every reachable status is [ConnectionQuality.good]). The
-  /// [slowThreshold] setter changes it at runtime while preserving [lastStatus], unlike rebuilding.
+  /// Response time above which a reachable connection counts as [ConnectionQuality.slow]. Null, the
+  /// default, means everything reachable is [ConnectionQuality.good].
   var Duration? _slowThreshold,
 
-  /// Runs a single check; defaults to [HttpProbe.head].
-  ///
-  /// Pass a custom probe to swap the transport ([HttpProbe.get] for HEAD-unfriendly endpoints, a
-  /// retry wrapper, a DNS or TCP probe) or inject a mock. Whatever you pass is capped at each
-  /// target's [ProbeTarget.timeout], so a retry wrapper has to fit its attempts inside that budget.
+  /// How one target gets checked. Defaults to [HttpProbe.head]. Whatever you pass is capped at the
+  /// target's [ProbeTarget.timeout], so a probe that retries has to fit every attempt inside that.
   ConnectivityProbe? probe,
 
-  /// An optional stream whose events force an immediate recheck.
-  ///
-  /// Typical Flutter wiring: `Connectivity().onConnectivityChanged.map(noopWithVal)`.
+  /// Every event on this stream forces an immediate recheck. In Flutter that's usually
+  /// `Connectivity().onConnectivityChanged.map(noopWithVal)`.
   Stream<void>? externalRecheckTrigger,
 }) {
   final List<ProbeTarget> _targets = targets != null
@@ -105,49 +83,35 @@ final class InternetConnection({
   var _disposed = false;
 
   /// Creates an [InternetConnection].
-  ///
-  /// To observe lifecycle events, subscribe to [events] or wire a `ConnectivityObserver` via the
-  /// top-level `attachObserver`.
   this : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty');
 
   /// The current periodic check interval.
   Duration get checkInterval => _checkInterval;
 
-  /// The current slow-classification cutoff, or null when slow detection is disabled
-  /// (every reachable status reports [ConnectionQuality.good]).
+  /// The current slow cutoff, or null when slow detection is off.
   Duration? get slowThreshold => _slowThreshold;
 
-  /// The most recently observed status, or null before the first check
-  /// (or after the last [onStatusChange] subscriber cancels, which suspends the periodic timer).
+  /// Last status seen. Null before the first check, and null again once the last [onStatusChange]
+  /// listener cancels.
   InternetStatus? get lastStatus => _lastStatus;
 
-  /// Stream of status transitions.
+  /// Status changes, deduped on kind: the same kind twice running fires once, good to slow fires.
   ///
-  /// Periodic checks start on the first listener and suspend when the last one cancels. Emissions
-  /// are deduped on status *kind*: two consecutive [Reachable]s of the same [ConnectionQuality] won't
-  /// double-fire, but a [ConnectionQuality.good] → [ConnectionQuality.slow] flip will.
+  /// Checking starts on the first listener and pauses when the last one cancels.
   Stream<InternetStatus> get onStatusChange => _statusController.stream;
 
-  /// Stream of internal diagnostic events.
+  /// Lifecycle events: checks, status emissions, triggers, config changes, dispose.
   ///
-  /// Surfaces lifecycle activity (status emissions, check completions, external triggers, config changes, dispose)
-  /// microtask-deferred from the caller's frame. The deferral keeps the scheduler on cadence while a
-  /// listener's synchronous work per event stays below the check interval, but it cannot insulate the
-  /// event loop: synchronous blocking work in a listener still blocks the whole isolate for its duration
-  /// (see the threading notes on `ConnectivityObserver`). [onStatusChange] is unaffected and stays
-  /// synchronous — status emission must not wait on diagnostic work.
-  ///
-  /// Emissions racing [dispose] are best-effort: anything queued after the sink closes is dropped.
-  /// The terminal [DisposedEvent] always reaches subscribers attached when [dispose] is called.
+  /// Delivered a microtask late, so a slow listener can't stall the caller. It can still block the
+  /// isolate though, see [ConnectivityObserver]. [DisposedEvent] always lands, anything queued after
+  /// it is dropped.
   Stream<ConnectivityEvent> get events => _eventSink.stream;
 
-  /// Runs one check and returns the resulting status.
+  /// Runs one check right now, off to the side: the timer, [onStatusChange] and [lastStatus] are all
+  /// left alone.
   ///
-  /// Each probe is capped at its target's [ProbeTarget.timeout], so the check takes at most the
-  /// longest of those (the built-in policies run their probes in parallel).
-  ///
-  /// Does not affect the periodic timer, the status stream, [lastStatus], or the failure streak the
-  /// [CheckSchedule] sees.
+  /// Built-in policies probe in parallel, so this takes about as long as the slowest
+  /// [ProbeTarget.timeout].
   Future<InternetStatus> checkOnce() =>
       _policy.evaluate(targets: _targets, probe: _probe, slowThreshold: _slowThreshold);
 
@@ -159,24 +123,17 @@ final class InternetConnection({
     _scheduler.rescheduleAfter(interval);
   }
 
-  /// Updates the slow-classification cutoff.
+  /// Updates the slow cutoff, which takes effect at the next check. Null turns slow detection off.
   ///
-  /// Pass `null` to disable slow classification (every reachable status reports [ConnectionQuality.good]).
-  /// Does **not** reset the timer, run a check, or clear [lastStatus] — the new threshold takes effect
-  /// at the next scheduled or triggered check.
-  ///
-  /// Prefer this over rebuilding the [InternetConnection] when only the threshold changes: rebuilding
-  /// loses the in-memory [lastStatus], resetting the next [StatusEmittedEvent]'s `previous` to null.
+  /// Nothing else moves: no timer reset, no check, [lastStatus] survives. That last part is why this
+  /// beats rebuilding the whole thing when only the threshold changed.
   set slowThreshold(Duration? threshold) {
     final previous = _slowThreshold;
     _slowThreshold = threshold;
     _eventSink.emit(SlowThresholdChangedEvent(previous: previous, next: threshold));
   }
 
-  /// Releases the status stream, periodic timer, and external-trigger subscription.
-  ///
-  /// After [dispose] returns the instance must not be used: [checkOnce] or subscribing to [onStatusChange]
-  /// yields undefined behaviour.
+  /// Tears down the stream, timer and trigger subscription. Don't use the instance afterwards.
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;

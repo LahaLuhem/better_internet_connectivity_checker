@@ -187,7 +187,7 @@ def render_summary_markdown(
             "## Peak resident set size per scenario\n",
             "Peak RSS captured via `ProcessInfo.currentRss` sampled every 500 ms "
             "(every 250 ms in `long_running`). The package's memory footprint "
-            "baseline; future refactors should not regress this without reason.\n",
+            "baseline, and future refactors should not regress it without reason.\n",
             metric_table(dataframe, "peak_rss_bytes", units="MB"),
         ]
     )
@@ -284,7 +284,7 @@ def render_compare_markdown(
         [
             "## Memory: peak RSS, baseline vs current\n",
             "Steady-state memory footprint should not regress. A shift > "
-            "5-10 MB warrants investigation; below that is noise on most "
+            "5-10 MB warrants investigation, and below that is noise on most "
             "machines.\n",
         ]
     )

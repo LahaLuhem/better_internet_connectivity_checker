@@ -1,63 +1,74 @@
-# AGENTS.md — `better_internet_connectivity_checker`
+# AGENTS.md: `better_internet_connectivity_checker`
 
 Tool-agnostic brief for any coding agent (Copilot, Cursor, Codex, Claude Code, …) working in
 this package. Claude-Code-specific guidance lives in [CLAUDE.md](./CLAUDE.md).
 
 ## Project goal
-A Dart package for **robust internet-connectivity checking** — distinguishes "a network
+A Dart package for **internet-connectivity checking** that tells "a network
 interface is up" (cheap, often wrong) from "I can actually reach the public internet right
 now" (the question users typically care about). Pure Dart so it works equally well in CLI,
 server, web, and Flutter contexts.
 
 Public API in v0.1 is stable: `InternetConnection` scheduler + sealed `InternetStatus`
 outcomes, backed by pluggable `ConnectivityProbe` and `ReachabilityPolicy` layers. See
-README for usage; APPENDIX for design rationale.
+README for usage, APPENDIX for design rationale.
 
 ## Stack
-- **Dart ≥ 3.10** (constraint pinned in `pubspec.yaml`, version pinned in `.fvmrc`).
-  3.10 is the floor because of the static dot-shorthand feature; bump only when a new
-  language feature is actually consumed. Whatever toolchain serves the pinned version is
-  fine — the host toolchain manager is a local implementation detail.
+- **Dart SDK floor: the `environment: sdk:` constraint in
+  [`pubspec.yaml`](../pubspec.yaml).** It sits where it does because the code uses
+  header-form primary constructors, so raise it only when a new language feature is
+  actually consumed. [`.fvmrc`](../.fvmrc) names the local channel, not a version.
+  Whatever toolchain serves it is fine, the host toolchain manager being a local
+  implementation detail.
 - **`dart test`** for tests, **`dart --no-version-check analyze .`** for pedantic static
-  analysis (matches what `flutter --no-version-check analyze .` runs on a Flutter app —
+  analysis (matching what `flutter --no-version-check analyze .` runs on a Flutter app,
   pedantic mode is intentional, not negotiable). No Flutter dep, no platform channels.
 - **`shellcheck`** (shell scripts) and **`actionlint`** (GitHub workflows) run from the
   [`linterpol`](https://github.com/LahaLuhem/linterpol) Docker image
   (`ghcr.io/lahaluhem/linterpol`), not a local install, so only Docker is needed.
-  `scripts/release.sh` preflight runs both through the image; CI runs them in `repo.yml`.
+  `scripts/release.sh` preflight runs both through the image, and CI runs them in `repo.yml`.
 - **CHANGELOG, `version:` field, and `example/pubspec.lock` are owned by
   [`scripts/release.sh`](../scripts/release.sh).** Do not invoke `cider` commands by hand
-  and do not edit `CHANGELOG.md`, `version:`, or `example/pubspec.lock` directly — run
+  and do not edit `CHANGELOG.md`, `version:`, or `example/pubspec.lock` directly. Run
   the script (or, on request, ask the user to run it) so the bump, CHANGELOG
   finalisation, example-lockfile resync, commit, tag, and push stay in lockstep.
   `example/pubspec.lock` is pipeline-owned because `example/pubspec.yaml` declares its
-  parent via `path: ../` — the lockfile records the parent version at resolve time and
+  parent via `path: ../`, so the lockfile records the parent version at resolve time and
   must follow each bump. The `cider:` block in `pubspec.yaml` is the script's static
   configuration (URLs, link templates) and may be hand-edited freely. Full release
   procedure (CLI flags, preflight checks, pipeline-owned vs. hand-editable yaml) is
   documented in [`scripts/README.md`](../scripts/README.md).
 - **Published to pub.dev.** `.pubignore` controls what ships in the tarball.
-- **`.editorconfig`** is the source of truth for text-file conventions — line width 100,
+- **`.editorconfig`** is the source of truth for text-file conventions: line width 100,
   LF endings, UTF-8, per-language indent rules. The Dart formatter's `page_width: 100` in
-  `analysis_options.yaml` matches it; keep them aligned if either ever moves.
+  `analysis_options.yaml` matches it, so keep them aligned if either ever moves.
 
 ## Repo layout
 ```
 better_internet_connectivity_checker/
 ├── lib/
-│   ├── better_internet_connectivity_checker.dart   Public entry; `export 'src/…'` only
+│   ├── better_internet_connectivity_checker.dart   Public entry, `export 'src/…'` only
 │   └── src/
 │       ├── internet_connection.dart                  Top-level scheduler / lifecycle
 │       ├── data/                                     Cross-cutting helpers + tuning knobs
 │       │   ├── typedefs.dart                         Shared typedefs (`ResponseAcceptor`)
 │       │   └── values.dart                           `Values` static defaults + `noopWithVal`
+│       ├── internal/                                 `part of` the coordinator, not its own API
+│       ├── observer/                                 Diagnostic events + the observer seam
+│       │   ├── connectivity_observer.dart            Base class + `attachObserver`
+│       │   ├── events/                               Sealed `ConnectivityEvent` cases
+│       │   └── sinks/                                Concrete impls (printing)
 │       ├── policy/
 │       │   ├── reachability_policy.dart              Abstract interface
-│       │   └── strategies/                           Concrete impls (`Any`/`All`Reachable)
+│       │   └── strategies/                           Concrete impls (`Any`/`All`/`Minimum`)
 │       ├── probe/
 │       │   ├── connectivity_probe.dart               Abstract interface
 │       │   ├── models/                               Value types (target / result)
 │       │   └── transports/                           Concrete impls (HTTP HEAD)
+│       ├── schedule/
+│       │   ├── check_schedule.dart                   Abstract interface
+│       │   ├── models/                               `ScheduleContext`
+│       │   └── strategies/                           Concrete impls (fixed / backoff)
 │       └── status/
 │           ├── internet_status.dart                  Sealed parent (declares `part`s)
 │           ├── models/                               Auxiliary types (quality enum)
@@ -69,13 +80,14 @@ better_internet_connectivity_checker/
 │   ├── micro/                                        `benchmark_harness` micro-benches
 │   ├── scenarios/                                    Long-running stateful scenarios
 │   ├── python/                                       uv + ruff orchestrator (see python/.ai/AGENTS.md)
-│   └── results/                                      Checked-in baseline JSONs per SDK
+│   ├── reports/                                      Committed charts + SUMMARY.md
+│   └── results-local/                                Per-machine run output (gitignored)
 ├── analysis_options.yaml                             Strict-mode + opinionated lints
 ├── pubspec.yaml                                      Deps + cider config + topics
 ├── .pubignore                                        Files excluded from `pub publish`
-├── .fvmrc                                            FVM-pinned SDK version
+├── .fvmrc                                            FVM channel for the local SDK
 ├── .editorconfig                                     Text-file formatting (width, indents)
-├── CHANGELOG.md                                      Pipeline-owned; appears on pub.dev
+├── CHANGELOG.md                                      Pipeline-owned, appears on pub.dev
 ├── README.md                                         pub.dev landing page
 ├── APPENDIX.md                                       Design rationale (anchor-keyed)
 ├── CODESTYLE.md                                      Library-package code style
@@ -84,25 +96,25 @@ better_internet_connectivity_checker/
 
 **Feature-directory conventions** (apply within `lib/src/<feature>/`):
 - `<feature>.dart` at the root holds the abstract interface or the sealed parent.
-- `strategies/` / `transports/` / `sinks/` — concrete implementations of the interface.
+- `strategies/` / `transports/` / `sinks/`: concrete implementations of the interface.
   Named for what they *are* (Strategy-pattern impls, transport impls, event-sink impls),
   not a generic `impl/`. Public impls (e.g. `PrintingConnectivityObserver` under
-  `observer/sinks/`) are regular libraries; private defaults (e.g.
+  `observer/sinks/`) are regular libraries. Private defaults (e.g.
   `_SilentConnectivityObserver`) can use `part of` to scope themselves to the consumer
-  library that owns them — see the `observer/sinks/silent_connectivity_observer.dart`
+  library that owns them, see the `observer/sinks/silent_connectivity_observer.dart`
   → `internet_connection.dart` linkage for the pattern.
-- `models/` — value types serving the feature (request/result/options).
-- `outcomes/` — sealed-class cases. Uses `part of` to share library scope with the
-  parent (required by Dart's sealed-class rules; see
+- `models/`: value types serving the feature (request/result/options).
+- `outcomes/`: sealed-class cases. Uses `part of` to share library scope with the
+  parent (required by Dart's sealed-class rules, see
   [`CODESTYLE.md#idioms-parts`](../CODESTYLE.md#idioms-parts)).
 
 ## Hard rules
 1. **The public API lives only in `lib/<package>.dart`.** That file re-exports from
-   `lib/src/`. Don't make users import from `package:…/src/…` — the `src/` subtree is
+   `lib/src/`. Don't make users import from `package:…/src/…`, since the `src/` subtree is
    private by convention. Anything callers need goes through an explicit `export`.
    Cross-cutting helpers and tuning knobs live in `lib/src/data/`:
-   - `data/typedefs.dart` — typedefs shared across the project.
-   - `data/values.dart` — internal defaults (timeouts, intervals, header maps, the
+   - `data/typedefs.dart`: typedefs shared across the project.
+   - `data/values.dart`: internal defaults (timeouts, intervals, header maps, the
      curated probe-target list) grouped under `abstract final class Values` so call
      sites read `Values.defaultX` and the origin is obvious. Loose helpers like
      `noopWithVal` stay top-level alongside the class. Before introducing a new magic
@@ -115,43 +127,43 @@ better_internet_connectivity_checker/
    unconstrained `Object?`, stop and reconsider.
 4. **Public symbols carry dartdoc.** `public_member_api_docs` is enabled. Every public
    class / function / getter / extension needs a `///` comment that explains *why*, not
-   *what* — types already carry the *what*.
+   *what*. The type already carries the *what*.
 5. **Semver, strictly.** Breaking changes only on a major bump. Any change to a public
    signature, deletion, or behavioural change of a documented contract is breaking.
    `cider` enforces the version-bump discipline.
 6. **Pure Dart, no Flutter dep in `pubspec.yaml`.** This package targets every Dart
-   platform — server, CLI, web, Flutter. If platform-channel features ever become
-   necessary, a sibling Flutter-plugin package can depend on this one — don't add Flutter
+   platform: server, CLI, web, Flutter. If platform-channel features ever become
+   necessary, a sibling Flutter-plugin package can depend on this one. Don't add Flutter
    to this `pubspec.yaml`. See
    [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter). The
    `example/` directory itself is Flutter, so any pure-Dart context resolving from the
-   root (CI, scripts, downstream tooling) must pass `dart pub get --no-example`; pub
+   root (CI, scripts, downstream tooling) must pass `dart pub get --no-example`. Pub
    resolves example dependencies by default and they require the Flutter SDK. Same
    reason: scope `dart analyze` to `lib test` (not `.`) and exclude `example/**` via
-   `dart_dependency_validator.yaml` for `dependency_validator` — both descend into
+   `dart_dependency_validator.yaml` for `dependency_validator`, and both descend into
    `example/` by default and break without Flutter.
-7. **`CHANGELOG.md` is fully bot-owned. Do not edit any section of it — including
+7. **`CHANGELOG.md` is fully bot-owned. Do not edit any section of it, including
    `## [Unreleased]`.** Release headers and per-version bullets are written by
-   [`scripts/release.sh`](../scripts/release.sh); the running `## [Unreleased]` buffer is
+   [`scripts/release.sh`](../scripts/release.sh), and the running `## [Unreleased]` buffer is
    appended to by the post-merge automation in
    [`.github/workflows/changelog.yml`](../.github/workflows/changelog.yml), which calls
    `cider log` with the merged-PR title. The PR title (governed by its `sem-*` label) is
-   what becomes the changelog line — so when landing a feature, do **not** curate,
+   what becomes the changelog line, so when landing a feature do **not** curate,
    prepend, or hand-write a bullet describing it. Manual entries will be reordered or
    duplicated by the bot. The bracket-and-link-reference format (`## [Unreleased]`
    heading, `[Unreleased]: …/compare/<last-tag>...vHEAD` reference at the bottom,
    `### Added` / `### Changed` / `### Fixed` subsections) is what cider's `link_template`
-   expects; inconsistent headings get rewritten on release. The same prohibition covers
+   expects, and inconsistent headings get rewritten on release. The same prohibition covers
    the `version:` field in `pubspec.yaml` and `example/pubspec.lock` (regenerated by the
-   release script's `flutter pub get` step in `example/`); never bump or hand-resolve
+   release script's `flutter pub get` step in `example/`). Never bump or hand-resolve
    either, nor run `cider` commands. The `cider:` block in `pubspec.yaml` is static
    configuration (link templates, URLs) and may be hand-edited like any other yaml.
 
 ## PR conventions
-All three checks are enforced by
+Every check below is enforced by
 [`.github/workflows/pr-conventions.yml`](../.github/workflows/pr-conventions.yml).
 
-- **Branch name** — `<type>/#<issue>-<slug>`, where `<type>` is one of
+- **Branch name**: `<type>/#<issue>-<slug>`, where `<type>` is one of
   `feature`, `bugfix`, `chore`, `refactor`, `acceptance-test-issues`, `hotfix`.
   Example: `chore/#4-tidy-readme`.
 - **Exactly one `sem-*` label per PR.** Selects the changelog category for the
@@ -168,25 +180,28 @@ All three checks are enforced by
   | `sem-security`  | `security`   | Security-relevant fix                          |
   | `sem-skip`      | (skip)       | Internal-only change (CI, docs, tests, …)      |
 
-  The PR title becomes the changelog line verbatim — phrase it as a release-note
+  The PR title becomes the changelog line verbatim, so phrase it as a release-note
   bullet, not a working title.
 - **PR body must not be empty**, **no merge commits in the PR range** (rebase to
   integrate `main`), and **commit subjects ≤ 82 characters**.
 
 ## Style
 Full guide: [`../CODESTYLE.md`](../CODESTYLE.md). The lint posture is deliberately strict
-(see `analysis_options.yaml`); rules are enforced through that file plus the DCM checks
+(see `analysis_options.yaml`), and rules are enforced through that file plus the DCM checks
 called out in CODESTYLE. Top-level rules to keep in working memory:
 
-- Type-annotate every public symbol; `final` by default for fields and locals.
+- Type-annotate every public symbol, `final` by default for fields and locals.
 - Nullability is explicit (no `as T` on `T?`).
-- 100-column line width; blank lines separate logical chunks within a method.
-- No magic numbers in `lib/` code — pull to named `static const`s (cross-cutting defaults
+- 100-column line width, and blank lines separate logical chunks within a method.
+- No magic numbers in `lib/` code, pull them to named `static const`s (cross-cutting defaults
   belong on `Values`, see *Hard rules* above).
 - Public symbols carry `///` dartdoc explaining *why*, not *what*.
 
-For everything else — naming, idioms (`Uri.https`, `.wait`, dot shorthands,
-`List.unmodifiable`, …), class structure, DCM rules, markdown conventions — go to
+- Prose on any surface a person reads follows [Prose & voice](../CODESTYLE.md#prose), which
+  starts by telling you to go read <https://noslopgrenade.com/>. Do that first.
+
+For everything else (naming, idioms like `Uri.https`, `.wait`, dot shorthands and
+`List.unmodifiable`, class structure, DCM rules, markdown conventions) go to
 [`../CODESTYLE.md`](../CODESTYLE.md).
 
 ## Guidelines for any AI agent
@@ -194,25 +209,29 @@ For everything else — naming, idioms (`Uri.https`, `.wait`, dot shorthands,
   reasonable approach (which connectivity-check strategy to default to, which test fixture
   to mock, whether to expose a class vs a function, whether to add a dependency, etc.),
   stop and ask. Present the options with trade-offs, say which you'd pick and why, then
-  wait. Don't silently pick one and build. This applies even when a choice feels small —
+  wait. Don't silently pick one and build. This applies even when a choice feels small, because
   small choices compound.
-- **Mark recommendations with `★`.** Prefix your preferred option in every set with `★` —
-  in tables, bullet lists, headings, inline — so the user can scan and reply by echoing or
-  overriding (e.g. "★ for 1–4, change 5 to B"). Exactly one star per option set in most
-  cases; occasionally a combined choice warrants more.
+- **Mark recommendations with `★`.** Prefix your preferred option in every set with `★`, in
+  tables, bullet lists, headings or inline, so the user can scan and reply by echoing or
+  overriding (e.g. "★ for 1-4, change 5 to B"). Exactly 1 star per option set in most cases, though
+  occasionally a combined choice warrants more.
 - **Document new user-facing features in the README.** Any new public class, function,
   configuration option, or example must be added to the README in the same change.
-  Rationale + design trade-offs still belong in `APPENDIX.md`; the README is the
+  Rationale and design trade-offs still belong in `APPENDIX.md`. The README is the
   user-facing entry point and must reflect what the package actually does.
+- **Read <https://noslopgrenade.com/> before writing any prose.** Docs, comments, commit
+  messages, PR bodies. Fetch the page, don't cite it from memory: it is the intent behind
+  [Prose & voice](../CODESTYLE.md#prose), and skipping it is how the wall of text gets
+  written.
 - **Read `analysis_options.yaml` before writing code.** The lint posture is far stricter
-  than the Dart default — code that fails lint won't pass review.
+  than the Dart default, and code that fails lint won't pass review.
 - **Surface semver implications loudly.** If a change touches anything re-exported from
   `lib/<package>.dart`, call out whether it's patch / minor / major before the diff lands.
 - **Refactor first when a change needs a better shape.** If a feature would sit better on a
   different structure, do the enabling refactor as its own behaviour-preserving step (separate
   commit/PR, no behaviour delta) before building the feature on top. A wrong shape is
   especially costly to undo here: public-API breakage is semver-significant and slow to walk
-  back once published. This doesn't bypass ask-first or plan-first — surface the refactor and
+  back once published. This doesn't bypass ask-first or plan-first, so surface the refactor and
   get sign-off before anything that touches the public API, adds a dependency, or has wide
   blast radius.
 - **Before proposing a performance or memory optimisation, read the existing rationale.**

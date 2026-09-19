@@ -278,7 +278,7 @@ void main() {
       check(observer).isA<PrintingConnectivityObserver>();
 
       // Smoke-check: every method should be safely callable without
-      // throwing. dart:developer.log writes to the runtime log channel —
+      // throwing. dart:developer.log writes to the runtime log channel,
       // there is no per-test assertion target, but the lack of a thrown
       // exception is the contract.
       observer

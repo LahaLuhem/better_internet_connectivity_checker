@@ -12,10 +12,10 @@ topics:
 screenshots:
   - description: >-
       Live status stream cycling Reachable(good) → Reachable(slow) →
-      Unreachable — de-duped to fire only on real transitions.
+      Unreachable, de-duped to fire only on real transitions.
     path: doc/screenshots/1-status-stream.webp
   - description: >-
-      Unreachable diagnostic view with per-probe failure breakdown — error
+      Unreachable diagnostic view with per-probe failure breakdown: error
       class and response time for every failed probe in the last check.
     path: doc/screenshots/2-failure-inspection.png
 

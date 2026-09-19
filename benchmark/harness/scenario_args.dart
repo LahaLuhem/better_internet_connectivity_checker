@@ -1,18 +1,11 @@
 import 'dart:io';
 
-/// Parsed CLI arguments for a benchmark scenario or micro entrypoint.
+/// The CLI flags every benchmark entrypoint takes, so the Python orchestrator drives them all the
+/// same way. `--iterations`, `--output`, `--git-sha` and `--package-version` are required.
+/// `--duration-seconds` defaults to 10, and micros ignore it.
 ///
-/// Every entrypoint accepts the same standard flags so the Python orchestrator drives them
-/// uniformly:
-///
-/// * `--iterations N` — required. Iterations to run in this one subprocess (loops 0..N-1, one record each).
-///   Batching in a single process amortises startup + AOT-load over N runs — the suite's dominant optimisation.
-/// * `--output P` — required. Where to write the JSON result file.
-/// * `--git-sha SHA` — required. Captured via `git rev-parse HEAD`; recorded per record for traceability.
-/// * `--package-version V` — required. Captured from `pubspec.yaml`; recorded per record.
-/// * `--duration-seconds N` — optional, default 10. Scenarios honour it; micros ignore it.
-///
-/// Hand-parsed — the surface is too small to justify a `package:args` dependency.
+/// Batching iterations into one subprocess spreads startup and AOT-load over N, which is the single
+/// biggest win in the suite. Hand-parsed, since this is far too small to want `package:args`.
 final class ScenarioArgs {
   final int iterations;
   final String outputPath;
@@ -28,12 +21,11 @@ final class ScenarioArgs {
     required this.durationSeconds,
   });
 
-  /// The Dart SDK version reported by `Platform.version`. Recorded in result records — different SDK
-  /// = baseline must be re-captured.
+  /// From `Platform.version`. A different SDK means the baseline has to be captured again.
   static String get sdkVersion => Platform.version.split(' ').first;
 
-  /// Parses the standard scenario CLI flags from [argv]. Exits the process with a non-zero code on
-  /// parse failure — benchmarks are non-interactive, no point throwing an exception nobody will catch.
+  /// Parses [argv], exiting non-zero on a bad flag rather than throwing. Nothing here is interactive
+  /// enough for anyone to catch it.
   factory parse(List<String> argv) {
     final flags = <String, String>{};
     for (var i = 0; i < argv.length; i++) {

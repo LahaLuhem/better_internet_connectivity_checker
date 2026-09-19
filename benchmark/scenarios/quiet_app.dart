@@ -1,10 +1,8 @@
 /// Scenario: quiet steady-state app.
 ///
-/// One subscriber, configurable check interval (default 500 ms), local HTTP server always up.
-/// Measures the baseline cost of running [InternetConnection] against a real-but-deterministic transport —
-/// RSS over time, event-loop stalls, emission count, dispose latency.
-///
-/// The "everything works" reference scenario: a steady-state regression shows up here first.
+/// One subscriber, server always up. The baseline cost of simply having an [InternetConnection]
+/// running, and the reference everything else gets read against. A steady-state regression lands here
+/// first.
 library;
 
 import 'dart:async';

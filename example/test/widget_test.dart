@@ -20,13 +20,13 @@ void main() {
   });
 
   // Regression: on iOS, PlatformScaffold renders a CupertinoPageScaffold whose
-  // body sits *behind* the translucent navigation bar — so the ListView starts
+  // body sits *behind* the translucent navigation bar, so the ListView starts
   // at y=0 and its top tiles hide under the bar unless the body is wrapped in a
   // SafeArea. Android's Scaffold insets the body for us, so this only regresses
   // on iOS. Asserting the list top clears y=0 proves the SafeArea wrap is doing
   // its job.
   testWidgets('iOS insets the scrolling body below the navigation bar', (tester) async {
-    // Reset in a finally (not addTearDown) — the framework's end-of-body
+    // Reset in a finally (not addTearDown), because the framework's end-of-body
     // invariant check runs before tearDowns and fails if the override leaks.
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
 

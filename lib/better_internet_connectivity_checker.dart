@@ -1,28 +1,15 @@
-/// Robust internet-connectivity checking — distinguishes "a network interface
-/// is up" (cheap, often misleading) from "I can actually reach the public
-/// internet right now" (the question users usually care about).
+/// Tells "the wifi icon is on" apart from "I can actually load a page right now".
 ///
-/// The package is pure Dart and works in every Dart context (CLI, server,
-/// web, Flutter). Wire `connectivity_plus` (or any other signal) via the
-/// `externalRecheckTrigger` parameter for snappy rechecks on OS-reported
-/// network changes.
+/// Pure Dart, so it runs wherever Dart does. Hand `externalRecheckTrigger` a stream from
+/// `connectivity_plus` or anything else, and checks rerun the moment the OS says the network moved.
 ///
 /// ```dart
-/// import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
-///
-/// Future<void> main() async {
-///   final checker = InternetConnection(
-///     slowThreshold: const Duration(milliseconds: 500),
-///   );
-///   final status = await checker.checkOnce();
-///   switch (status) {
-///     case Reachable(:final quality):
-///       print('online ($quality)');
-///     case Unreachable(:final failedProbes):
-///       print('offline (${failedProbes.length} probes failed)');
-///   }
-///   await checker.dispose();
+/// final checker = InternetConnection();
+/// switch (await checker.checkOnce()) {
+///   case Reachable(:final quality): print('online ($quality)');
+///   case Unreachable(:final failedProbes): print('offline, ${failedProbes.length} probes failed');
 /// }
+/// await checker.dispose();
 /// ```
 library;
 

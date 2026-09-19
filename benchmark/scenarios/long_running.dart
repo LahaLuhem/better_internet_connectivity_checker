@@ -1,11 +1,9 @@
 /// Scenario: long-running stability.
 ///
-/// Quiet-app shape (1 subscriber, default-ish interval, server always up), but sampling memory more
-/// aggressively to detect leaks. Default `--duration-seconds 10` makes this a smoke. Pass `--duration-seconds 3600`
-/// for the full hour bake.
+/// Quiet-app shape, but sampling memory harder. The default 10 seconds is a smoke test, so pass
+/// `--duration-seconds 3600` for the real bake.
 ///
-/// The metric that matters: `rss_delta_bytes`. A non-zero (positive) delta over a long run is a leak.
-/// Zero or oscillating-around-baseline is healthy.
+/// Watch `rss_delta_bytes`. Climbing over a long run is a leak, hovering around the baseline is fine.
 library;
 
 import 'dart:async';
@@ -51,7 +49,7 @@ Future<void> _runIteration(
     checkInterval: const Duration(seconds: 5),
   );
 
-  // Sample every 250 ms — finer resolution for leak detection. For 1 h runs
+  // Sample every 250 ms, a finer resolution for leak detection. For 1 h runs
   // that's ~14k samples (~120 KB of int data). Acceptable.
   final memorySampler = MemorySampler(interval: const Duration(milliseconds: 250))..start();
   final stallMeter = EventLoopStallMeter()..start();
@@ -70,7 +68,7 @@ Future<void> _runIteration(
   final requestCount = server.requestCount;
   await server.stop();
 
-  // Approximate growth rate per minute — useful sanity check vs durationSeconds.
+  // Approximate growth rate per minute, a useful sanity check vs durationSeconds.
   final minutes = args.durationSeconds / 60.0;
   final rssGrowthPerMinute = minutes <= 0 ? 0.0 : memorySampler.rssDelta / minutes;
 

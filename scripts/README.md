@@ -18,7 +18,7 @@ and pushes commit + tag atomically. The tag push triggers
 [`../.github/workflows/publish.yml`](../.github/workflows/publish.yml), which then
 publishes to pub.dev via OIDC.
 
-Laptop-only — does not run inside CI.
+Laptop-only. Does not run inside CI.
 
 ## Usage
 
@@ -34,16 +34,14 @@ scripts/release.sh minor -m "Big new feature"     # annotated tag with this mess
 
 ### Tag mode
 
-By default, `git tag <version>` produces a **lightweight tag** — a bare ref pointer with no
-body, message, or signature. Pass `-m "MSG"` / `--tag-message "MSG"` to produce an
-**annotated tag** with that message; if your git config has `tag.gpgSign=true`, the
-annotated tag is also signed.
+By default, `git tag <version>` produces a **lightweight tag**: a bare ref pointer with no body,
+message, or signature. Pass `-m "MSG"` / `--tag-message "MSG"` for an **annotated tag** with that
+message, which also gets signed if your git config has `tag.gpgSign=true`.
 
-The lightweight default is independent of your `tag.gpgSign` setting — for the
-no-`-m` path the script runs `git tag` with `-c tag.gpgSign=false` applied to that one
-invocation, so plain `release.sh minor` never opens an editor or demands a message.
-Lightweight tags can't be signed (there's no body to sign), so the bypass is
-mechanically necessary, not a stylistic choice.
+The lightweight default doesn't care about your `tag.gpgSign` setting. On the no-`-m` path the
+script runs `git tag` with `-c tag.gpgSign=false` applied to that one invocation, so plain
+`release.sh minor` never opens an editor or demands a message. Lightweight tags can't be signed,
+there being no body to sign, so the bypass is mechanically necessary rather than a style choice.
 
 ## What's pipeline-owned vs. hand-editable
 
@@ -52,22 +50,22 @@ mechanically necessary, not a stylistic choice.
 will not survive the next release.
 
 `example/pubspec.lock` is regenerated automatically because `example/pubspec.yaml`
-declares its parent via `path: ../` — when the parent version changes, the lockfile
-needs to follow. The release script runs `(cd example && flutter pub get)` after the
+declares its parent via `path: ../`, so when the parent version changes the lockfile has to
+follow. The release script runs `(cd example && flutter pub get)` after the
 bump and stages the refreshed lockfile in the prep commit, so the tree is consistent
 before pub.dev sees it. Without this, the next `flutter pub get` *anywhere* (CI's
 publish step, pana on pub.dev, an IDE on a contributor's machine) would rewrite it
 and `dart pub publish` would complain that a checked-in file is modified.
 
-The `## Unreleased` block in `CHANGELOG.md` is the script's **input** — curated by
-hand between releases. The script bails if it's empty.
+The `## Unreleased` block in `CHANGELOG.md` is the script's **input**, curated by hand between
+releases. The script bails if it's empty.
 
-The `cider:` block in `pubspec.yaml` is static configuration (link templates, URLs)
-and sits outside the pipeline-owned set — hand-editable.
+The `cider:` block in `pubspec.yaml` is static configuration (link templates, URLs), sits outside
+the pipeline-owned set, and is hand-editable.
 
 ## Tag format
 
-`<MAJOR>.<MINOR>.<PATCH>` — no `v` prefix. Matches the trigger pattern in
+`<MAJOR>.<MINOR>.<PATCH>`, no `v` prefix. Matches the trigger pattern in
 [`../.github/workflows/publish.yml`](../.github/workflows/publish.yml)
 (`[0-9]+.[0-9]+.[0-9]+`) and pub.dev's canonical `{{version}}` convention.
 
@@ -77,7 +75,7 @@ The script refuses to proceed unless every check passes:
 
 - `dart` resolvable (prefers `.fvm/flutter_sdk/bin/dart` if present, else PATH).
 - `flutter` on PATH (used to regenerate `example/pubspec.lock` against the new parent
-  version — see *What's pipeline-owned vs. hand-editable* above).
+  version, see *What's pipeline-owned vs. hand-editable* above).
 - `cider` on PATH.
 - `docker` on PATH, daemon running (scripts + workflows are linted via the linterpol
   image: `shellcheck` and `actionlint`, no local installs).
@@ -86,33 +84,32 @@ The script refuses to proceed unless every check passes:
 - `dart format`, `dart analyze`, and `dart test` all clean.
 - The target tag does not already exist locally or on the remote.
 
-`dart pub publish --dry-run` is *not* in preflight. It cross-checks three things
-that must be satisfied simultaneously:
+`dart pub publish --dry-run` is *not* in preflight. It cross-checks 3 things that all have to hold
+at once:
 
 1. `pubspec.yaml`'s `version:` matches a CHANGELOG header.
 2. No checked-in files are modified in the working tree.
 3. The tarball builds and validates against pub.dev rules.
 
-(1) only holds *after* `cider bump` + `cider release`. (2) only holds *after*
-`git commit` — running the dry-run against the working tree mid-execute would
-trip on the bump/release modifications. So the dry-run runs as step 5, after
-the prep commit lands. The `ERR` trap handles failure in two phases:
+(1) only holds *after* `cider bump` plus `cider release`. (2) only holds *after* `git commit`,
+since running the dry-run against the working tree mid-execute would trip on the bump and release
+modifications. So the dry-run runs as step 5, once the prep commit lands. The `ERR` trap handles
+failure in 2 phases:
 
 - **Pre-commit failure** (bump, release, or `example/` resync errored, no commit yet):
   restore `pubspec.yaml` + `CHANGELOG.md` + `example/pubspec.lock` from `HEAD`.
 - **Post-commit, pre-tag failure** (dry-run rejected the prep commit):
   `git reset --hard HEAD~1` to drop the prep commit, leaving the working
-  tree exactly as it was before `release.sh` started. No remote tag is ever
-  created in this case — the validation gate sits between commit and tag, so
-  there's nothing to clean up on `origin`.
+  tree exactly as it was before `release.sh` started. No remote tag is ever created here, because
+  the validation gate sits between commit and tag, so there's nothing to clean up on `origin`.
 
-After the dry-run passes, the trap clears — `git tag` / `git push` failures
-require manual recovery (the script prints the recipe).
+Once the dry-run passes the trap clears, and `git tag` / `git push` failures need manual recovery
+(the script prints the recipe).
 
 ## FVM note
 
 If `.fvm/flutter_sdk/bin/dart` exists, the script prepends it to `PATH` so plain
-`dart` resolves to the `.fvmrc`-pinned SDK. Otherwise, it falls back to whatever
-`dart` is on `PATH` — a non-FVM contributor can run the script unchanged.
+`dart` resolves to the SDK FVM installed for the `.fvmrc` channel. Otherwise it falls back to
+whatever `dart` is on `PATH`, so a non-FVM contributor can run the script unchanged.
 SDK-version compatibility is enforced indirectly via `pub publish --dry-run` in
 preflight.

@@ -3,12 +3,10 @@ import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Card;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// A platform-adaptive card — Material [Card] on Android, and a rounded, filled surface in the iOS
-/// idiom on Cupertino (which ships no native card).
+/// Material [Card] on Android, a rounded filled surface on iOS, which has no card of its own.
 ///
-/// Gap-plugging stand-in: `platform_adaptive_widgets` exposes no `PlatformCard` (Cupertino has no `Card` to map to),
-/// so the example owns one until the base library grows it. The child supplies its own padding,
-/// exactly as a Material [Card] expects.
+/// `platform_adaptive_widgets` has no `PlatformCard` for exactly that reason, so the example carries
+/// one until it does. The child brings its own padding, same as a Material [Card] expects.
 class const PlatformCard({
   /// Content of the card.
   required final Widget child,
@@ -18,12 +16,11 @@ class const PlatformCard({
 
   super.key,
 }) extends StatelessWidget {
-  /// Mirror of Material [Card]'s default margin, applied on the Cupertino branch
-  /// (the Material branch lets [Card] apply its own when [margin] is null).
+  /// Copy of Material [Card]'s default, for the Cupertino branch. The Material branch lets [Card]
+  /// apply its own.
   static const _defaultMargin = EdgeInsets.all(4);
 
-  /// Corner radius shared by the Cupertino branch's fill and its clip, so the painted background and
-  /// the child-clipping path stay in lockstep.
+  /// Shared by the Cupertino branch's fill and its clip, so background and clip path stay in step.
   static const _cornerRadius = BorderRadius.all(.circular(12));
 
   @override
