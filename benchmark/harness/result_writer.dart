@@ -2,11 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-/// Writes scenario-result JSON conforming to the schema documented in
-/// [`~/Desktop/bicc-benchmark-plan-2026-05-21.md`](file:///Users/mehul/Desktop/bicc-benchmark-plan-2026-05-21.md)
-/// §5 — one record per iteration, appended to a per-run output file.
+/// Writes 1 JSON record per iteration, appended to a per-run output file. Schema lives in
+/// [benchmark/README.md](../README.md#result-json-schema).
 ///
-/// One [ResultWriter] per scenario invocation. Construct, call [open], emit one [writeRecord] per iteration, then [close].
+/// One per scenario invocation: [open], a [writeRecord] per iteration, then [close].
 final class ResultWriter {
   final String scenario;
   final String sdkVersion;
@@ -80,10 +79,8 @@ final class ResultWriter {
   }
 }
 
-/// Forces a young-generation GC by allocating then dropping a large amount of pressure. Imperfect —
-/// the Dart VM is free to defer — but the canonical "I want a clean slate before measuring" pattern.
-///
-/// Call this immediately before opening a measurement window. Idempotent.
+/// Nudges a young-gen GC by allocating a pile of garbage and dropping it. The VM is free to ignore
+/// you, but it's the usual "clean slate before measuring" move. Call it just before a window opens.
 void forceGc() {
   // Allocate ~8 MB of unreachable garbage to provoke young-gen collection.
   // Drop the reference immediately; the VM should reclaim before the next synchronous chunk.

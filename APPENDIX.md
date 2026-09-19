@@ -1,10 +1,10 @@
-# APPENDIX — `better_internet_connectivity_checker`
+# APPENDIX: `better_internet_connectivity_checker`
 
 Consolidated source of truth for design decisions, rejected paths, and non-obvious
 technical trade-offs.
 
 READMEs and `.ai/AGENTS.md` reference sections here by anchor (e.g.
-`APPENDIX.md#pure-dart-not-flutter`). **Headings below are load-bearing** — each carries
+`APPENDIX.md#pure-dart-not-flutter`). **Headings below are load-bearing**, each carrying
 an explicit `<a id="…">` anchor immediately above it. When renaming a heading, keep the
 anchor stable or grep-and-update every caller.
 
@@ -16,9 +16,9 @@ anchor stable or grep-and-update every caller.
 - **Decision:** the canonical text for both files lives under `.ai/`. The repo root holds
   symlinks (`AGENTS.md → .ai/AGENTS.md`, `CLAUDE.md → .ai/CLAUDE.md`).
 - **Why:** Claude Code (and most other coding agents) auto-discover `CLAUDE.md` /
-  `AGENTS.md` at the project root, but two more loose Markdown files at the root add
+  `AGENTS.md` at the project root, but 2 more loose Markdown files at the root add
   visual noise to the file tree. Scoping the agent-guidance files under `.ai/` keeps them
-  together; the root symlinks preserve auto-discovery.
+  together, and the root symlinks preserve auto-discovery.
 - **Cross-platform note:** symlinks survive `git clone` on macOS/Linux. On Windows hosts
   without symlink support enabled, the file may show up as a small text file containing
   the link target. If that ever bites a contributor, the fallback is to drop the symlinks
@@ -30,17 +30,17 @@ anchor stable or grep-and-update every caller.
 <a id="pure-dart-not-flutter"></a>
 ## Pure-Dart package, no Flutter dependency
 
-- **Chosen:** zero Flutter dependency. `pubspec.yaml` declares only a Dart SDK constraint
-  (`sdk: ^3.11.0`); no `flutter:` block.
+- **Chosen:** zero Flutter dependency. [`pubspec.yaml`](./pubspec.yaml) declares only a Dart SDK
+  constraint, no `flutter:` block.
 - **Why:** connectivity checking is fundamentally an HTTP / DNS / TCP problem, none of
   which need platform channels. Keeping the package Flutter-free means it works equally
-  on Dart server, CLI, web, and Flutter — not just Flutter apps — and avoids pulling a
+  on Dart server, CLI, web and Flutter, not just Flutter apps, and avoids pulling a
   Flutter dep tree into non-Flutter users' transitive closure.
 - **If platform channels ever become necessary** (e.g. iOS reachability API integration),
   the right move is a sibling Flutter-plugin package that depends on this one, not adding
   Flutter to this `pubspec.yaml`.
-- **`.fvmrc` exists** for local SDK pinning, but FVM is a build-time tool, not a runtime
-  dep — it doesn't show up in `pubspec.yaml` and doesn't affect downstream consumers.
+- **`.fvmrc` names the local Flutter channel**, but FVM is a build-time tool, not a runtime
+  dep, so it doesn't show up in `pubspec.yaml` and doesn't affect downstream consumers.
 
 ---
 
@@ -48,16 +48,16 @@ anchor stable or grep-and-update every caller.
 ## Public API funnelled through `lib/<package>.dart`
 
 - **Chosen:** `lib/better_internet_connectivity_checker.dart` is the only file callers
-  import. Implementation lives in `lib/src/`; nothing in `src/` is intended to be
+  import. Implementation lives in `lib/src/`, and nothing in `src/` is intended to be
   imported directly. The entry file consists almost entirely of `export 'src/…' show …;`
   lines.
-- **Why:** Dart doesn't have a hard public/private boundary between library files —
+- **Why:** Dart doesn't have a hard public/private boundary between library files.
   anything under `lib/` is importable. The single-entry + `lib/src/` convention is how
   the ecosystem signals private intent. It also gives one place to audit the public
   surface when planning a release, and one place to control re-exports with `show` /
   `hide`.
 - **Implication for refactors:** moving code *within* `lib/src/` is free (private).
-  Moving anything *into or out of* the re-export list is a semver-visible change — minor
+  Moving anything *into or out of* the re-export list is a semver-visible change: minor
   for additions, major for removals or signature changes.
 
 ---
@@ -65,19 +65,19 @@ anchor stable or grep-and-update every caller.
 <a id="three-layer-architecture"></a>
 ## Layered architecture: probe / policy / schedule / coordinator
 
-- **Chosen:** the package splits into four independent concerns:
-  1. **`ConnectivityProbe`** — runs one check against one `ProbeTarget`, returns one
+- **Chosen:** the package splits into 4 independent concerns:
+  1. **`ConnectivityProbe`**: runs one check against one `ProbeTarget`, returns one
      `ProbeResult`. The built-in `HttpProbe` (with `.head()` and `.get()` factories) is
-     one implementation; others can wrap it (retry decorators) or replace it (DNS / TCP
+     one implementation, and others can wrap it (retry decorators) or replace it (DNS / TCP
      / mock).
-  2. **`ReachabilityPolicy`** — aggregates per-probe results into an `InternetStatus`.
+  2. **`ReachabilityPolicy`**: aggregates per-probe results into an `InternetStatus`.
      Built-ins: `AnyReachablePolicy` (any-of-N), `AllReachablePolicy` (all-of-N). Future
      variants (k-of-N, majority, circuit-breaker) slot in at this layer.
-  3. **`CheckSchedule`** — decides the gap before the next periodic check, given the
+  3. **`CheckSchedule`**: decides the gap before the next periodic check, given the
      base interval, the consecutive-failure streak, and the last status. Built-ins:
      `FixedIntervalSchedule` (the default), `ExponentialBackoffSchedule`.
-  4. **`InternetConnection`** — owns scheduling (periodic timer + external-trigger
-     stream) and the de-duped broadcast status stream. It composes the other three; it
+  4. **`InternetConnection`**: owns scheduling (periodic timer plus external-trigger
+     stream) and the de-duped broadcast status stream. It composes the other 3, and
      does not know how a probe runs, how a status is aggregated, or why one gap differs
      from the last.
 - **Why:** every named future feature falls cleanly into exactly one layer. DNS probing
@@ -90,7 +90,7 @@ anchor stable or grep-and-update every caller.
   layer 3 exists. Retrying *within* one check (probe failed, try again before calling the
   target dead) is a probe decorator. Backing off *between* checks is not: it is terminal
   in the first case and endless in the second, and it needs the failure history, which no
-  probe sees. The two were conflated until
+  probe sees. The 2 were conflated until
   [`why-cadence-is-its-own-seam`](#why-cadence-is-its-own-seam) split them.
 - **What this rules out:** putting probe / policy logic directly on `InternetConnection`
   (the v1 mistake), or exposing knobs (`enableStrict`, `slowConnectionConfig`) that the
@@ -103,13 +103,13 @@ anchor stable or grep-and-update every caller.
 
 - **Chosen:** a `CheckSchedule` interface at the scheduler layer, with the failure streak handed
   in on a `ScheduleContext`. No new dependency.
-- **The distinction that drove it:** "add retries with backoff" names two different features.
+- **The distinction that drove it:** "add retries with backoff" names 2 different features.
   Retrying *within* one check is terminal (give up after N and report the target dead) and needs
   nothing but the current probe, so it decorates `ConnectivityProbe`, a seam that already existed.
   Backing off *between* checks is endless (a monitor never stops polling) and needs the failure
   history, which no probe or policy sees. Only the second one needed a new seam.
 - **Why not `package:retry`:** it is a good fit for the first feature and a poor one for the second.
-  The only usable member is `RetryOptions.delay()`, about five lines of arithmetic. `retry()` itself
+  The only usable member is `RetryOptions.delay()`, about 5 lines of arithmetic. `retry()` itself
   rethrows once `maxAttempts` is hit, which is wrong for a checker that must keep polling. Its API
   is exception-driven, whereas `ConnectivityProbe` is contractually non-throwing, so bridging means
   throwing a sentinel on the normal path. And its jitter comes from a library-private `Random` with
@@ -117,11 +117,11 @@ anchor stable or grep-and-update every caller.
   entire graph is `http` did not pay for itself.
 - **Interop instead of dependency:** `ScheduleContext.consecutiveFailures` is exactly
   `RetryOptions.delay()`'s argument, so a caller who already has a `RetryOptions` writes a
-  three-line `CheckSchedule` around it. README shows the snippet.
+  small `CheckSchedule` around it. README shows the snippet.
 - **A value object, not named parameters.** `ReachabilityPolicy.evaluate` takes named parameters and
   the consistency argument pointed that way, but a cadence signature is far likelier to grow
   (elapsed-in-state, attempts since start, a clock). Adding a named parameter to a public interface
-  method breaks every downstream implementer; adding a field to a value object does not.
+  method breaks every downstream implementer, where adding a field to a value object does not.
 - **`checkInterval` stays the base.** The schedule transforms it rather than replacing it, so the
   shipped setter and `CheckIntervalChangedEvent` keep their meaning, the default schedule returning
   it verbatim is exactly the old behaviour, and reassigning it at runtime rescales the whole ladder.
@@ -140,7 +140,7 @@ anchor stable or grep-and-update every caller.
   one value. It is also why the factor must stay below 1: at 1 the lowest draw reaches zero and
   busy-loops the scheduler.
 
-Two implementation facts worth not rediscovering:
+2 implementation facts worth not rediscovering:
 
 - **`Duration` cannot be asserted in a `const` constructor.** `assert(maxDelay > Duration.zero)`
   fails const evaluation with `const_eval_type_num`, and `maxDelay.inMicroseconds > 0` fails with
@@ -149,7 +149,7 @@ Two implementation facts worth not rediscovering:
   interval instead of asserting, so a `maxDelay` below the base pins the delay to the base rather
   than returning zero and busy-looping the scheduler.
 - **The delay cap is applied as a ratio, before any `Duration` is built.** A long outage drives the
-  exponent unbounded, and `Duration * factor` handles overflow badly in two different ways:
+  exponent unbounded, and `Duration * factor` handles overflow badly in 2 different ways:
   `10^31` silently saturates at int64 (`2562047788:00:54`), while an infinite factor throws
   `UnsupportedError: Infinity or NaN toInt`. Clamping the *exponent* does not fix this, because the
   hazard is `multiplier^exponent` and the multiplier is caller-supplied. Comparing growth factor
@@ -160,22 +160,22 @@ Two implementation facts worth not rediscovering:
 <a id="sealed-status-not-enum"></a>
 ## `InternetStatus` is a sealed class, not an enum
 
-- **Chosen:** `sealed class InternetStatus` with two concrete cases — `Reachable` (carries
+- **Chosen:** `sealed class InternetStatus` with 2 concrete cases: `Reachable` (carries
   `responseTime` and `quality`) and `Unreachable` (carries the list of `failedProbes`).
   Slow-vs-fast is encoded as a `ConnectionQuality` enum on `Reachable`, not as a third
   top-level status.
 - **Why:** a `Slow` status is not a peer of `Connected` and `Disconnected`. It is a
-  *refinement* of "connected" — you are connected, but the link is slow. Modelling it as
+  *refinement* of "connected". You are connected, the link is just slow. Modelling it as
   a top-level enum value (the previous package's choice) loses that structure. With a
   sealed class, callers `switch` exhaustively, and adding a future variant (e.g.
   `Intermittent`) is a compiler-enforced breaking change instead of a runtime gotcha.
 - **Data on the status:** carrying `failedProbes` on `Unreachable` and `responseTime` on
-  `Reachable` lets callers debug "why am I offline" without re-running probes — without
+  `Reachable` lets callers debug "why am I offline" without re-running probes, and without
   needing a separate "snapshot" type. The shape is small enough that adding such a type
   would be premature.
-- **Stream de-duplication operates on *kind*, not value-equality.** Two consecutive
+- **Stream de-duplication operates on *kind*, not value-equality.** 2 consecutive
   `Reachable(quality: good)` statuses with different `responseTime`s are still "the same
-  state" from a user perspective — the stream does not re-emit. Quality flips (good ↔
+  state" from a user perspective, so the stream does not re-emit. Quality flips (good ↔
   slow) and reachability flips do re-emit. Value-equality on the status types is left to
   identity to avoid surprising users with structural list-equality semantics on
   `failedProbes`.
@@ -190,10 +190,10 @@ Two implementation facts worth not rediscovering:
   per-evaluation argument, not policy state, so policies are `const`-constructible and
   shareable.
 - **Why:** the previous package used a `bool enableStrictCheck` to flip between
-  "any" and "all". The boolean flag is the cheapest path to two strategies and the worst
-  path to three. The next feature on the roadmap (k-of-N, circuit-breaker) doubles the
+  "any" and "all". The boolean flag is the cheapest path to 2 strategies and the worst
+  path to 3. The next feature on the roadmap (k-of-N, circuit-breaker) doubles the
   matrix again. A strategy interface makes "add a policy" an *additive* change instead of
-  a *cross-cutting* one — no existing code touches.
+  a *cross-cutting* one, with no existing code touched.
 - **Const-constructible by convention:** every built-in policy has a `const`
   constructor and no per-call state. Callers can write `const AnyReachablePolicy()` and
   pass it around freely. Stateful policies (e.g. one that remembers recent failures for a
@@ -208,9 +208,9 @@ Two implementation facts worth not rediscovering:
 - **Chosen:** `ProbeResult` carries only `target`, `isSuccess`, `responseTime`, and
   `error`. No `statusCode`, no `headers`, no protocol-specific response payload. Probes
   that need to surface protocol-specific data (HTTP response codes, DNS authoritative
-  server, TCP reset reason, …) do so on the probe's own surface — constructor callbacks,
-  captured state, custom getters on the probe instance — not on the shared result.
-- **Why:** `ConnectivityProbe` is the abstraction layer; HTTP HEAD is one implementation
+  server, TCP reset reason, …) do so on the probe's own surface (constructor callbacks,
+  captured state, custom getters on the probe instance), not on the shared result.
+- **Why:** `ConnectivityProbe` is the abstraction layer, and HTTP HEAD is one implementation
   of it. The result type is the contract every probe fulfils. Putting HTTP fields on it
   leaks HTTP semantics into a transport-agnostic surface: a DNS probe has no
   `statusCode`, a TCP probe has no `headers`, every non-HTTP implementation would carry
@@ -223,7 +223,7 @@ Two implementation facts worth not rediscovering:
   onto `ProbeResult.failure`, motivated by a single demo's needs. Reverted because the
   generalisation was driven by n=1 and would have set a precedent every future custom
   probe could lean on. The demo's `MethodAwareProbe` instead exposes an `onAllowHeader`
-  constructor callback — that callback is exactly what the pluggable probe seam is for:
+  constructor callback, which is exactly what the pluggable probe seam is for:
   if your probe needs to expose something the shared `ProbeResult` doesn't carry, expose
   it on the probe.
 - **Test:** when reviewing a contribution that proposes adding a field to `ProbeResult`,
@@ -232,7 +232,7 @@ Two implementation facts worth not rediscovering:
   not on the shared result.
 - **Future-proof escape hatch:** if a real cross-cutting need ever materialises (multiple
   protocols all needing to surface their own structured metadata), the right shape is a
-  single `Map<String, Object?> metadata` field — one bounded surface point, not N
+  single `Map<String, Object?> metadata` field, one bounded surface point rather than N
   protocol-specific fields. Defer that until the use case is real.
 
 ---
@@ -245,28 +245,28 @@ Two implementation facts worth not rediscovering:
   `ProbeResult`. The built-in `HttpProbe` wires it into an
   [`http.AbortableRequest`](https://pub.dev/documentation/http/latest/http/AbortableRequest-class.html)
   via the `abortTrigger` named parameter. `IOClient` calls `HttpClientRequest.abort()` on
-  the underlying socket; `BrowserClient` calls `AbortController.abort()`. Either way the
+  the underlying socket, and `BrowserClient` calls `AbortController.abort()`. Either way the
   TCP/TLS connection is released as soon as the signal fires, rather than sitting open until
   the deadline expires.
 - **Why an optional `Future<void>`** rather than a new `CancellationToken` type: standard
   Dart types compose cleanly. The fan-out in `AnyReachablePolicy` is one `Completer<void>`
-  shared across all probes; custom probes that want to honour the signal can race against
+  shared across all probes, and custom probes that want to honour the signal can race against
   it with `Future.any` or `whenComplete` without depending on a package-specific primitive.
   Probes that cannot abort (DNS lookups already in flight, mocked transports, retry
-  decorators) simply ignore the parameter — the contract is best-effort, the policy still
+  decorators) simply ignore the parameter. The contract is best-effort, and the policy still
   resolves correctly.
 - **Why `http.Abortable` rather than per-call `http.Client` + `Client.close()`:** the
   closure approach was the original plan and would have worked, but it forced a breaking
-  change to `HttpProbe`'s constructor — replacing `{http.Client? client}` with a
+  change to `HttpProbe`'s constructor, replacing `{http.Client? client}` with a
   factory function so each probe call could mint and close its own client. That sacrifices
   connection pooling on the injected-client path for no gain over the canonical primitive
-  `package:http` 1.6.0 already provides. `Abortable` keeps the constructor untouched, the
+  `package:http` already provides. `Abortable` keeps the constructor untouched, the
   injected client live across calls, and matches what every modern HTTP client (including
   the platform `fetch`) does at the wire level.
 - **`AnyReachablePolicy` owns the cancellation fan-out, not `InternetConnection`.** A
   single `Completer<void>` lives for the duration of one `evaluate(...)` call: pass its
   future to every probe, complete it on first success or last failure. `AllReachablePolicy`
-  passes nothing — every probe must complete by definition, so there is nothing to cancel.
+  passes nothing, because every probe must complete by definition, leaving nothing to cancel.
   `InternetConnection` does not need to know about this: it asks the policy for an answer,
   and the policy decides whether and when to release siblings. The deadline wrapper below
   adds a second, independent source on the same channel, which is how a timed-out probe is
@@ -276,7 +276,7 @@ Two implementation facts worth not rediscovering:
   `HttpProbe` captures it and the result lands as `ProbeResult.failure(error: …)`. It now
   means one thing only, "a sibling settled the answer first", because deadline failures
   report `TimeoutException` from the wrapper below. A caller that type-discriminates on
-  `ProbeResult.error` can finally tell the two apart.
+  `ProbeResult.error` can finally tell them apart.
 - **Not in scope today:** wiring `InternetConnection.dispose()` into the same cancellation
   channel. A mid-flight policy run continues to completion when the connection is disposed,
   bounded by the deadline wrapper below. Worth revisiting if the default check interval ever
@@ -296,7 +296,7 @@ Two implementation facts worth not rediscovering:
   TCP connection has none, so the call runs until the OS gives up on the connect. Measured at 75 s
   against a blackholed address for a 2 s timeout. `Future.timeout` asks nothing of the transport, so
   it holds either way.
-- **The evidence it sat in the wrong layer:** of the four `ConnectivityProbe` implementations in this
+- **The evidence it sat in the wrong layer:** of the 4 `ConnectivityProbe` implementations in this
   repo, one honoured `target.timeout`, and it was the example app's teaching probe rather than the
   shipped `HttpProbe`. Every implementer had to remember the same line, and the reference
   implementation forgot it.
@@ -330,8 +330,8 @@ candidate endpoints.
   intercepted HTTPS defaults changed no verdict, and under any-of-N a single plain `200` outvotes a
   rejected `204` target, so such a target can never veto.
 - **Whitelisting is the real hole, and it belongs to the policy layer**, which is why
-  `MinimumReachablePolicy` exists. Measured: one reachable host of four gives `Reachable` under
-  any-of-N and `Unreachable` under a 2-of-4 quorum, while a two-host whitelist beats that quorum too.
+  `MinimumReachablePolicy` exists. Measured: 1 reachable host of 4 gives `Reachable` under
+  any-of-N and `Unreachable` under a 2-of-4 quorum, while a 2-host whitelist beats that quorum too.
   All-of-N catches it but calls a healthy network offline the moment one endpoint is down.
 - **A plain-HTTP target a portal answers with `200` is still trusted**, since the default predicate
   sees a plain success. A `302` to a login page used to pass too: the client followed it and the
@@ -353,7 +353,7 @@ candidate endpoints.
   *not* depend on `connectivity_plus`.
 - **Why:** `connectivity_plus` is a Flutter plugin and pulls Flutter into the dependency
   graph. This package is pure Dart by design (see
-  [`pure-dart-not-flutter`](#pure-dart-not-flutter)); pulling Flutter just to get a
+  [`pure-dart-not-flutter`](#pure-dart-not-flutter)), and pulling Flutter just to get a
   network-change signal would break that property for every non-Flutter consumer (CLI,
   server, web).
 - **What the hook expects:** any `Stream<void>` whose events suggest the OS-reported
@@ -363,7 +363,7 @@ candidate endpoints.
   early recheck.
 - **Future:** a sibling `better_internet_connectivity_checker_flutter` package can
   provide the `connectivity_plus` wiring as a default, depending on this package without
-  the inverse coupling. Today, "wire it yourself" is a 1-line snippet in the README.
+  the inverse coupling. Today, "wire it yourself" is a snippet in the README.
 
 ---
 
@@ -375,21 +375,21 @@ candidate endpoints.
 - **Rejected:** DNS-only or TCP-connect probes, both of which would be cheaper per check.
 - **Why:** the package answers "can I actually reach the public internet right now", not
   "is *some* socket-level path alive". DNS resolution succeeds inside captive portals
-  (the portal serves its own DNS), inside transparent proxies, and on LAN-only networks —
+  (the portal serves its own DNS), inside transparent proxies, and on LAN-only networks,
   none of which let HTTP traffic out. Raw TCP connects catch some of those cases but still
   miss TLS-handshake failures and HTTP-layer interception (captive portals returning a 302
   to a sign-in page on port 443). HTTP HEAD costs one extra round-trip but exercises the
   entire path the user cares about: DNS, TCP, TLS, and an HTTP response.
 - **GET ships alongside HEAD as a built-in fallback.** Same class (`HttpProbe`), different
   named constructor (`HttpProbe.get()`). Some reliability endpoints reject HEAD with HTTP
-  405; some CDNs strip cache-control headers on HEAD responses; some legacy APIs simply
+  405, some CDNs strip cache-control headers on HEAD responses, and some legacy APIs simply
   misbehave under it. GET is the universal fallback, paid for with one extra response body
   on the wire. The body is drained but not buffered, so the per-call memory cost matches
-  HEAD; the wire cost does not. HEAD stays the default because the body cost matters at
+  HEAD, where the wire cost does not. HEAD stays the default because the body cost matters at
   the periodic-check interval the scheduler runs at.
 - **Faster probes remain available as custom impls.** Users who explicitly accept the
   trade-off can implement DNS or TCP probes against the `ConnectivityProbe` interface and
-  pass them via `InternetConnection(probe: …)`. The seam exists; the default is
+  pass them via `InternetConnection(probe: …)`. The seam exists, and the default is
   conservative by design.
 
 ---
@@ -404,33 +404,33 @@ candidate endpoints.
   1. The real trade-offs are *orthogonal*, not linear. Network bandwidth vs. responsiveness
      (`checkInterval`), reliability vs. fan-out cost (`targets`), strictness vs. speed
      (`policy`), transport overhead vs. portability (`probe`), classification-only
-     `slowThreshold`. Collapsing four independent axes onto one slider loses information.
-  2. The package's dominant cost is the *network* — bandwidth, latency, battery. Memory is
+     `slowThreshold`. Collapsing 4 independent axes onto one slider loses information.
+  2. The package's dominant cost is the *network*: bandwidth, latency, battery. Memory is
      already near-zero (well under 1 KB per `InternetConnection`, no buffers, no caches).
      There is no real memory-vs-perf axis to slide along.
   3. Presets bake in opinions and age badly in a published API. If users want a
      "battery mode", the right answer is a documented recipe composing existing knobs
-     (long interval, single target, any-of-1) — not a new opaque enum whose semantics
+     (long interval, single target, any-of-1), not a new opaque enum whose semantics
      drift across versions.
 - **Future-proof escape hatch:** if a real memory-vs-observability axis ever materialises
   (status-history buffer, diagnostic ring buffer), expose it as a *direct* knob
-  (`historySize: 50`) — not as part of a coalesced preset.
+  (`historySize: 50`), not as part of a coalesced preset.
 
 ---
 
 <a id="why-no-checkonce-coalescing"></a>
 ## Why `checkOnce()` is not single-flighted today
 
-- **Chosen:** each `checkOnce()` call independently runs the full probe fan-out. Two
-  simultaneous callers issue two parallel sets of probes.
-- **Why:** most apps call `checkOnce()` from a single place — a status provider, a
+- **Chosen:** each `checkOnce()` call independently runs the full probe fan-out. 2
+  simultaneous callers issue 2 parallel sets of probes.
+- **Why:** most apps call `checkOnce()` from a single place: a status provider, a
   service singleton, the periodic timer inside `InternetConnection` itself. The
-  duplicate-call case is rare; pre-shipping a single-flight wrapper adds code paths and
+  duplicate-call case is rare, and pre-shipping a single-flight wrapper adds code paths and
   surface area for a non-problem. Callers that *do* hit the case can wrap one
   `Future<InternetStatus>` themselves with a `Completer`.
-- **If real-world demand materialises:** the shape is straightforward and non-breaking —
+- **If real-world demand materialises:** the shape is straightforward and non-breaking.
   keep one in-flight `Future` on `InternetConnection`, return it to concurrent callers,
-  clear on completion. The API stays identical; the change is transparent.
+  clear on completion. The API stays identical, so the change is transparent.
 
 ---
 
@@ -439,26 +439,26 @@ candidate endpoints.
 
 - **Chosen:** any refactor that claims a performance, memory, or latency improvement
   must ship its PR with before/after measurements from the
-  [`benchmark/`](./benchmark/) framework — charts and a Mann-Whitney U
+  [`benchmark/`](./benchmark/) framework, charts and a Mann-Whitney U
   significance table (via `benchmark/python/run.py compare`) pasted into the
   PR description for any "X improved" claim. The raw JSON files are **not**
-  committed — they're per-machine and per-clone, and cross-machine comparisons
+  committed, being per-machine and per-clone, and cross-machine comparisons
   are misleading. The contributor captures a local baseline on their own
-  machine, applies the change, captures a second run, and diffs the two
+  machine, applies the change, captures a second run, and diffs them
   same-machine result sets locally.
-- **Why:** the package is published — every claim downstream users read is one
+- **Why:** the package is published, so every claim downstream users read is one
   we have to defend. "Trust me, it's faster" is not enough when the audience is
   every Dart developer who pulls the package. Numbers compared against a
-  committed baseline are reproducible by anyone with the repo; vibes are not.
-  The slow-observer scheduler-drift bug is the canonical example — the
+  committed baseline are reproducible by anyone with the repo, where vibes are not.
+  The slow-observer scheduler-drift bug is the canonical example:
   scheduler stalls by hundreds of milliseconds when a slow observer is wired
   in, which is invisible without the `tick_drift_meter` instrumentation but
   obvious with it. We do not want to discover the next such bug after release.
 - **Methodology** (non-negotiable, lives in [`benchmark/README.md`](./benchmark/README.md)):
-  AOT compile (`dart compile exe`), pin the SDK via `.fvmrc`, N ≥ 10 iterations
-  per scenario, median + IQR (not mean — GC outliers skew means), Mann-Whitney U
+  AOT compile (`dart compile exe`), record the SDK version per run, N ≥ 10 iterations
+  per scenario, median and IQR (not mean, since GC outliers skew means), Mann-Whitney U
   for significance, warmup discarded, localhost-only HTTP. The Python orchestrator
-  (uv + ruff + polars + matplotlib + scipy) is maintainer-only — excluded from
+  (uv, ruff, polars, matplotlib, scipy) is maintainer-only, excluded from
   the published tarball via `.pubignore`.
 
 ---
@@ -466,22 +466,22 @@ candidate endpoints.
 <a id="why-events-microtask-deferred"></a>
 ## Why the diagnostic stream is microtask-deferred (with a no-subscriber early-out)
 
-- **Chosen:** [`InternetConnection.events`](./lib/src/internet_connection.dart) —
-  the diagnostic event stream introduced by the event-bus refactor — delivers
+- **Chosen:** [`InternetConnection.events`](./lib/src/internet_connection.dart),
+  the diagnostic event stream introduced by the event-bus refactor, delivers
   events microtask-deferred from the caller's frame, and skips queuing the
   microtask entirely when no subscriber is attached. The public status stream
   (`onStatusChange`) is unaffected and remains synchronous on the caller's frame.
 - **Why (architectural):** dispatch from a single
   `_eventSink.emit(...)` call site replaces the prior `_observer.onXyz(...)`
-  fan-out across seven lifecycle locations. Adding a future lifecycle event
+  fan-out across every lifecycle location. Adding a future lifecycle event
   is now a one-line emit + one new sealed `final class` extending
-  `ConnectivityEvent`; no need to thread a new `_observer.onSomething()`
+  `ConnectivityEvent`, with no need to thread a new `_observer.onSomething()`
   call into every affected method.
 - **What microtask deferral does NOT do:** it does *not* shield the
   scheduler from synchronous blocking work performed inside an override
   or stream listener. A `sleep`, sync IO call, or CPU-bound loop inside
   the override still blocks the event loop just as it does for a
-  directly-called observer — microtasks run synchronously inside the
+  directly-called observer, since microtasks run synchronously inside the
   same isolate, so the only thing the deferral moves is *when* the
   blocking happens, not *whether* it happens. Benchmark evidence on the
   `slow_observer` scenario (which uses `dart:io`'s synchronous `sleep`)
@@ -490,32 +490,32 @@ candidate endpoints.
   shifted from "inside the tick" (33 % duty cycle) to "during the wait
   between ticks" (50 % duty cycle). The doc warning on
   [`ConnectivityObserver`](./lib/src/observer/connectivity_observer.dart#L37)
-  — *"heavy work or blocking IO inside an override will stall the
-  checker's scheduling loop"* — is preserved by the refactor, not
+  (*"heavy work or blocking IO inside an override will stall the
+  checker's scheduling loop"*) is preserved by the refactor, not
   resolved by it.
 - **What microtask deferral DOES do:** it decouples the observer's
   failure mode from the scheduler. An exception inside a microtask is
   raised as an uncaught error on the isolate's error handler and does
   not propagate back into `_runScheduledCheck`'s stack frame. The
-  scheduler's tick loop continues even if a subscriber throws — pre-
+  scheduler's tick loop continues even if a subscriber throws, where pre-
   refactor a thrown exception from `_observer.onCheckCompleted(...)`
   would propagate out of `_runScheduledCheck` and reset the tick
   scheduler.
-- **Trade-off — late subscribers miss past events.** A subscriber attaching in
+- **Trade-off, late subscribers miss past events.** A subscriber attaching in
   the narrow window between an event's emission and its microtask firing will
   miss that event. This matches the existing broadcast-stream contract that
   late subscribers never see past events. The no-subscriber early-out
-  (`hasListener` check inside `_EventSink.emit`) widens the window slightly —
-  events emitted while *nobody* is attached are not queued at all — but the
+  (`hasListener` check inside `_EventSink.emit`) widens the window slightly, since
+  events emitted while *nobody* is attached are not queued at all, but the
   consumer-visible contract is unchanged: attach before the action you want
   to observe. The early-out exists because emitting into an empty broadcast
-  controller is pure overhead and showed up as a 30–95 % `tick_drift` regression
+  controller is pure overhead and showed up as a 30-95 % `tick_drift` regression
   on the `many_subscribers` and `trigger_storm` scenarios when the stream went
   unobserved (the common case for downstream users who only consume
   `onStatusChange`).
-- **Trade-off — `DisposedEvent` is the one guaranteed-delivered event.** The
+- **Trade-off, `DisposedEvent` is the one guaranteed-delivered event.** The
   dispose path emits the terminal event, yields one microtask cycle for the
-  queued add to flush, then closes the controller — so subscribers attached
+  queued add to flush, then closes the controller, so subscribers attached
   at the time `dispose()` is called observe `DisposedEvent` before the stream
   completes. Any `DisposedEvent` emitted while nobody is attached is dropped
   by the same early-out, which is fine: there's nobody around to care.
@@ -523,38 +523,38 @@ candidate endpoints.
   [`StreamController<ConnectivityEvent>.broadcast()`](./lib/src/internal/event_sink.dart)
   is instantiated on first access to [`InternetConnection.events`](./lib/src/internet_connection.dart),
   not at construction. Checkers whose consumers only watch
-  `onStatusChange` — the common case — never pay the per-instance
+  `onStatusChange`, which is the common case, never pay the per-instance
   broadcast-controller cost. The post-dispose contract is preserved: a
   subscriber attaching to `events` after [`dispose`] completes receives
   `const Stream<ConnectivityEvent>.empty()`, an interned broadcast that
-  fires `done` immediately — same observable behaviour as the closed
+  fires `done` immediately, the same observable behaviour as the closed
   controller in the original eager-allocation design, without forcing a
   re-allocation on use-after-dispose. The fix is measurable: on the
   ephemeral construct/dispose pattern (`flapping_network` benchmark at
-  N=30, 2026-05-25), the median peak RSS shifts from 79.3 M → 78.7 M —
+  N=30, 2026-05-25), the median peak RSS shifts from 79.3 M → 78.7 M,
   ~600 KB per 30-checker workload, ~17 KB per never-subscribed instance.
   The `events`-using paths (`slow_observer`, `attachObserver`) are
-  unaffected — the controller is allocated identically once subscription
+  unaffected, because the controller is allocated identically once subscription
   happens.
 - **Known follow-up (open):** the ephemeral construct/dispose pattern
   still shows a +19.8 % `flapping_network` median peak RSS gap vs the
-  pre-refactor baseline at N=30 (baseline 65.5 M → bugfix 78.5 M — the
+  pre-refactor baseline at N=30 (baseline 65.5 M → bugfix 78.5 M, the
   lazy-allocation fix above only shaved ~1 pp off the original +20.9 %
-  gap). Both branches peak at the same ~80 M ceiling — the divergence
+  gap). Both branches peak at the same ~80 M ceiling, so the divergence
   is that the pre-refactor VM happens to trigger a major GC at iter 12
   (heap drops to ~64 M) and the post-refactor VM doesn't on this
-  workload. Two candidate causes (extra broadcast controller; the
+  workload. 2 candidate causes (extra broadcast controller, and the
   `InternetConnection ↔ _PeriodicScheduler._onTick` /
   `_ExternalTriggerLink._on*` closure cycle) were tested and ruled out:
   lazy allocation closed only ~1 pp, the cycle-breaking experiment
   (nullable callback fields + null in collaborator dispose) delivered
-  zero measurable change and was reverted. A third hypothesis — the
+  zero measurable change and was reverted. A third hypothesis, that the
   per-tick `async`/`await` wrapper in `_PeriodicScheduler._runTickAndReschedule`
-  inflating young-gen allocation pressure — was tested by rewriting the
+  inflating young-gen allocation pressure, was tested by rewriting the
   wrapper as an `unawaited(_onTick().then(...))` continuation and
   re-running `long_running` + `quiet_app` at N=30 on 2026-05-26. The
   result was a regression, not an improvement: `quiet_app` median drift
-  +26 % (p=0.03), p95 drift +140 % (p=0.01); `long_running` drift flat
+  +26 % (p=0.03), p95 drift +140 % (p=0.01), and `long_running` drift flat
   (Δ +0.5 %, p=0.49). Variance also widened ~4× on the p95 metric. The
   hand-rolled `.then()` form is apparently *worse* than the
   Dart-compiler-optimised `async`/`await` desugaring on small-tick
@@ -562,8 +562,8 @@ candidate endpoints.
   closed too. Remaining hypotheses (heap fragmentation from the new
   collaborator layout, pure VM heuristic luck) are tracked in
   `~/Desktop/bicc-gc-heuristic-investigation-2026-05-25.md`. Real-user
-  impact is bounded — both ephemeral and long-lived patterns hit the
-  same peak — so this is doc-only until the investigation identifies a
+  impact is bounded, since both ephemeral and long-lived patterns hit the
+  same peak, so this is doc-only until the investigation identifies a
   structural cause.
 
 ---
@@ -577,52 +577,50 @@ candidate endpoints.
   alongside the rest of `_runScheduledCheck`'s logic. The event-bus refactor
   explicitly considered (and rejected) extracting them into a
   `_StatusDeduper` collaborator under `lib/src/internal/`.
-- **Why:** `_isDistinctKind` is a 7-line `static` pure function with one
+- **Why:** `_isDistinctKind` is a small `static` pure function with one
   caller and no other state to coordinate. `_lastStatus` is also read by
   the public [`InternetConnection.lastStatus`](./lib/src/internet_connection.dart)
-  getter and reset by `_handleLastCancel` — extracting it would force the
+  getter and reset by `_handleLastCancel`, so extracting it would force the
   collaborator to expose a getter and a reset method just so the facade
   can keep its own contract, trading one inline field for one delegated
-  field and two extra methods. The package's CODESTYLE / `CLAUDE.md`
-  guidance is explicit: *"three similar lines is better than a premature
-  abstraction"*, and *"don't add features, refactor, or introduce
-  abstractions beyond what the task requires."*
+  field and 2 extra methods. That is a premature abstraction: 3 similar
+  lines beat an indirection nothing else needs.
 - **Why not for tests:** the original refactor plan considered the case
   where extraction would let the deduper be tested in isolation. With the
   package's `_`-prefix-private + `part of` convention for internal
   collaborators (`_EventSink`, `_PeriodicScheduler`, `_ExternalTriggerLink`
   all follow it), a hypothetical `_StatusDeduper` could not be tested
-  directly either — its tests would still have to drive it through
+  directly either, because its tests would still have to drive it through
   `InternetConnection`. So the testing argument that would have justified
   the extraction collapses.
 - **If real-world demand materialises:** the existing inline shape is
   refactor-friendly. Extraction is a mechanical lift-and-shift if a
   future feature (hysteresis, kind-aware backoff, custom equality) starts
   needing per-checker dedup state with its own behaviour.
-- **Verified clean at N=30 on 2026-05-25 — no regression.** N=10
+- **Verified clean at N=30 on 2026-05-25, no regression.** N=10
   comparison runs across the event-bus + collaborator-extraction
   refactor had shown a recurring `many_subscribers` `tick_drift`
-  regression that swung wildly between captures (Step 2: +95 %;
-  Step 2.1 with early-out: +72 %; Step 3 with scheduler extracted:
-  +143 %; Step 4 with trigger-link extracted: +334 %) — the size of
+  regression that swung wildly between captures (Step 2: +95 %,
+  Step 2.1 with early-out: +72 %, Step 3 with scheduler extracted:
+  +143 %, Step 4 with trigger-link extracted: +334 %). The size of
   the swing was itself the noise signal. Repeating the comparison at
   N=30 (`c473acd` pre-refactor vs `17f36f0` post-refactor, 390 records
   each, Apple Silicon macOS, Dart 3.11.5) collapses the variance:
   `many_subscribers` `tick_drift` median is **−40.6 % (2,631 →
-  1,564 µs, p < 0.0001)** — a real improvement, not a regression. The
-  two suspected sources documented in earlier drafts of this note
+  1,564 µs, p < 0.0001)**, a real improvement rather than a regression. The
+  2 suspected sources documented in earlier drafts of this note
   ((a) event-object allocation at each emit site, (b) the periodic
   scheduler's `_runTickAndReschedule` async/await wrapper) were never
   demonstrated to matter on this workload, and the call-site
   `hasListener` guards / `.then()` continuation fixes are unnecessary.
-  The two costs *do* exist in the hot path but at this tick rate
+  Both costs *do* exist in the hot path but at this tick rate
   (10 ticks/sec) and this allocation size (~24 B per
-  `CheckCompletedEvent`) they sit well below the GC noise floor — the
+  `CheckCompletedEvent`) they sit well below the GC noise floor, so the
   pessimistic ceiling we computed (10 events/sec × 24 B = 240 B/sec
-  sustained) is roughly four orders of magnitude under the Dart VM's
+  sustained) is roughly 4 orders of magnitude under the Dart VM's
   young-gen allocation tolerance. The N=30 capture artefacts are in
   `benchmark/results-local/{baseline-c473acd,main}-n30/` and
-  `benchmark/results-local/compare-pre-vs-post-n30/` (gitignored — the
+  `benchmark/results-local/compare-pre-vs-post-n30/` (gitignored, since the
   raw JSONs are per-machine).
 
 ---
@@ -636,34 +634,34 @@ candidate endpoints.
   [`InternetConnection`](./lib/src/internet_connection.dart) + a top-level
   [`attachObserver(events, observer)`](./lib/src/observer/connectivity_observer.dart)
   helper. The `observer:` constructor parameter is removed in the same
-  release; consumers who used it migrate to `attachObserver` on the
+  release, and consumers who used it migrate to `attachObserver` on the
   events stream.
 - **Why the architectural change:** the user-facing complaint that drove
   the refactor was *"adding a logging module meant that an `_observer.`
-  call was added to multiple sites — every new feature compounds that
-  complexity"*. The event-bus design replaces the seven-site fan-out
+  call was added to multiple sites, so every new feature compounds that
+  complexity"*. The event-bus design replaces the per-site fan-out
   (`_observer.onXyz(...)` at every check completion / status emission /
   external trigger / config change / dispose) with a single
   `_eventSink.emit(...)` per site. Adding a future lifecycle event is now
   one new sealed `final class` extending `ConnectivityEvent` + one
-  `_eventSink.emit(NewEvent(...))` line; previously it required threading
-  a new abstract method onto `ConnectivityObserver` (a `base` class — a
+  `_eventSink.emit(NewEvent(...))` line. Previously it required threading
+  a new abstract method onto `ConnectivityObserver` (a `base` class, so a
   contract change for every subclass) and wiring it into every call site.
 - **Why the breaking change (drop `observer:`):** keeping the constructor
   param as a deprecated escape hatch was considered (see also the closed
   discussion in this file under
   [`why-events-microtask-deferred`](#why-events-microtask-deferred)).
-  Rejected because the two paths would have published two ways to do the
-  same thing — one synchronous, one microtask-deferred — with subtly
+  Rejected because the 2 paths would have published 2 ways to do the
+  same thing, one synchronous and one microtask-deferred, with subtly
   different failure semantics (sync observers propagate exceptions back
-  into `_runScheduledCheck`; stream-dispatched observers don't). API
+  into `_runScheduledCheck`, where stream-dispatched observers don't). API
   surface that lets consumers pick the worse-behaved path on accident is
   worth retiring outright.
 - **What this refactor does NOT claim:** *not* a perf fix. The dartdoc
-  warning on `ConnectivityObserver` — *"heavy work or blocking IO inside
-  an override will stall the checker's scheduling loop"* — still applies
+  warning on `ConnectivityObserver` (*"heavy work or blocking IO inside
+  an override will stall the checker's scheduling loop"*) still applies
   word-for-word post-refactor. Microtasks run synchronously inside the
-  isolate; a `sleep` or sync IO call inside a stream subscriber blocks
+  isolate, and a `sleep` or sync IO call inside a stream subscriber blocks
   the event loop just as it would inside a direct method call. The only
   thing the microtask boundary buys is **failure isolation**: a thrown
   exception from a subscriber surfaces as an unhandled async error
@@ -672,34 +670,34 @@ candidate endpoints.
   honest perf accounting (the `slow_observer` benchmark scenario
   regresses ~60 % under the refactor because synchronous blocking now
   happens *between* ticks rather than *during* them).
-- **Rejected dependency alternatives** (researched 2026-05-21 — see also
+- **Rejected dependency alternatives** (researched 2026-05-21, see also
   the table in `~/Desktop/bicc-event-bus-refactor-plan-2026-05-21.md`):
-  - [`event_bus`](https://pub.dev/packages/event_bus) — ~150 LoC wrapper
+  - [`event_bus`](https://pub.dev/packages/event_bus): ~150 LoC wrapper
     over `Stream`. Mature, lean, but adds a transitive dep for what's
     ~50 LoC of stream + sealed-event-types we can roll ourselves. Every
     pub.dev consumer would pull `event_bus`'s transitive closure.
-  - [`event_bus_plus`](https://pub.dev/packages/event_bus_plus) — pulls
+  - [`event_bus_plus`](https://pub.dev/packages/event_bus_plus): pulls
     `rxdart` + `logger` + `equatable` + `clock`. Disqualified on
     transitive-dep weight alone for a pure-Dart utility package.
-  - [`global_event_bus`](https://pub.dev/packages/global_event_bus) —
-    depends on the Flutter SDK. We're pure-Dart; disqualified outright.
-  - [`messaging`](https://pub.dev/packages/messaging) — pulls `uuid` as
+  - [`global_event_bus`](https://pub.dev/packages/global_event_bus):
+    depends on the Flutter SDK. We're pure-Dart, so it's disqualified outright.
+  - [`messaging`](https://pub.dev/packages/messaging): pulls `uuid` as
     a transitive (dead weight for our event-correlation needs, which
-    are nil). Underused (~8 likes, 47 weekly downloads); risk of
+    are nil). Underused (~8 likes, 47 weekly downloads), with risk of
     abandonment.
   - **`collection`'s `HeapPriorityQueue`** would be the right primitive
-    *if* we needed a real priority queue. We don't — see
+    *if* we needed a real priority queue. We don't, see
     `why-events-microtask-deferred` for the rejected N-tier-priority
     design.
 - **Rejected priority-queue design:** the user's original framing
   asked about *"some events firing ASAP compared to others (like logging
   has a lower priority)"*. The first-cut response of a heap-based
   priority queue (à la `global_event_bus`'s `critical | high | normal |
-  low`) was rejected in favour of the two-tier shape that already exists:
+  low`) was rejected in favour of the 2-tier shape that already exists:
   status changes flow through the synchronous `onStatusChange` stream
-  (no deferral, the user-perceived contract); diagnostics flow through
-  the microtask-deferred events stream. We have two effective tiers,
-  not N, and packing them onto two streams keeps subscribers' filter
+  (no deferral, the user-perceived contract), and diagnostics flow through
+  the microtask-deferred events stream. We have 2 effective tiers,
+  not N, and packing them onto 2 streams keeps subscribers' filter
   code obvious (`whereType<X>()`) rather than requiring them to learn a
   priority enum.
 
@@ -717,7 +715,7 @@ candidate endpoints.
 - **Root `pub` stays manual:** a root-pubspec bump shifts the published package's
   constraints and reaches every consumer's resolution, and bots are exempt from
   [`changelog.yml`](.github/workflows/changelog.yml), so it would land on pub.dev with no
-  release note. `/example` is an unpublished demo app and `github-actions` is CI wiring;
+  release note. `/example` is an unpublished demo app and `github-actions` is CI wiring,
   neither reaches a published byte.
 - **Minor, not just patch:** [`dependabot.yml`](.github/dependabot.yml) groups minor with
   patch, and `fetch-metadata` reports a group's *highest* step. Patch-only would skip any
@@ -728,7 +726,7 @@ candidate endpoints.
   `required_signatures` out of it: rebase-merge emits unsigned commits, so it would block
   every rebase merge, bot or human.
 - **Raw job names, no `*-ok` aggregates.** `list_smith` fronts each workflow with an
-  aggregate job because its lint matrix is data-driven and two of its workflows share a
+  aggregate job because its lint matrix is data-driven and 2 of its workflows share a
   display name. Here every job name is unique and no CI workflow carries a `paths:` filter,
   so each reports on every PR and can back a required check directly. Bot PRs still pass
   [`pr-conventions.yml`](.github/workflows/pr-conventions.yml)'s required contexts because

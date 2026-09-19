@@ -99,7 +99,7 @@ final class CustomTargetsViewModel extends ViewModel {
         showPlatformToast(
           context: context,
           message:
-              'Server replied 405 with allow: $allowSeen — switched '
+              'Server replied 405 with allow: $allowSeen, switched '
               '${probeMethod.label} → ${suggestedProbeMethod.label}'
               '${allowRetry ? ' and retrying.' : '.'}',
         ),

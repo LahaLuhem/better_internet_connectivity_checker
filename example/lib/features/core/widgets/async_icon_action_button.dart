@@ -3,12 +3,10 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:platform_icons/platform_icons.dart';
 import 'package:tap_debouncer/tap_debouncer.dart';
 
-/// A [PlatformButton.icon] that locks itself while [onPressed] is in flight.
+/// A [PlatformButton.icon] that locks itself while [onPressed] is still running.
 ///
-/// Wraps [TapDebouncer] with `cooldown: Duration.zero` so the button re-arms
-/// as soon as the async work completes. While locked, the button is disabled,
-/// the icon is swapped for a [PlatformProgressIndicator], and the label is
-/// replaced with [busyLabel].
+/// [TapDebouncer] with a zero cooldown, so it re-arms the moment the work finishes. While locked you
+/// get a [PlatformProgressIndicator] and [busyLabel] in place of the icon and label.
 class AsyncIconActionButton extends StatelessWidget {
   final Future<void> Function() onPressed;
   final PlatformIcons idleIcon;

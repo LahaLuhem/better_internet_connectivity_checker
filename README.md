@@ -156,7 +156,7 @@ response). That is enough to answer "why am I offline" without probing again:
 ```dart
 switch (await checker.checkOnce()) {
   case Reachable(:final responseTime, :final quality):
-    print('online — $quality, ${responseTime.inMilliseconds} ms');
+    print('online: $quality, ${responseTime.inMilliseconds} ms');
   case Unreachable(:final failedProbes):
     for (final probeResult in failedProbes) {
       print(
@@ -228,10 +228,10 @@ endpoint being down would flag a working connection as unreachable.
 final checker = InternetConnection(policy: const MinimumReachablePolicy(minimum: 2));
 ```
 
-The middle ground between the default any-of-N and the strict all-of-N. Two of four still
+The middle ground between the default any-of-N and the strict all-of-N. 2 of 4 still
 calls a network online while one endpoint is down, and refuses to call it online off a
 single host, which is what a captive portal whitelisting one target looks like. A portal
-whitelisting two beats a `minimum` of two, so the number is the trade.
+whitelisting 2 beats a `minimum` of 2, so the number is the trade.
 
 It settles as soon as the count is decided either way and cancels the rest, so an
 `Unreachable` lists the failures that decided it rather than every target.
@@ -397,7 +397,7 @@ final subscription = attachObserver(
 );
 // ... later, when shutting down:
 await subscription.cancel();          // explicit cleanup, OR
-await checker.dispose();              // closes events; the subscription cancels automatically
+await checker.dispose();              // closes events, so the subscription cancels itself
 ```
 
 For reactive callers that prefer streams over per-method callbacks, subscribe directly and
@@ -463,7 +463,7 @@ each answer a slightly different question, and the right pick depends on the que
 - [`connectivity_plus`](https://pub.dev/packages/connectivity_plus) answers a *different*
   question: "what network type is the OS on (Wi-Fi / cellular / none)?". It does not
   probe actual reachability, so a captive portal registers as a healthy Wi-Fi connection.
-  The two packages are complementary: wire `connectivity_plus` as this package's
+  The 2 packages are complementary: wire `connectivity_plus` as this package's
   `externalRecheckTrigger` to get instant rechecks on OS network-state flips (canonical
   wiring in [Usage](#wiring-connectivity_plus-flutter)).
 - [`internet_connection_checker`](https://pub.dev/packages/internet_connection_checker)
@@ -498,7 +498,7 @@ What the default configuration buys you, with no further configuration:
 - **Listener-gated periodic timer.** Auto-suspends when nothing is listening to
   `onStatusChange`, auto-resumes on first re-subscription. No CPU or network spend while
   the stream has no consumers.
-- **Status-kind de-duping.** Two consecutive `Reachable(quality: good)` events do not
+- **Status-kind de-duping.** 2 consecutive `Reachable(quality: good)` events do not
   re-emit, so downstream `setState` and listener rebuilds fire only on real transitions.
   Quality flips and reachability flips do re-emit.
 - **`const` defaults and `ConstUri` lazy parsing.** The default target list and its URIs are
@@ -605,7 +605,7 @@ dart analyze --fatal-infos                           # strict-mode static analys
 dart format --output=none --set-exit-if-changed .    # formatter check
 ```
 
-Dart 3.13+ required (see `pubspec.yaml`).
+SDK requirement: the `environment: sdk:` constraint in [`pubspec.yaml`](./pubspec.yaml).
 
 ## Contributing
 
@@ -618,7 +618,7 @@ guidelines, and [`APPENDIX.md`](./APPENDIX.md) for the design rationale.
 ### Optional: AI-agent discovery symlinks
 
 Canonical agent guidance lives under `.ai/`. The repo root holds gitignored symlinks so
-agents that auto-discover root-level files find them without two extra Markdown files at
+agents that auto-discover root-level files find them without 2 extra Markdown files at
 each level. Opt-in, and nothing in the build, lint, or test pipeline depends on them:
 
 ```bash

@@ -4,19 +4,17 @@ import 'models/connection_quality.dart';
 part 'outcomes/reachable.dart';
 part 'outcomes/unreachable.dart';
 
-/// The outcome of a reachability check: either [Reachable] or [Unreachable].
-///
-/// Sealed so callers can pattern-match exhaustively:
+/// What a check came back with: [Reachable] or [Unreachable], nothing else.
 ///
 /// ```dart
 /// switch (await checker.checkOnce()) {
 ///   case Reachable(:final responseTime, :final quality):
 ///     print('online (${responseTime.inMilliseconds} ms, $quality)');
 ///   case Unreachable(:final failedProbes):
-///     print('offline (${failedProbes.length} probes failed)');
+///     print('offline, ${failedProbes.length} probes failed');
 /// }
 /// ```
 sealed class InternetStatus {
-  /// Subclasses are sealed; external code may not extend this type.
+  /// Creates an [InternetStatus].
   const new();
 }

@@ -10,17 +10,13 @@ import '../../probe/models/probe_target.dart';
 import '../../status/internet_status.dart';
 import '../reachability_policy.dart';
 
-/// A [ReachabilityPolicy] that needs at least `minimum` probes to succeed.
+/// Needs at least `minimum` probes to succeed, sitting between [AnyReachablePolicy] and
+/// [AllReachablePolicy]. 2 of 4 rides out one endpoint being down, and won't call the network
+/// online off a single host, which is exactly what a captive portal whitelisting one target looks
+/// like. See [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#what-portal-detection-rests-on).
 ///
-/// Middle ground between [AnyReachablePolicy] and [AllReachablePolicy]: two of four survives one
-/// endpoint being down, and won't call a network online off a single host. That last part is what a
-/// captive portal whitelisting one target looks like (APPENDIX `what-portal-detection-rests-on`),
-/// though whitelisting two beats a `minimum` of two.
-///
-/// Settles as soon as the count is decided either way and cancels the rest, so [Reachable]'s response
-/// time is the deciding success and [Unreachable] lists only the `targets - minimum + 1` failures that
-/// settled it. Asking for more than the target list holds asserts in debug, reports [Unreachable] in
-/// release.
+/// Settles the moment the count is decided either way and cancels the rest, so [Unreachable] only
+/// lists the failures that settled it, not every target.
 final class const MinimumReachablePolicy({
   /// How many probes must succeed. A `minimum` of 1 is [AnyReachablePolicy].
   required final int _minimum,

@@ -1,8 +1,7 @@
-/// Micro-benchmark: cost of one `InternetConnection.checkOnce()` against an instant fake probe.
+/// Micro-benchmark: one `InternetConnection.checkOnce()` against an instant fake probe.
 ///
-/// Isolates the coordinator's per-check cost (probe call → policy aggregation → result construction)
-/// from network noise: the [FakeProbe] returns synchronously, so any time measured here is *coordinator
-/// overhead*, the baseline for judging any dispatch-path change.
+/// The [FakeProbe] returns straight away, so everything measured here is coordinator overhead. That's
+/// the baseline any dispatch-path change gets judged against.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';

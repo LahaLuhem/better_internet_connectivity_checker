@@ -96,7 +96,7 @@ class CustomTargetsView extends StatelessWidget {
                   shouldAcceptAnyTwoXx
                       ? 'isSuccess: (response) => '
                             'response.statusCode >= 200 && response.statusCode < 300'
-                      : 'isSuccess: default — statusCode == 200',
+                      : 'isSuccess: default, statusCode == 200',
                 ),
                 trailing: PlatformSwitch(
                   value: shouldAcceptAnyTwoXx,
@@ -160,7 +160,7 @@ class _AutoSwitchInfoCard extends StatelessWidget {
             child: Text(
               'Main probing uses the built-in HttpProbe.head() / HttpProbe.get(). '
               'On Unreachable, the demo re-fetches via an inline MethodAwareProbe '
-              'to read the response’s Allow header — ProbeResult is intentionally '
+              'to read the response’s Allow header. ProbeResult is intentionally '
               'protocol-agnostic, so HTTP-specific data must be surfaced on the '
               'probe itself. If Allow names a supported method, the dropdown '
               'switches and retries once. See method_aware_probe.dart.',

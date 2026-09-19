@@ -1,10 +1,7 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
-/// A [CheckSchedule] that delegates to a caller-supplied closure.
-///
-/// Lives under `test/support/` so the production code stays free of test scaffolding. Records every
-/// [ScheduleContext] it was handed, which is how connection tests observe the failure streak: the
-/// streak is private state on `InternetConnection` with no getter.
+/// A [CheckSchedule] backed by a closure. Keeps every [ScheduleContext] it's handed, which is the
+/// only way a test sees the failure streak, since that's private state with no getter.
 final class StubSchedule(final Duration Function(ScheduleContext scheduleContext) _respond)
     implements CheckSchedule {
   /// Every context passed to [nextDelay], in order.
@@ -13,7 +10,7 @@ final class StubSchedule(final Duration Function(ScheduleContext scheduleContext
   /// Creates a [StubSchedule].
   this;
 
-  /// The failure streaks seen so far, one per [nextDelay] call.
+  /// The failure streaks seen so far, 1 per [nextDelay] call.
   List<int> get seenFailureStreaks =>
       receivedContexts.map((context) => context.consecutiveFailures).toList(growable: false);
 

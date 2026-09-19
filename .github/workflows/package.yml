@@ -65,7 +65,7 @@ jobs:
       # here when adding another smoke-only file.
       #
       # `lcov` is not pre-installed on the `ubuntu-latest` runner image as of
-      # ubuntu-24.04 — install it explicitly. `apt-get update` keeps the package
+      # ubuntu-24.04, so install it explicitly. `apt-get update` keeps the package
       # index fresh enough that a stale mirror cache doesn't break the install.
       - name: Install lcov
         run: sudo apt-get update -qq && sudo apt-get install -y lcov
@@ -79,7 +79,7 @@ jobs:
       # event context (PR vs. push to main).
       #
       # `continue-on-error: true` keeps a Coveralls outage from failing the
-      # whole job — they have occasional 500s from their /api/v1/jobs endpoint
+      # whole job, since they have occasional 500s from their /api/v1/jobs endpoint
       # ("Internal server error. Please contact Coveralls team.") that have
       # nothing to do with our coverage data. Coveralls is observability, not
       # a correctness gate; the actual threshold check is the next step. The

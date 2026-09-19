@@ -1,17 +1,15 @@
-/// Scenario: slow observer — the headline benchmark.
+/// Scenario: slow observer, the headline benchmark.
 ///
-/// Observer sleeps 50 ms per callback; check interval 100 ms. This measures the package's worst case
-/// under a deliberately-misbehaving synchronous observer, and the numbers it produces are a property
-/// of the *observer*, not something dispatch changes can fix: a Dart isolate is single-threaded, so
-/// 50 ms of synchronous work blocks the event loop for 50 ms no matter which queue (direct call, microtask, event queue)
-/// it was dispatched from. Expect `max_stall_microseconds` ≈ the observer's per-callback delay and
-/// `blocked_duty_ratio` ≈ delay ÷ check interval (~0.5 here).
+/// The observer sleeps 50 ms per callback against a 100 ms check interval. The numbers belong to the
+/// observer, not to dispatch: one isolate means 50 ms of sync work parks the loop for 50 ms whichever
+/// queue it came off. Expect `max_stall_microseconds` near the per-callback delay, and
+/// `blocked_duty_ratio` near delay over interval, so roughly 0.5 here.
 ///
-/// What the event-bus refactor *did* change is the check cadence: the next tick's timer is armed before
-/// observer microtasks drain, so checks stay on-interval as long as per-tick observer work < the interval.
-/// Cadence is visible via `observer_call_count` ÷ run duration.
+/// What the event-bus refactor did change is cadence. The next tick is armed before observer
+/// microtasks drain, so checks stay on-interval while per-tick observer work stays under it. Read
+/// that off `observer_call_count` over run duration.
 ///
-/// Probe is a [FakeProbe] (instant) — we want to isolate observer behaviour from HTTP variance.
+/// The probe is an instant [FakeProbe], to keep HTTP variance out of it.
 library;
 
 import 'dart:async';

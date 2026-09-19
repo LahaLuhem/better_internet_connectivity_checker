@@ -1,14 +1,7 @@
 part of '../internet_connection.dart';
 
-/// Internal wiring for the optional external recheck trigger.
-///
-/// Owns the underlying `StreamSubscription` and the trigger stream reference. The coordinator drives
-/// the lifecycle via [start] and [stop]. When the constructor's `trigger` argument is null, [start]
-/// and [stop] are inert — the link silently does nothing rather than failing, mirroring the package's
-/// contract that an external trigger is optional.
-///
-/// [start] is idempotent: calling it while already subscribed does not re-subscribe. [stop] cancels
-/// and clears the subscription. A subsequent [start] re-subscribes from scratch.
+/// Owns the subscription behind the optional external recheck trigger. With a null `trigger`, [start]
+/// and [stop] quietly do nothing, because the trigger is meant to be optional.
 final class _ExternalTriggerLink({
   required final Stream<void>? _trigger,
   required final void Function() _onTrigger,
@@ -21,7 +14,7 @@ final class _ExternalTriggerLink({
     _subscription ??= _trigger?.listen((_) => _onTrigger(), onError: _onError);
   }
 
-  /// Cancels the underlying subscription and clears it so a later [start] re-subscribes from scratch.
+  /// Cancels and clears the subscription, so a later [start] subscribes afresh.
   Future<void> stop() async {
     await _subscription?.cancel();
     _subscription = null;

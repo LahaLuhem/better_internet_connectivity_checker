@@ -1,11 +1,8 @@
-/// Quality classification of a reachable internet connection.
-///
-/// Carried on a successful status to signal whether the response time fell within the configured
-/// slow threshold. With no threshold configured, every reachable status reports [ConnectionQuality.good].
+/// Whether a reachable connection came back fast enough, judged against the slow threshold.
 enum ConnectionQuality {
-  /// Response time was at or under the slow threshold, or no threshold was configured.
+  /// Came back inside the threshold, or no threshold was set.
   good,
 
-  /// Response time exceeded the configured slow threshold.
+  /// Took longer than the threshold.
   slow,
 }

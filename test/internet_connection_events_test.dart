@@ -342,7 +342,7 @@ void main() {
       });
     });
 
-    scenario('emission is microtask-deferred — subscriber sees event after the caller frame', () {
+    scenario('emission is microtask-deferred, subscriber sees event after the caller frame', () {
       final probe = StubProbe(
         (target) async =>
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),

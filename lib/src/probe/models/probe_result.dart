@@ -1,38 +1,30 @@
 import 'probe_target.dart';
 
-/// Outcome of probing a single [ProbeTarget].
+/// What came of probing one [ProbeTarget].
 ///
-/// Every result carries the elapsed time: on success so the aggregation layer can classify a slow-but-reachable
-/// connection, on failure to tell "timed out after 3 s" from "DNS failed in 30 ms" (plus any exception caught during the probe).
-///
-/// Intentionally protocol-agnostic. Probe-specific response data (HTTP headers, DNS records, TCP RST codes, …)
-/// lives on the probe's own surface, not here —
-/// see [`APPENDIX.md#no-response-data-on-result`](../../APPENDIX.md#no-response-data-on-result).
-///
-/// The primary constructor is private because [isSuccess] is derived rather than passed: the two
-/// public named constructors pin it and redirect here.
+/// Always carries the elapsed time, which is what tells "timed out after 3 s" apart from "DNS died
+/// in 30 ms". No protocol-specific fields (headers, DNS records, RST codes): those belong on the
+/// probe that knows about them. See [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#no-response-data-on-result).
 final class const ProbeResult._({
-  /// The target that was probed.
+  /// The target that got probed.
   required final ProbeTarget target,
 
-  /// Whether the probe succeeded according to its target's predicate.
+  /// Whether the target's predicate accepted the response. Derived, which is why the primary
+  /// constructor is private and the 2 named ones pin it.
   required final bool isSuccess,
 
-  /// Wall-clock time the probe took.
+  /// How long the probe took.
   required final Duration responseTime,
 
-  /// The error caught during the probe, if any. Always null on success.
+  /// Whatever the probe threw, if anything. Always null on success.
   final Object? error,
 }) {
-  /// Creates a successful [ProbeResult]. [responseTime] spans request start to response completion.
+  /// Creates a successful [ProbeResult].
   const new success({required ProbeTarget target, required Duration responseTime})
     : this._(target: target, isSuccess: true, responseTime: responseTime);
 
-  /// Creates a failed [ProbeResult].
-  ///
-  /// [responseTime] is the time to failure — the timeout duration on timeout, else the time to the
-  /// transport error. [error] is the caught exception, or null when the probe completed but the target's
-  /// [ProbeTarget.isSuccess] predicate returned false.
+  /// Creates a failed [ProbeResult]. [error] is null when the probe came back fine but
+  /// [ProbeTarget.isSuccess] turned the response down.
   const new failure({required ProbeTarget target, required Duration responseTime, Object? error})
     : this._(target: target, isSuccess: false, responseTime: responseTime, error: error);
 

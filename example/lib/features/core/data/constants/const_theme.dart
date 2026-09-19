@@ -3,14 +3,11 @@ import 'package:flutter/widgets.dart' show BuildContext, Color;
 import 'package:material_ui/material_ui.dart' show Colors;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// Status palette for the demo, resolved per platform.
+/// Status palette for the demo: the Material hue on Android, the matching `CupertinoColors.system*`
+/// on iOS.
 ///
-/// Each colour returns the Material hue on Android and the matching
-/// `CupertinoColors.system*` colour on iOS, picked via [platformValue]
-/// (`defaultTargetPlatform`, the same dispatch as `context.platformIcon`) and
-/// then run through [CupertinoDynamicColor.resolve] so the iOS system colours
-/// follow light/dark mode. The Android arm is a plain [Color], so resolving it
-/// is a no-op.
+/// Everything goes through [CupertinoDynamicColor.resolve] so the iOS colours follow light and dark
+/// mode. On the Android side that's a no-op, since a plain [Color] has nothing to resolve.
 abstract final class ConstTheme {
   static const statusOutlineAlpha = 0.3;
 

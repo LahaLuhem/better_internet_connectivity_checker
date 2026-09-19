@@ -2,18 +2,14 @@ import 'dart:async';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
-/// A [ConnectivityProbe] returning canned [ProbeResult]s with no network I/O — the only way to measure
-/// µs-scale dispatch changes when a real probe takes 100–1000 ms.
+/// Canned [ProbeResult]s, no network. The only way to see a microsecond-scale dispatch change when a
+/// real probe takes 100 to 1000 ms.
 ///
-/// Three modes:
+/// [FakeProbe.alwaysSuccess], [FakeProbe.alwaysFailure], or [FakeProbe.scripted], which walks a list
+/// and cycles once it runs out.
 ///
-/// * [FakeProbe.alwaysSuccess] — always succeeds with a fixed simulated response time (default 10 ms).
-/// * [FakeProbe.alwaysFailure] — always fails, with a fixed response time and error.
-/// * [FakeProbe.scripted] — serves a programmable list one result per call, cycling when exhausted.
-///   Drives `flapping_network`-style scenarios.
-///
-/// "Simulated response time" is the value *reported* on the result, not a real delay — the call resolves
-/// on the next microtask. For a real delay, use the localhost [`local_http_server.dart`](local_http_server.dart).
+/// The response time is reported, not waited out: every call resolves on the next microtask. Want a
+/// real delay? Use [`local_http_server.dart`](local_http_server.dart).
 final class FakeProbe implements ConnectivityProbe {
   final _Mode _mode;
   final Duration _responseTime;
@@ -58,7 +54,7 @@ final class FakeProbe implements ConnectivityProbe {
     final result = _script![_scriptIndex];
     _scriptIndex = (_scriptIndex + 1) % _script.length;
 
-    // Rebind the target — the scripted result was likely built with a placeholder target, but the
+    // Rebind the target. The scripted result was likely built with a placeholder target, but the
     // scheduler passes its configured target in.
     return result.isSuccess
         ? .success(target: target, responseTime: result.responseTime)

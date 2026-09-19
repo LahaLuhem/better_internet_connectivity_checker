@@ -11,24 +11,22 @@ final _random = Random();
 
 double _defaultJitterSource() => _random.nextDouble();
 
-/// A [CheckSchedule] that widens the gap while checks keep failing, and snaps back on recovery.
+/// Widens the gap while checks keep failing, and snaps back the moment one succeeds.
 ///
-/// `baseInterval * multiplier^(consecutiveFailures - 1)`, spread by [randomizationFactor] and held
-/// between a jittered floor and [maxDelay]. The first failure retries at the base, so a 10-second
-/// `checkInterval` at the defaults gives nominally 10s, 10s, 20s, 40s, 80s, each ±25 %.
+/// `baseInterval * multiplier^(consecutiveFailures - 1)`, spread by [randomizationFactor] and kept
+/// between a jittered floor and [maxDelay]. At the defaults a 10-second interval gives roughly 10s,
+/// 10s, 20s, 40s, 80s, each give or take 25%.
 ///
-/// Backed off, a connection that returns is not noticed until the next check. Pair with
-/// `externalRecheckTrigger` and keep [maxDelay] inside the staleness the app tolerates.
+/// The catch: once backed off, a connection that comes back isn't noticed until the next check. Pair
+/// it with `externalRecheckTrigger` and keep [maxDelay] inside what your app can stomach.
 final class const ExponentialBackoffSchedule({
   required final Duration _maxDelay,
   final double _multiplier = 2,
   final double _randomizationFactor = 0.25,
   final JitterSource _jitterSource = _defaultJitterSource,
 }) implements CheckSchedule {
-  /// Creates an [ExponentialBackoffSchedule].
-  ///
-  /// [maxDelay] is unasserted: `Duration` comparison is not a constant expression, so asserting it
-  /// would cost the `const` constructor. At or below the base interval it pins every delay there.
+  /// Creates an [ExponentialBackoffSchedule]. [maxDelay] goes unasserted because comparing
+  /// `Duration`s isn't a const expression, and the assert would cost the const constructor.
   this
     : assert(_multiplier >= 1, 'multiplier must be at least 1'),
       assert(
@@ -39,15 +37,12 @@ final class const ExponentialBackoffSchedule({
   /// The ceiling on the returned delay. Jitter never pushes past it.
   Duration get maxDelay => _maxDelay;
 
-  /// How much the delay grows per consecutive failure after the first.
-  ///
-  /// A multiplier of `1` never grows, which matches [FixedIntervalSchedule].
+  /// How much the delay grows per failure after the first. `1` never grows, same as
+  /// [FixedIntervalSchedule].
   double get multiplier => _multiplier;
 
-  /// How far each delay is spread either side of its computed value, as a fraction.
-  ///
-  /// Defaults to `0.25`, so a fleet that dropped together does not return in lockstep. `0` makes
-  /// every delay exact.
+  /// How far each delay is spread either side of its computed value. The default 0.25 stops a fleet
+  /// that dropped together from all coming back at once. `0` makes every delay exact.
   double get randomizationFactor => _randomizationFactor;
 
   @override
@@ -55,8 +50,8 @@ final class const ExponentialBackoffSchedule({
     final baseInterval = scheduleContext.baseInterval;
     final growthExponent = max(0, scheduleContext.consecutiveFailures - 1);
     final growthFactor = pow(_multiplier, growthExponent).toDouble();
-    // Capped as a ratio, not by building the Duration first: an unbounded exponent makes
-    // `Duration * factor` saturate at int64, or throw outright on an infinite factor.
+    // Capped as a ratio rather than by building the Duration first: a big enough exponent saturates
+    // `Duration * factor` at int64, or throws outright once the factor goes infinite.
     final ceilingFactor = _maxDelay.inMicroseconds / baseInterval.inMicroseconds;
     final grownDelay = growthFactor >= ceilingFactor ? _maxDelay : baseInterval * growthFactor;
     final spreadDelay = _jittered(grownDelay);

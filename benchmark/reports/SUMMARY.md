@@ -37,7 +37,7 @@ Longest single continuous window in which synchronous work blocked the event loo
 
 ## Peak resident set size per scenario
 
-Peak RSS captured via `ProcessInfo.currentRss` sampled every 500 ms (every 250 ms in `long_running`). The package's memory footprint baseline; future refactors should not regress this without reason.
+Peak RSS captured via `ProcessInfo.currentRss` sampled every 500 ms (every 250 ms in `long_running`). The package's memory footprint baseline, and future refactors should not regress it without reason.
 
 | Scenario | N | Median (MB) | IQR (MB) | Min (MB) | Max (MB) |
 |---|---:|---:|---:|---:|---:|

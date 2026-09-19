@@ -1,8 +1,7 @@
-/// Micro-benchmark: cost of one observer-method dispatch.
+/// Micro-benchmark: one observer-method dispatch.
 ///
-/// Measures the virtual-call cost of [ConnectivityObserver.onStatusChangeEmitted] in isolation, bypassing
-/// [InternetConnection] — a floor for "what does invoking one callback cost", against which the event-stream
-/// path (allocate event + microtask + broadcast `add`) can be compared.
+/// Just the virtual call to [ConnectivityObserver.onStatusChangeEmitted], with no [InternetConnection]
+/// in the way. The floor for what invoking a callback costs, to compare the event-stream path against.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -22,8 +21,7 @@ final class _ObserverDispatch extends BenchmarkBase {
   void run() => _observer.onStatusChangeEmitted(_previous, _next);
 }
 
-/// Minimal subclass — counts calls but does no work. Mirrors what a PrintingConnectivityObserver-style
-/// consumer looks like in the steady state (no expensive side effect on the hot path).
+/// Counts calls and does nothing else, the way a well-behaved consumer looks in the steady state.
 final class _NoopCountingObserver extends ConnectivityObserver {
   new();
 

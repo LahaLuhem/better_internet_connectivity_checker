@@ -1,8 +1,7 @@
 /// Scenario: flapping network.
 ///
-/// Local HTTP server toggles up (200) / down (503) every 3 s; the checker runs at 1 s interval, so
-/// each toggle is seen within the next tick. Exercises the dedup + emission path under genuine status
-/// churn: every toggle should yield exactly one emission (Reachable ↔ Unreachable), no duplicates.
+/// The server flips between 200 and 503 every 3 s while the checker runs every 1 s, so no toggle
+/// slips past. Leans on the dedup path: 1 emission per toggle, never 2.
 library;
 
 import 'dart:async';

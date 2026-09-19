@@ -34,7 +34,7 @@ jobs:
       #   - github_actions ANYWHERE: CI-only, never reaches the published tree.
       #   - gradle/pub ONLY under /example: the Flutter demo app is not
       #     published, so its dep bumps can't affect downstream users of the
-      #     pub.dev package. Root `pub` bumps deliberately stay manual — those
+      #     pub.dev package. Root `pub` bumps deliberately stay manual, since those
       #     shift the published package's version constraints.
       # Update-type gate: only patch and minor; majors always stay manual for
       # isolated review.
