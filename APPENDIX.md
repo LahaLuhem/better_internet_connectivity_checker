@@ -709,9 +709,10 @@ candidate endpoints.
 Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job in
 [dartender](https://github.com/LahaLuhem/dartender)'s shared `ci.yml`. 2 things still bite here:
 
-- **The rulesets are the load-bearing half.** Auto-merge only waits on required checks, so it's
-  safe only while `main` requires `ci / ok`, `conventions / ok` and `benchmark-ok`. Keep
-  `required_signatures` out: GitHub's rebase-merge makes unsigned commits, so that rule would
-  block every merge.
+- **The ruleset is the load-bearing half.** Auto-merge only waits on required checks, so it's
+  safe only while `main` requires `ci / ok` and `conventions / ok`. Keep `required_signatures`
+  out: GitHub's rebase-merge makes unsigned commits, so that rule would block every merge.
 - **A merge made with `GITHUB_TOKEN` starts no workflows,** so `main`'s push run is skipped for
-  auto-merged PRs.
+  auto-merged PRs. The changelog App's token would start them, but don't swap it in: the App is on
+  the ruleset's bypass list so it can commit `CHANGELOG.md`, and a bypass lets it merge past the
+  required checks.

@@ -98,8 +98,8 @@ benchmark/python/
   `omit`-ed because they're smoke-only by design, so they appear in neither the numerator nor the
   denominator. Everything else (config,
   data/dtos, data/utils minus charts) sits inside the scope and is
-  expected to be unit-tested. **CI gate is 95%** (`--cov-fail-under=95`
-  in [`.github/workflows/benchmark.yml`](../../../.github/workflows/benchmark.yml)).
+  expected to be unit-tested. **CI gate is 95%** (`python-min-coverage: 95`
+  in [`.github/workflows/ci.yml`](../../../.github/workflows/ci.yml)).
   If you add a new module that is ALSO smoke-only, append it to the
   `omit` list with a one-line rationale. Do not lower the gate to accommodate untested code.
 
