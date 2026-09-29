@@ -27,7 +27,9 @@ README for usage, APPENDIX for design rationale.
 - **`shellcheck`** (shell scripts) and **`actionlint`** (GitHub workflows) run from the
   [`linterpol`](https://github.com/LahaLuhem/linterpol) Docker image
   (`ghcr.io/lahaluhem/linterpol`), not a local install, so only Docker is needed.
-  `scripts/release.sh` preflight runs both through the image, and CI runs them in `repo.yml`.
+  `scripts/release.sh` preflight runs both through the image. CI runs them too, with rumdl and ryl
+  for Markdown and YAML, from [`.github/lint-checks.json`](../.github/lint-checks.json), which
+  dartender's `setup.sh` writes.
 - **CHANGELOG, `version:` field, and `example/pubspec.lock` are owned by
   [`scripts/release.sh`](../scripts/release.sh).** Do not invoke `cider` commands by hand
   and do not edit `CHANGELOG.md`, `version:`, or `example/pubspec.lock` directly. Run
@@ -141,7 +143,7 @@ better_internet_connectivity_checker/
    to this `pubspec.yaml`. See
    [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter). The
    `example/` directory itself is Flutter, so any pure-Dart context resolving from the
-   root (CI, scripts, downstream tooling) must pass `dart pub get --no-example`. Pub
+   root (scripts, downstream tooling) must pass `dart pub get --no-example`. Pub
    resolves example dependencies by default and they require the Flutter SDK. Same
    reason: scope `dart analyze` to `lib test` (not `.`) and exclude `example/**` via
    `dart_dependency_validator.yaml` for `dependency_validator`, and both descend into
@@ -164,11 +166,11 @@ better_internet_connectivity_checker/
    configuration (link templates, URLs) and may be hand-edited like any other yaml.
 
 ## PR conventions
-Every check below is enforced by
-[`.github/workflows/pr-conventions.yml`](../.github/workflows/pr-conventions.yml).
+Every check below is enforced by dartender's `conventions.yml`, through
+[`.github/workflows/conventions.yml`](../.github/workflows/conventions.yml).
 
 - **Branch name**: `<type>/#<issue>-<slug>`, where `<type>` is one of
-  `feature`, `bugfix`, `chore`, `refactor`, `acceptance-test-issues`, `hotfix`.
+  `feature`, `bugfix`, `chore`, `refactor`.
   Example: `chore/#4-tidy-readme`.
 - **Exactly one `sem-*` label per PR.** Selects the changelog category for the
   post-merge automation in

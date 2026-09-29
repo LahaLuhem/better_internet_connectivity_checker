@@ -64,7 +64,7 @@ python_files = ["test_*.py"]
 # --cov / --cov-report: collect coverage for the bicc_bench package on every
 #       run; the threshold gate (--cov-fail-under) lives in CI to keep local
 #       runs frictionless, mirroring the Dart side (dart test collects,
-#       very_good_coverage enforces).
+#       very_good's --min-coverage enforces).
 addopts = "-ra --strict-markers --cov=bicc_bench --cov-report=term-missing"
 
 # ---- coverage -------------------------------------------------------------
