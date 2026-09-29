@@ -7,6 +7,7 @@ example-specific code style (MVVM, naming, widget composition, …) lives in
 subdirectory.
 
 ## Scope
+
 - Runnable demo of `better_internet_connectivity_checker`, exercising it against real probes and
   showing off the usage patterns worth copying.
 - Not published to pub.dev. No semver discipline. Freely depends on Flutter.

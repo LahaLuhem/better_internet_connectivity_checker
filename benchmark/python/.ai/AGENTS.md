@@ -34,7 +34,7 @@ House rules. Python written closer to typed Dart than to dynamic-Python idiom:
 
 ## Tooling
 
-- **`uv`** (https://docs.astral.sh/uv/) manages env + deps. `uv.lock` is
+- **`uv`** (<https://docs.astral.sh/uv/>) manages env + deps. `uv.lock` is
   checked into the repo for reproducibility.
 - **`ruff`** for both lint and format (replaces black + flake8 + isort).
   Config in [`pyproject.toml`](../pyproject.toml) under `[tool.ruff]`.
@@ -47,7 +47,7 @@ House rules. Python written closer to typed Dart than to dynamic-Python idiom:
 
 See [`bicc_bench/__init__.py`](../bicc_bench/__init__.py) for the live tour.
 
-```
+```text
 benchmark/python/
 ├── run.py                      # thin entry: argparse + dispatch
 ├── bicc_bench/
@@ -71,6 +71,7 @@ benchmark/python/
 ```
 
 ### Conventions
+
 - **Drop the underscore prefix on names exported to other modules** in the
   package. Functions stay underscore-prefixed only when they're purely
   module-local (e.g. `_print_compare_table` in `subcommands/compare.py`,
@@ -110,15 +111,15 @@ Definition-of-done for any Python change in this directory:
 - [ ] `uv run ruff check .`, clean.
 - [ ] `uv run ruff format --check .`, clean.
 - [ ] Type annotations on every function signature + module constant you
-      added or changed. Mypy isn't wired in, and ruff doesn't type-check yet (RUF rules cover
-      style only). If the type stack grows, add `pyright` or `mypy` here.
+  added or changed. Mypy isn't wired in, and ruff doesn't type-check yet (RUF rules cover
+  style only). If the type stack grows, add `pyright` or `mypy` here.
 - [ ] If you added or changed a runtime dep: `uv sync` was re-run and
-      `uv.lock` is staged.
+  `uv.lock` is staged.
 - [ ] **Tests for new logic** in `data/utils/` or `data/dtos/`. Subcommand modules are
-      integration-tested via the end-to-end smoke, and unit tests target the pure helpers.
+  integration-tested via the end-to-end smoke, and unit tests target the pure helpers.
 - [ ] **Coverage ≥ 95%** on the in-scope surface. `uv run pytest` prints
-      the table locally, and the CI gate enforces it. Don't add new code to
-      `data/utils/` or `data/dtos/` without a matching `tests/test_<module>.py`.
+  the table locally, and the CI gate enforces it. Don't add new code to
+  `data/utils/` or `data/dtos/` without a matching `tests/test_<module>.py`.
 
 ## Hard rules
 

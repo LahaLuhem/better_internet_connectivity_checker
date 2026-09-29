@@ -1,11 +1,14 @@
 [![Package checks](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/package.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/package.yml)
 [![Coverage Status](https://coveralls.io/repos/github/LahaLuhem/better_internet_connectivity_checker/badge.svg?branch=main)](https://coveralls.io/github/LahaLuhem/better_internet_connectivity_checker?branch=main)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls) [![Pub Package](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls)
+[![Pub Package](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)
 [![Pub Version](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)
 [![Pub Points](https://img.shields.io/pub/points/better_internet_connectivity_checker?logo=dart)](https://pub.dev/packages/better_internet_connectivity_checker/score)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues) [![GitHub closed issues](https://img.shields.io/github/issues-closed/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues?q=is%3Aissue+is%3Aclosed)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls) [![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls?q=is%3Apr+is%3Aclosed)
+[![GitHub issues](https://img.shields.io/github/issues/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues)
+[![GitHub closed issues](https://img.shields.io/github/issues-closed/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues?q=is%3Aissue+is%3Aclosed)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls)
+[![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls?q=is%3Apr+is%3Aclosed)
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
@@ -567,9 +570,9 @@ Deliberate non-features that may affect how you use the package:
   answers off that single host unless you raise the bar with
   [`MinimumReachablePolicy`](#requiring-more-than-one-target-to-answer), and plain-HTTP
   targets you add yourself, where a portal's `200` login page passes the default predicate.
-  A `302` to one does not, since probes do not follow redirects. The verdict is never "portal", only `Unreachable`,
-  though `failedProbes` usually tells you which: all handshake errors means interception,
-  all timeouts means dropped packets. Details in
+  A `302` to one does not, since probes do not follow redirects. The verdict is never "portal", only
+  `Unreachable`, though `failedProbes` usually tells you which: all handshake errors means
+  interception, all timeouts means dropped packets. Details in
   [`APPENDIX.md`](./APPENDIX.md#what-portal-detection-rests-on).
 - **`AllReachablePolicy` is brittle with arbitrary public endpoints.** Any one being briefly
   unavailable flags a working connection as offline. Use it only with a curated probe list,
