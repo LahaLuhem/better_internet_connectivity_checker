@@ -46,7 +46,7 @@ dependencies = [
 # black + flake8 + isort; pytest is the test runner for `tests/`.
 dev = [
     "ruff>=0.6,<1.0",
-    "pytest>=8.0,<9.0",
+    "pytest>=8.0,<10.0",
     "pytest-cov>=7.1,<8.0",
 ]
 
