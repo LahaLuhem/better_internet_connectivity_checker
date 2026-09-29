@@ -19,3 +19,4 @@ jobs:
       coveralls: true
       min-coverage: 95
       coverage-excludes: "**/printing_connectivity_observer.dart"
+      python-min-coverage: 95
