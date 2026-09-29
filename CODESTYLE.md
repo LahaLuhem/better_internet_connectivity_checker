@@ -588,8 +588,9 @@ Tests read as a specification via the Gherkin vocabulary in
   Dart. It runs from the [`linterpol`](https://github.com/LahaLuhem/linterpol) Docker image
   (`docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest shellcheck scripts/*.sh`),
   so the only local requirement is Docker, no `brew install shellcheck`. Both
-  `scripts/release.sh` preflight and CI (`.github/workflows/repo.yml`) enforce it. The same
-  image also runs `actionlint` over the workflows.
+  `scripts/release.sh` preflight and CI enforce it, CI from
+  [`.github/lint-checks.json`](./.github/lint-checks.json). The same image also runs `actionlint`
+  over the workflows.
 - **Prefer `# shellcheck disable=SC<code>` + a one-line "why" comment over refactoring
   for simple cases.** Refactor when the warning points at a real bug or when the rewrite
   is genuinely clearer. Reach for the directive when the code is correct as-is and

@@ -1,4 +1,4 @@
-[![Package checks](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/package.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/package.yml)
+[![CI](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/ci.yml)
 [![Coverage Status](https://coveralls.io/repos/github/LahaLuhem/better_internet_connectivity_checker/badge.svg?branch=main)](https://coveralls.io/github/LahaLuhem/better_internet_connectivity_checker?branch=main)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls)
 [![Pub Package](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)

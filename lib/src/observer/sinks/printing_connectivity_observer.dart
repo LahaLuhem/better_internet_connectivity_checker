@@ -1,4 +1,4 @@
-// Dropped from coverage by an `lcov --remove` glob in `.github/workflows/package.yml`: every method
+// Dropped from coverage by the `coverage-excludes` glob in `.github/workflows/ci.yml`: every method
 // is a one-line forward to `developer.log`, which has no test seam. Adding another smoke-only file?
 // Add a matching glob there.
 
