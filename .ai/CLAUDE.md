@@ -13,6 +13,7 @@ visible to every downstream user and breakage is expensive and slow to walk back
 versions stay reserved for 7 days).
 
 ## Communication
+
 - **Read <https://noslopgrenade.com/> first**, then write to
   [Prose & voice](../CODESTYLE.md#prose). It governs chat replies here as much as it governs
   committed prose.
@@ -22,6 +23,7 @@ versions stay reserved for 7 days).
 - Flag breaking-API or lint-violation implications loudly and early.
 
 ## Technical choices: always ask first
+
 - **Do not silently pick between reasonable alternatives.** Whenever a task admits more
   than one defensible approach (connectivity-check strategy, dependency choice, whether a
   symbol belongs in `lib/<pkg>.dart`'s public exports or stays under `lib/src/`, function
@@ -37,6 +39,7 @@ versions stay reserved for 7 days).
   error). Just do them.
 
 ## Tool preferences
+
 - **Read / Edit / Grep / Glob** over `cat` / `sed` / `grep` / `find`. Always.
 - **Bash** only for things without a dedicated tool: `dart`, `git`. (The user's shell
   aliases `dart` to whatever toolchain manager serves the `.fvmrc` channel's SDK, so invoke
@@ -48,6 +51,7 @@ versions stay reserved for 7 days).
   context. Not for trivial lookups.
 
 ## Scope awareness
+
 - **Public-API edits** (anything in `lib/<package>.dart`, or anything re-exported from it)
   are pub.dev-visible. Treat them with care, and flag whether the change is patch, minor or major
   under semver before landing.
@@ -60,6 +64,7 @@ versions stay reserved for 7 days).
   transitive closure, so treat them as public-API-class.
 
 ## Auto-memory conventions for this project
+
 - **`project` memories**: scope and constraints the user states aloud (e.g. "we're shipping
   v0.1 before the end of the sprint", "minimum SDK bumps to 3.x on date Y"). Convert
   relative dates to absolute.
@@ -73,6 +78,7 @@ versions stay reserved for 7 days).
 - **Before acting on a memory**, verify the named file / symbol still exists.
 
 ## Plan before editing when
+
 - The change touches the public API (anything re-exported from `lib/<package>.dart`). Even
   adding a new public method affects semver and downstream users.
 - You're adding or removing a dependency in `pubspec.yaml`. Each dep expands the
@@ -89,6 +95,7 @@ or an `example/` lockfile refresh, and don't make one. The `cider:` block itself
 configuration (URLs, link templates) and may be hand-edited like any other yaml.
 
 ## Commit / PR etiquette
+
 - **Never commit without being asked.** Not after a fix, not as a "checkpoint".
 - **Never push without being asked.** Especially not to `main`.
 - **Never `--amend`** unless the user asked. Create a new commit instead.
@@ -99,6 +106,7 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
   approval.
 
 ## Forbidden / confirm-first actions
+
 - **Never** `dart pub publish`. Publishing is effectively one-way, since pub.dev reserves the
   version for 7 days after retraction. Releases go through `scripts/release.sh`, which
   the user runs manually.
@@ -122,6 +130,7 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
   first.
 
 ## Definition of done
+
 - `dart --no-version-check analyze .` clean (pedantic mode, non-negotiable).
 - `dart format --output=none --set-exit-if-changed .` clean.
 - `dart test` green (where tests exist).

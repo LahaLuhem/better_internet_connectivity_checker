@@ -14,6 +14,7 @@ outcomes, backed by pluggable `ConnectivityProbe` and `ReachabilityPolicy` layer
 README for usage, APPENDIX for design rationale.
 
 ## Stack
+
 - **Dart SDK floor: the `environment: sdk:` constraint in
   [`pubspec.yaml`](../pubspec.yaml).** It sits where it does because the code uses
   header-form primary constructors, so raise it only when a new language feature is
@@ -44,7 +45,8 @@ README for usage, APPENDIX for design rationale.
   `analysis_options.yaml` matches it, so keep them aligned if either ever moves.
 
 ## Repo layout
-```
+
+```text
 better_internet_connectivity_checker/
 ├── lib/
 │   ├── better_internet_connectivity_checker.dart   Public entry, `export 'src/…'` only
@@ -95,6 +97,7 @@ better_internet_connectivity_checker/
 ```
 
 **Feature-directory conventions** (apply within `lib/src/<feature>/`):
+
 - `<feature>.dart` at the root holds the abstract interface or the sealed parent.
 - `strategies/` / `transports/` / `sinks/`: concrete implementations of the interface.
   Named for what they *are* (Strategy-pattern impls, transport impls, event-sink impls),
@@ -109,6 +112,7 @@ better_internet_connectivity_checker/
   [`CODESTYLE.md#idioms-parts`](../CODESTYLE.md#idioms-parts)).
 
 ## Hard rules
+
 1. **The public API lives only in `lib/<package>.dart`.** That file re-exports from
    `lib/src/`. Don't make users import from `package:…/src/…`, since the `src/` subtree is
    private by convention. Anything callers need goes through an explicit `export`.
@@ -196,7 +200,6 @@ called out in CODESTYLE. Top-level rules to keep in working memory:
 - No magic numbers in `lib/` code, pull them to named `static const`s (cross-cutting defaults
   belong on `Values`, see *Hard rules* above).
 - Public symbols carry `///` dartdoc explaining *why*, not *what*.
-
 - Prose on any surface a person reads follows [Prose & voice](../CODESTYLE.md#prose), which
   starts by telling you to go read <https://noslopgrenade.com/>. Do that first.
 
@@ -205,6 +208,7 @@ For everything else (naming, idioms like `Uri.https`, `.wait`, dot shorthands an
 [`../CODESTYLE.md`](../CODESTYLE.md).
 
 ## Guidelines for any AI agent
+
 - **Always ask before making technical choices.** When the task admits more than one
   reasonable approach (which connectivity-check strategy to default to, which test fixture
   to mock, whether to expose a class vs a function, whether to add a dependency, etc.),

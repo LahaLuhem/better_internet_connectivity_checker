@@ -1,20 +1,20 @@
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [Layout](#layout)
-- [2 layers](#two-layers)
+- [2 layers](#2-layers)
 - [Prerequisites](#prerequisites)
 - [Running](#running)
-    * [Parallelism: what is and isn't parallel](#parallelism--what-is-and-isnt-parallel)
+    * [Parallelism: what is and isn't parallel](#parallelism-what-is-and-isnt-parallel)
     * [Linting the Python side](#linting-the-python-side)
-- [Methodology: non-negotiable](#methodology--non-negotiable)
+- [Methodology: non-negotiable](#methodology-non-negotiable)
 - [Metrics tracked](#metrics-tracked)
 - [Result JSON schema](#result-json-schema)
 - [When to re-baseline](#when-to-re-baseline)
-- [Baselines: per-machine, never committed](#baselines--per-machine-never-committed)
+- [Baselines: per-machine, never committed](#baselines-per-machine-never-committed)
     * [Per-contributor workflow](#per-contributor-workflow)
 - [Reports](#reports)
     * [`report` outputs (single dataset)](#report-outputs-single-dataset)
-    * [`compare` outputs (2 datasets)](#compare-outputs-two-datasets)
+    * [`compare` outputs (2 datasets)](#compare-outputs-2-datasets)
     * [When to regenerate the committed set](#when-to-regenerate-the-committed-set)
 
 <!-- TOC end -->
@@ -25,7 +25,7 @@ empirically verify perf/memory claims before they ship in a release, with no
 
 ## Layout
 
-```
+```text
 benchmark/
 ├── README.md                  this file
 ├── harness/                   shared Dart utilities for both layers
@@ -54,9 +54,14 @@ via GitHub raw URLs (see [Reports](#reports) below).
 
 - The Dart SDK from the channel [`.fvmrc`](../.fvmrc) names. A different SDK means the baseline
   JSON must be re-captured, and every record carries the `sdk_version` it ran on.
-- [`uv`](https://docs.astral.sh/uv/) for the Python orchestrator (`brew install uv` on macOS, or see upstream install docs). Pins Python via `python/.python-version` (3.12), creates `.venv`, manages deps from `python/pyproject.toml`, locks them in `python/uv.lock` (checked in for reproducibility).
+- [`uv`](https://docs.astral.sh/uv/) for the Python orchestrator (`brew install uv` on macOS, or see
+  upstream install docs). Pins Python via `python/.python-version` (3.12), creates `.venv`, manages
+  deps from `python/pyproject.toml`, locks them in `python/uv.lock` (checked in for
+  reproducibility).
 - `dart pub get` at the repo root (picks up `benchmark_harness` from `dev_dependencies`).
-- `cd benchmark/python && uv sync` (one-time, creates `.venv` and installs `numpy`, `scipy`, `polars`, `matplotlib`, `seaborn`, `jinja2`, `ruff`). Seaborn pulls `pandas` in transitively, used only at the seaborn-API boundary in the chart helpers. Everything else stays in polars.
+- `cd benchmark/python && uv sync` (one-time, creates `.venv` and installs `numpy`, `scipy`,
+  `polars`, `matplotlib`, `seaborn`, `jinja2`, `ruff`). Seaborn pulls `pandas` in transitively, used
+  only at the seaborn-API boundary in the chart helpers. Everything else stays in polars.
 
 ## Running
 
@@ -147,7 +152,8 @@ can't be defended.
 ## Metrics tracked
 
 - **Memory**: static footprint, active footprint, allocation rate per tick, RSS delta over long runs.
-- **Time**: coordinator overhead per tick, tier-1/tier-2 emission latency, per-event cost vs subscribers, dispose latency.
+- **Time**: coordinator overhead per tick, tier-1/tier-2 emission latency, per-event cost vs
+  subscribers, dispose latency.
 - **Concurrency**: throughput ceiling, trigger storm response, subscriber-count scaling.
 - **Event-loop blocking**: worst continuous stall + blocked-time share via
   `harness/event_loop_stall_meter.dart`. A 1 ms heartbeat timer records the
@@ -194,7 +200,7 @@ See `harness/result_writer.dart` for the canonical writer.
 
 Your own `aggregated.json`, from whatever `run --out …` capture you made, is the anchor
 for any "this PR makes things X% better" claim. There is no shared baseline, see
-[Baselines](#baselines--per-machine-never-committed). Re-capture yours when:
+[Baselines](#baselines-per-machine-never-committed). Re-capture yours when:
 
 - The Dart SDK changes, which the channel does on its own without any `.fvmrc` edit.
 - A non-perf-related change to `lib/src/internet_connection.dart` lands that
