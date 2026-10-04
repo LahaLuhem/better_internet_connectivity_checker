@@ -108,14 +108,13 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
 ## Forbidden / confirm-first actions
 
 - **Never** `dart pub publish`. Publishing is effectively one-way, since pub.dev reserves the
-  version for 7 days after retraction. Releases go through `scripts/release.sh`, which
-  the user runs manually.
+  version for 7 days after retraction. Releases go through the **Release** workflow, which
+  the user starts from the Actions tab.
 - **Never** run `cider` commands (`cider bump`, `cider release`, …) or manually edit
   `CHANGELOG.md`, the `version:` field in `pubspec.yaml`, or `example/pubspec.lock`.
-  Version bumps, CHANGELOG entries, and the example-lockfile resync are owned by
-  [`scripts/release.sh`](../scripts/release.sh), and manual edits get reordered or
-  overwritten. If the user asks for a release, suggest running
-  `scripts/release.sh <bump>`, but don't invoke it for them (it pushes to `origin/main` and
+  Version bumps, CHANGELOG entries, and the example-lockfile resync are owned by the release
+  run, and manual edits get reordered or overwritten. If the user asks for a release, point
+  them at the **Release** workflow, but don't start it for them (it pushes to `main` and
   triggers pub.dev publish). **The `## [Unreleased]` section is also bot-owned.**
   The post-merge CI automation in `.github/workflows/changelog.yml` runs `cider log`
   to append the merged-PR title under Unreleased on its own. Do not curate, prepend,
@@ -134,15 +133,13 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
 - `dart --no-version-check analyze .` clean (pedantic mode, non-negotiable).
 - `dart format --output=none --set-exit-if-changed .` clean.
 - `dart test` green (where tests exist).
-- `shellcheck scripts/*.sh` clean (where shell scripts exist), and when workflows change,
-  `actionlint` clean too. Both run via the linterpol image rather than local installs:
-  `docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest shellcheck scripts/*.sh`.
+- When workflows change, `actionlint` clean, via the linterpol image rather than a local install:
+  `docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest actionlint`.
 - DCM rules in `analysis_options.yaml` applied by hand (`dart analyze` does not run
   them): `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`,
   plus the project-wide rule that blank lines segment logical chunks inside methods.
 - `dart pub publish --dry-run` clean if the change is publish-relevant. Do **not** bump
-  the version or add a CHANGELOG entry to make the dry-run happy. `scripts/release.sh` owns
-  those.
+  the version or add a CHANGELOG entry to make the dry-run happy. The release run owns those.
 - Public API additions documented with `///` dartdoc and reflected in README.
 - Explicitly call out what you did NOT verify (e.g. "didn't exercise on a real network, only
   mocked HTTP responses").
