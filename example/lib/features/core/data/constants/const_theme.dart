@@ -8,7 +8,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 ///
 /// Everything goes through [CupertinoDynamicColor.resolve] so the iOS colours follow light and dark
 /// mode. On the Android side that's a no-op, since a plain [Color] has nothing to resolve.
-abstract final class ConstTheme {
+abstract final class ConstTheme._() {
   static const statusOutlineAlpha = 0.3;
 
   /// [Colors.green] on Android, [CupertinoColors.systemGreen] on iOS.

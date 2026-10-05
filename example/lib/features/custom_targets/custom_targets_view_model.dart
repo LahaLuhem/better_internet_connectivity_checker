@@ -12,7 +12,7 @@ import 'method_aware_probe.dart';
 
 typedef ProbeOutcome = ({InternetStatus status, String targetUrl});
 
-final class CustomTargetsViewModel extends ViewModel {
+final class CustomTargetsViewModel() extends ViewModel {
   final urlController = TextEditingController(text: 'https://api.github.com/zen');
 
   final _shouldAcceptAnyTwoXxNotifier = ValueNotifier(true);
@@ -33,11 +33,17 @@ final class CustomTargetsViewModel extends ViewModel {
 
   ValueListenable<String?> get urlErrorListenable => _urlErrorNotifier;
 
+  // A view-event callback, named on<Event> per CODESTYLE.
+  // ignore: use_setters_to_change_properties
   void onAcceptAnyTwoXxToggled({required bool value}) =>
       _shouldAcceptAnyTwoXxNotifier.value = value;
 
+  // A view-event callback, named on<Event> per CODESTYLE.
+  // ignore: use_setters_to_change_properties
   void onMethodSelected(ProbeMethod value) => _probeMethodNotifier.value = value;
 
+  // A view-event callback, named on<Event> per CODESTYLE.
+  // ignore: use_setters_to_change_properties
   void onTimeoutChanged(double value) => _timeoutSecondsNotifier.value = value;
 
   Future<void> onProbePressed() async {

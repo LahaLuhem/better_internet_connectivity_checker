@@ -14,9 +14,7 @@ import '/features/schedule_comparison/schedule_comparison_view.dart';
 import '../widgets/platform/platform_card.dart';
 import 'home_view_model.dart';
 
-class HomeView extends StatelessWidget {
-  const new({super.key});
-
+class const HomeView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: HomeViewModel(),

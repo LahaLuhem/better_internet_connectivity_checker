@@ -4,7 +4,7 @@ import 'package:pmvvm/pmvvm.dart';
 
 import '../core/data/constants/core_constants.dart';
 
-final class FailureInspectionViewModel extends ViewModel {
+final class FailureInspectionViewModel() extends ViewModel {
   static final _unreachableTargets = [
     ProbeTarget(uri: Uri.https('nope-1.invalid')),
     ProbeTarget(

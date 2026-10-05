@@ -4,7 +4,7 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 import 'package:flutter/foundation.dart';
 import 'package:pmvvm/pmvvm.dart';
 
-final class OneShotViewModel extends ViewModel {
+final class OneShotViewModel() extends ViewModel {
   final _connection = InternetConnection();
   final _lastResultNotifier = ValueNotifier<InternetStatus?>(null);
 

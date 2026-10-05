@@ -11,9 +11,7 @@ import '../core/data/constants/core_constants.dart';
 import '../core/widgets/core_widgets.dart';
 import 'live_stream_view_model.dart';
 
-class LiveStreamView extends StatelessWidget {
-  const new({super.key});
-
+class const LiveStreamView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: LiveStreamViewModel(),
@@ -112,9 +110,10 @@ class LiveStreamView extends StatelessWidget {
 
 /// Slider sitting on a band that fades orange (expect slow) to green (expect good), because probe
 /// response times wobble and so does the real flip point. Same colours as the status badges.
-class _ThresholdSlider extends StatelessWidget {
-  const new({required this.viewModel, required this.sliderValueMs});
-
+class const _ThresholdSlider({
+  required final LiveStreamViewModel viewModel,
+  required final double sliderValueMs,
+}) extends StatelessWidget {
   /// Visual band height. Eyeball against the slider knob diameter.
   static const _bandHeight = 20.0;
 
@@ -125,9 +124,6 @@ class _ThresholdSlider extends StatelessWidget {
 
   /// Where it starts being solidly "good". See [_errorBandLowerStop] for where the numbers come from.
   static const _errorBandUpperStop = 0.6;
-
-  final LiveStreamViewModel viewModel;
-  final double sliderValueMs;
 
   @override
   Widget build(BuildContext context) => Stack(

@@ -9,7 +9,7 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 /// Only 2 operators, against the library default's wider spread. That's the demo trading
 /// production-grade redundancy for predictable latency. If both go down you get an [Unreachable],
 /// which is also worth seeing. Swap in any other `delay/<n>` mirror if these stop answering.
-abstract final class ConstProbeTargets {
+abstract final class ConstProbeTargets._() {
   /// 1 second is the floor `httpbin.org` takes, and no mirror does sub-second. The faster of the
   /// 2 wins under the default [AnyReachablePolicy], and the other is the backup.
   static final liveStreamSlowTargets = [

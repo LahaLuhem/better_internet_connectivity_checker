@@ -40,8 +40,9 @@ README for usage, APPENDIX for design rationale.
   cider's static configuration (URLs, link templates) and may be hand-edited freely.
 - **Published to pub.dev.** `.pubignore` controls what ships in the tarball.
 - **`.editorconfig`** is the source of truth for text-file conventions: line width 100,
-  LF endings, UTF-8, per-language indent rules. The Dart formatter's `page_width: 100` in
-  `analysis_options.yaml` matches it, so keep them aligned if either ever moves.
+  LF endings, UTF-8, per-language indent rules. The Dart formatter's `page_width: 100`, from
+  [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
+  matches it.
 
 ## Repo layout
 
@@ -83,7 +84,7 @@ better_internet_connectivity_checker/
 │   ├── python/                                       uv + ruff orchestrator (see python/.ai/AGENTS.md)
 │   ├── reports/                                      Committed charts + SUMMARY.md
 │   └── results-local/                                Per-machine run output (gitignored)
-├── analysis_options.yaml                             Strict-mode + opinionated lints
+├── analysis_options.yaml                             Includes dartender's shared lints
 ├── pubspec.yaml                                      Deps + cider config + topics
 ├── .pubignore                                        Files excluded from `pub publish`
 ├── .fvmrc                                            FVM channel for the local SDK
@@ -123,10 +124,9 @@ better_internet_connectivity_checker/
      `noopWithVal` stay top-level alongside the class. Before introducing a new magic
      number or default in a class, check whether it belongs in `Values`.
 2. **No `print()` in library code.** Diagnostic output is the caller's responsibility
-   (loggers, callbacks, etc.). `avoid_print` is already a warning in
-   `analysis_options.yaml`.
+   (loggers, callbacks, etc.). `avoid_print` is already a warning in the shared lints.
 3. **No `dynamic` escape hatches.** `strict-casts`, `strict-inference`, and
-   `strict-raw-types` are all on in `analysis_options.yaml`. If you reach for `dynamic` or
+   `strict-raw-types` are all on in the shared lints. If you reach for `dynamic` or
    unconstrained `Object?`, stop and reconsider.
 4. **Public symbols carry dartdoc.** `public_member_api_docs` is enabled. Every public
    class / function / getter / extension needs a `///` comment that explains *why*, not
@@ -189,8 +189,8 @@ Every check below is enforced by dartender's `conventions.yml`, through
 
 ## Style
 Full guide: [`../CODESTYLE.md`](../CODESTYLE.md). The lint posture is deliberately strict
-(see `analysis_options.yaml`), and rules are enforced through that file plus the DCM checks
-called out in CODESTYLE. Top-level rules to keep in working memory:
+(see the shared lints `analysis_options.yaml` includes), and rules are enforced through them
+plus the DCM checks called out in CODESTYLE. Top-level rules to keep in working memory:
 
 - Type-annotate every public symbol, `final` by default for fields and locals.
 - Nullability is explicit (no `as T` on `T?`).
@@ -225,7 +225,7 @@ For everything else (naming, idioms like `Uri.https`, `.wait`, dot shorthands an
   messages, PR bodies. Fetch the page, don't cite it from memory: it is the intent behind
   [Prose & voice](../CODESTYLE.md#prose), and skipping it is how the wall of text gets
   written.
-- **Read `analysis_options.yaml` before writing code.** The lint posture is far stricter
+- **Read the shared lints before writing code.** The lint posture is far stricter
   than the Dart default, and code that fails lint won't pass review.
 - **Surface semver implications loudly.** If a change touches anything re-exported from
   `lib/<package>.dart`, call out whether it's patch / minor / major before the diff lands.

@@ -10,9 +10,7 @@ import '../core/data/const_formatters.dart';
 import '../core/widgets/core_widgets.dart';
 import 'policy_comparison_view_model.dart';
 
-class PolicyComparisonView extends StatelessWidget {
-  const new({super.key});
-
+class const PolicyComparisonView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: PolicyComparisonViewModel(),

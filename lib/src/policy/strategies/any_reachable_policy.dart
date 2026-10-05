@@ -11,9 +11,9 @@ import '../reachability_policy.dart';
 /// Races them all, then cancels the stragglers through [ConnectivityProbe.probe]'s `cancelSignal`.
 /// The built-in `HttpProbe` honours that and drops its socket instead of sitting on it until the
 /// timeout.
-final class AnyReachablePolicy implements ReachabilityPolicy {
+final class const AnyReachablePolicy() implements ReachabilityPolicy {
   /// Creates an [AnyReachablePolicy].
-  const new();
+  this;
 
   @override
   Future<InternetStatus> evaluate({

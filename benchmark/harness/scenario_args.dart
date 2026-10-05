@@ -6,21 +6,13 @@ import 'dart:io';
 ///
 /// Batching iterations into one subprocess spreads startup and AOT-load over N, which is the single
 /// biggest win in the suite. Hand-parsed, since this is far too small to want `package:args`.
-final class ScenarioArgs {
-  final int iterations;
-  final String outputPath;
-  final String gitSha;
-  final String packageVersion;
-  final int durationSeconds;
-
-  const new _({
-    required this.iterations,
-    required this.outputPath,
-    required this.gitSha,
-    required this.packageVersion,
-    required this.durationSeconds,
-  });
-
+final class const ScenarioArgs._({
+  required final int iterations,
+  required final String outputPath,
+  required final String gitSha,
+  required final String packageVersion,
+  required final int durationSeconds,
+}) {
   /// From `Platform.version`. A different SDK means the baseline has to be captured again.
   static String get sdkVersion => Platform.version.split(' ').first;
 

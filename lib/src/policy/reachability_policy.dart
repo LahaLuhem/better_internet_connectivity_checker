@@ -7,7 +7,7 @@ import '../status/internet_status.dart';
 ///
 /// Run the probes however you like, sequentially or racing. Stateless by convention, but it's an
 /// interface rather than a typedef so a policy that needs state, a circuit breaker say, can keep it.
-abstract interface class ReachabilityPolicy {
+abstract interface class ReachabilityPolicy._() {
   /// Runs [probe] over every one of [targets] and rolls the results up. A null [slowThreshold] turns
   /// slow detection off.
   Future<InternetStatus> evaluate({

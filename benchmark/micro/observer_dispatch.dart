@@ -10,21 +10,19 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
-final class _ObserverDispatch extends BenchmarkBase {
-  final _NoopCountingObserver _observer;
-  final InternetStatus _previous;
-  final InternetStatus _next;
-
-  new(this._observer, this._previous, this._next) : super('observer_dispatch');
+final class _ObserverDispatch(
+  final _NoopCountingObserver _observer,
+  final InternetStatus _previous,
+  final InternetStatus _next,
+) extends BenchmarkBase {
+  this : super('observer_dispatch');
 
   @override
   void run() => _observer.onStatusChangeEmitted(_previous, _next);
 }
 
 /// Counts calls and does nothing else, the way a well-behaved consumer looks in the steady state.
-final class _NoopCountingObserver extends ConnectivityObserver {
-  new();
-
+final class _NoopCountingObserver() extends ConnectivityObserver {
   var count = 0;
 
   @override

@@ -10,7 +10,7 @@ import 'models/probe_target.dart';
 /// You don't have to watch [ProbeTarget.timeout]. `InternetConnection` caps every call at it, and
 /// [probe]'s `cancelSignal` tells you when. Read it only if you want to bail out sooner. Why the
 /// deadline lives up there: see [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#why-the-coordinator-keeps-the-deadline).
-abstract interface class ConnectivityProbe {
+abstract interface class ConnectivityProbe._() {
   /// Probes [target] and returns what happened.
   ///
   /// [cancelSignal] completes when nobody needs the answer any more, either because a sibling probe

@@ -12,7 +12,7 @@ typedef ScheduledRung = ({Duration delay, int consecutiveFailures});
 /// Both ladders, always written together as one tick.
 typedef LadderState = ({List<ScheduledRung> fixed, List<ScheduledRung> backoff});
 
-final class ScheduleComparisonViewModel extends ViewModel {
+final class ScheduleComparisonViewModel() extends ViewModel {
   InternetConnection? _fixedConnection;
   InternetConnection? _backoffConnection;
   final _subscriptions = <StreamSubscription<void>>[];

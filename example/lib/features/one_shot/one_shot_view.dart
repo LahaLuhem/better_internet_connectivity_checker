@@ -10,9 +10,7 @@ import '../core/data/const_formatters.dart';
 import '../core/widgets/core_widgets.dart';
 import 'one_shot_view_model.dart';
 
-class OneShotView extends StatelessWidget {
-  const new({super.key});
-
+class const OneShotView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: OneShotViewModel(),

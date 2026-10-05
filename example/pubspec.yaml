@@ -25,6 +25,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  dartender_lints:
+    git:
+      url: https://github.com/LahaLuhem/dartender.git
+      path: lints
+      ref: main
   dependency_validator: ^5.1.0
 
 flutter:

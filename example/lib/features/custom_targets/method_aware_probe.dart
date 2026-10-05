@@ -11,13 +11,12 @@ import 'package:http/http.dart' as http;
 /// Deliberately bare. `cancelSignal` is ignored, since this only runs on the failure-inspection path
 /// and never inside a policy fan-out, so there's no sibling to race. It does keep the timeout itself,
 /// because it's called directly rather than through [InternetConnection].
-final class MethodAwareProbe implements ConnectivityProbe {
-  final String httpMethod;
-  final void Function(String allow)? onAllowHeader;
-  final http.Client _client;
-
-  new({required this.httpMethod, this.onAllowHeader, http.Client? client})
-    : _client = client ?? http.Client();
+final class MethodAwareProbe({
+  required final String httpMethod,
+  final void Function(String allow)? onAllowHeader,
+  http.Client? client,
+}) implements ConnectivityProbe {
+  final http.Client _client = client ?? http.Client();
 
   @override
   Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) async {

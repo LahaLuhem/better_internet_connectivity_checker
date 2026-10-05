@@ -2,8 +2,9 @@ Library-package code style. Project facts (goal, stack, repo layout, hard rules)
 [`.ai/AGENTS.md`](./.ai/AGENTS.md), design rationale lives in [`APPENDIX.md`](./APPENDIX.md), and
 example-app code style lives in [`example/CODESTYLE.md`](./example/CODESTYLE.md).
 
-The lint posture is deliberately strict
-(see [`analysis_options.yaml`](./analysis_options.yaml)). The house style values
+The lint posture is deliberately strict (see
+[dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
+which [`analysis_options.yaml`](./analysis_options.yaml) includes). The house style values
 explicit types, no ambient mutability, and small focused classes.
 
 Each heading below carries an explicit `<a id="…">` anchor. Link by anchor, not by
@@ -196,8 +197,9 @@ entirely, remove it from any `show` clauses too. Re-running analyze surfaces
 <!-- TOC --><a name="header-form-primary-constructors-dart-313"></a>
 ### Header-form primary constructors (Dart 3.13+)
 
-Declare a new value or config type's fields in the class header. Keep `const new();` for
-field-less types (interfaces, `AnyReachablePolicy`-style strategies), which have nothing to hoist.
+Declare a new value or config type's fields in the class header. A field-less type gets an empty
+one, `final class const AnyReachablePolicy()`. A class nothing constructs, a namespace like
+`Values` or an interface, gets a private `._()`, which leaves no public constructor to document.
 
 ```dart
 /// Backs off exponentially while checks keep failing.

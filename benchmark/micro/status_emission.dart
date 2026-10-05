@@ -16,10 +16,8 @@ import '../harness/scenario_args.dart';
 
 const _subscriberCounts = [1, 10, 25, 50, 100];
 
-final class _StatusEmission extends BenchmarkBase {
-  final int subscriberCount;
-
-  new(this.subscriberCount) : super('status_emission_n$subscriberCount');
+final class _StatusEmission(final int subscriberCount) extends BenchmarkBase {
+  this : super('status_emission_n$subscriberCount');
 
   late StreamController<InternetStatus> _controller;
   late List<StreamSubscription<InternetStatus>> _subscriptions;

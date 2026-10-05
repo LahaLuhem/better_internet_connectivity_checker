@@ -44,9 +44,10 @@ versions stay reserved for 7 days).
 - **Bash** only for things without a dedicated tool: `dart`, `git`. (The user's shell
   aliases `dart` to whatever toolchain manager serves the `.fvmrc` channel's SDK, so invoke
   plain `dart`, not the manager directly.)
-- **Lint with `dart --no-version-check analyze .`**, because the project runs pedantic mode on
-  purpose (mirroring `flutter --no-version-check analyze .` in Flutter-app projects). Don't
-  substitute `dart analyze` and wave off what it surfaces. Those lints are the contract.
+- **Lint with `dart --no-version-check analyze --fatal-infos --fatal-warnings .`**, like CI,
+  because the project runs pedantic mode on purpose (mirroring `flutter --no-version-check
+  analyze .` in Flutter-app projects). Don't substitute `dart analyze` and wave off what it
+  surfaces. Those lints are the contract.
 - **Agent tool** for wide / open-ended searches or to keep large outputs out of main
   context. Not for trivial lookups.
 
@@ -58,8 +59,8 @@ versions stay reserved for 7 days).
 - **`lib/src/` edits** are private. Refactor freely as long as the public re-exports stay
   stable.
 - **`test/` edits** are local, no publish impact.
-- **`analysis_options.yaml` edits** affect every file. Surface lint-posture changes loudly
-  and add a written reason in `APPENDIX.md`.
+- **`analysis_options.yaml` edits** override dartender's shared lints, which every repo gets.
+  Surface them loudly and add a written reason in `APPENDIX.md`.
 - **`pubspec.yaml` edits** that touch `dependencies` add to every downstream user's
   transitive closure, so treat them as public-API-class.
 
@@ -83,8 +84,8 @@ versions stay reserved for 7 days).
   adding a new public method affects semver and downstream users.
 - You're adding or removing a dependency in `pubspec.yaml`. Each dep expands the
   user-facing surface area and constrains downstream resolution.
-- You're changing `analysis_options.yaml`. Lint posture is project-wide, so any toggle
-  deserves a written reason in APPENDIX.
+- You're overriding a shared lint in `analysis_options.yaml`. Lint posture is project-wide, so
+  any toggle deserves a written reason in APPENDIX.
 
 For single-file, single-concern fixes inside `lib/src/`: just do it.
 
@@ -130,12 +131,13 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
 
 ## Definition of done
 
-- `dart --no-version-check analyze .` clean (pedantic mode, non-negotiable).
+- `dart --no-version-check analyze --fatal-infos --fatal-warnings .` clean (pedantic mode,
+  non-negotiable).
 - `dart format --output=none --set-exit-if-changed .` clean.
 - `dart test` green (where tests exist).
 - When workflows change, `actionlint` clean, via the linterpol image rather than a local install:
   `docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest actionlint`.
-- DCM rules in `analysis_options.yaml` applied by hand (`dart analyze` does not run
+- DCM rules from the shared lints applied by hand (`dart analyze` does not run
   them): `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`,
   plus the project-wide rule that blank lines segment logical chunks inside methods.
 - `dart pub publish --dry-run` clean if the change is publish-relevant. Do **not** bump

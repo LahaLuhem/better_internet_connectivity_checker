@@ -4,7 +4,7 @@ import 'package:pmvvm/pmvvm.dart';
 
 typedef PolicyResults = ({InternetStatus any, InternetStatus all});
 
-final class PolicyComparisonViewModel extends ViewModel {
+final class PolicyComparisonViewModel() extends ViewModel {
   static final _baseTargets = [
     ProbeTarget(uri: Uri.https('one.one.one.one')),
     ProbeTarget(uri: Uri.https('icanhazip.com')),

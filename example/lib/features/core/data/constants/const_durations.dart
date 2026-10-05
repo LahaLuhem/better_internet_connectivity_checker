@@ -1,4 +1,4 @@
-abstract final class ConstDurations {
+abstract final class ConstDurations._() {
   /// Initial `ProbeTarget.timeout` shown in the Custom-targets demo.
   static const defaultCustomTargetsProbeTimeout = Duration(seconds: 3);
 

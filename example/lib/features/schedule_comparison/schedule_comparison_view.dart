@@ -9,9 +9,7 @@ import '../core/widgets/core_widgets.dart';
 import 'data/constants/const_schedule_comparison.dart';
 import 'schedule_comparison_view_model.dart';
 
-class ScheduleComparisonView extends StatelessWidget {
-  const new({super.key});
-
+class const ScheduleComparisonView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: ScheduleComparisonViewModel(),

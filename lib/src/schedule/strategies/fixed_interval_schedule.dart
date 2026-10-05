@@ -8,9 +8,9 @@ import '../models/schedule_context.dart';
 /// when spotting recovery quickly matters more than the radio cost of retrying.
 ///
 /// Swap in [ExponentialBackoffSchedule] to back off while checks keep failing.
-final class FixedIntervalSchedule implements CheckSchedule {
+final class const FixedIntervalSchedule() implements CheckSchedule {
   /// Creates a [FixedIntervalSchedule].
-  const new();
+  this;
 
   @override
   Duration nextDelay(ScheduleContext scheduleContext) => scheduleContext.baseInterval;

@@ -1,4 +1,4 @@
-abstract final class ConstFormatters {
+abstract final class ConstFormatters._() {
   static String humanReadableDuration(Duration duration) {
     if (duration.inMilliseconds < Duration.millisecondsPerSecond) {
       return '${duration.inMilliseconds} ms';

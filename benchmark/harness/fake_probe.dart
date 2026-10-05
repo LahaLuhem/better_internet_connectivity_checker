@@ -62,4 +62,8 @@ final class FakeProbe implements ConnectivityProbe {
   }
 }
 
-enum _Mode { alwaysSuccess, alwaysFailure, scripted }
+enum _Mode() {
+  alwaysSuccess,
+  alwaysFailure,
+  scripted,
+}

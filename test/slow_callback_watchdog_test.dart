@@ -109,7 +109,7 @@ void main() {
 
 // Test-specific implementation
 // ignore: prefer-match-file-name
-final class _BlockingCountingObserver extends ConnectivityObserver {
+final class _BlockingCountingObserver() extends ConnectivityObserver {
   var checkCompletedCalls = 0;
 
   @override

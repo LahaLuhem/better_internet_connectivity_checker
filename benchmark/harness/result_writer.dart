@@ -6,21 +6,14 @@ import 'dart:io';
 /// [benchmark/README.md](../README.md#result-json-schema).
 ///
 /// One per scenario invocation: [open], a [writeRecord] per iteration, then [close].
-final class ResultWriter {
-  final String scenario;
-  final String sdkVersion;
-  final String packageVersion;
-  final String gitSha;
-  final IOSink _sink;
+final class ResultWriter._({
+  required final String scenario,
+  required final String sdkVersion,
+  required final String packageVersion,
+  required final String gitSha,
+  required final IOSink _sink,
+}) {
   var _firstRecord = true;
-
-  new _({
-    required this.scenario,
-    required this.sdkVersion,
-    required this.packageVersion,
-    required this.gitSha,
-    required this._sink,
-  });
 
   /// Opens [outputPath] for writing and emits the JSON-array prefix `[`.
   /// Subsequent [writeRecord] calls add comma-separated records.
