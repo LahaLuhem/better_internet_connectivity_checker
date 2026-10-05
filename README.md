@@ -604,7 +604,7 @@ Not on the roadmap (deliberate non-features):
 
 ```bash
 dart test                                            # full test suite
-dart analyze --fatal-infos                           # strict-mode static analysis
+dart analyze --fatal-infos --fatal-warnings          # strict-mode static analysis
 dart format --output=none --set-exit-if-changed .    # formatter check
 ```
 

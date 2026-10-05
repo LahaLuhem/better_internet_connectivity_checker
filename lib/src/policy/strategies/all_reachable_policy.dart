@@ -8,9 +8,9 @@ import '../reachability_policy.dart';
 ///
 /// Runs them all in parallel and waits for the lot. [Reachable.responseTime] is the slowest of them,
 /// because the slowest is what the user actually feels.
-final class AllReachablePolicy implements ReachabilityPolicy {
+final class const AllReachablePolicy() implements ReachabilityPolicy {
   /// Creates an [AllReachablePolicy].
-  const new();
+  this;
 
   @override
   Future<InternetStatus> evaluate({

@@ -24,18 +24,14 @@ import 'dart:async';
 /// print('max stall: ${meter.maxStall.inMilliseconds} ms');
 /// print('blocked: ${(meter.blockedDutyRatio * 100).toStringAsFixed(1)} %');
 /// ```
-final class EventLoopStallMeter {
-  final Duration _interval;
-  final Duration _stallFloor;
+final class EventLoopStallMeter({
+  final Duration _interval = const Duration(milliseconds: 1),
+  final Duration _stallFloor = const Duration(milliseconds: 2),
+}) {
   final _stalls = <Duration>[];
   Timer? _timer;
   Stopwatch? _stopwatch;
   Duration _lastFire = .zero;
-
-  new({
-    this._interval = const Duration(milliseconds: 1),
-    this._stallFloor = const Duration(milliseconds: 2),
-  });
 
   /// Every stall, in order. Mostly zeros on a healthy loop, with blocking windows as lone spikes.
   List<Duration> get stalls => List.unmodifiable(_stalls);

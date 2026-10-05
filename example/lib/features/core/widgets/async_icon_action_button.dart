@@ -7,20 +7,13 @@ import 'package:tap_debouncer/tap_debouncer.dart';
 ///
 /// [TapDebouncer] with a zero cooldown, so it re-arms the moment the work finishes. While locked you
 /// get a [PlatformProgressIndicator] and [busyLabel] in place of the icon and label.
-class AsyncIconActionButton extends StatelessWidget {
-  final Future<void> Function() onPressed;
-  final PlatformIcons idleIcon;
-  final String idleLabel;
-  final String busyLabel;
-
-  const new({
-    required this.onPressed,
-    required this.idleIcon,
-    required this.idleLabel,
-    required this.busyLabel,
-    super.key,
-  });
-
+class const AsyncIconActionButton({
+  required final Future<void> Function() onPressed,
+  required final PlatformIcons idleIcon,
+  required final String idleLabel,
+  required final String busyLabel,
+  super.key,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TapDebouncer(
     onTap: onPressed,

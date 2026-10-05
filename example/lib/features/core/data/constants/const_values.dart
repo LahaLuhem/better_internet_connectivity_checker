@@ -1,4 +1,4 @@
-abstract final class ConstValues {
+abstract final class ConstValues._() {
   /// HTTP 200. Spelled out here because `dart:io`'s `HttpStatus` doesn't exist on the web.
   static const httpStatusOk = 200;
 

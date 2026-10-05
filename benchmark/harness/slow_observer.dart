@@ -10,26 +10,17 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 /// to make that cost land in the numbers, as `max_stall_microseconds` and `blocked_duty_ratio`.
 ///
 /// A real `sleep`, not a busy-wait, so CPU stays low while the loop sits there.
-final class SlowObserver extends ConnectivityObserver {
-  final Duration _delay;
-  final bool _delayOnStatusChange;
-  final bool _delayOnCheckCompleted;
-  final bool _delayOnTrigger;
-  final bool _delayOnConfigChange;
-  final bool _delayOnDispose;
-
+final class SlowObserver({
+  final Duration _delay = const Duration(milliseconds: 50),
+  final bool _delayOnStatusChange = true,
+  final bool _delayOnCheckCompleted = true,
+  final bool _delayOnTrigger = true,
+  final bool _delayOnConfigChange = false,
+  final bool _delayOnDispose = false,
+}) extends ConnectivityObserver {
   /// Counts of how many times each callback fired. Useful for verifying the scenario exercised the
   /// code paths it was supposed to.
   final callCounts = <String, int>{};
-
-  new({
-    this._delay = const Duration(milliseconds: 50),
-    this._delayOnStatusChange = true,
-    this._delayOnCheckCompleted = true,
-    this._delayOnTrigger = true,
-    this._delayOnConfigChange = false,
-    this._delayOnDispose = false,
-  });
 
   @override
   void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) {

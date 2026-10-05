@@ -12,7 +12,7 @@ part 'instances/status_emitted_event.dart';
 
 /// One thing that happened inside an `InternetConnection`. Sealed, so a `switch` over them is
 /// exhaustive and the compiler nags you when a new one lands.
-sealed class ConnectivityEvent {
+sealed class const ConnectivityEvent() {
   /// Creates a [ConnectivityEvent].
-  const new();
+  this;
 }

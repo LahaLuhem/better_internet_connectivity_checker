@@ -7,9 +7,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 ///
 /// Material's [Divider] doesn't throw on iOS, it just paints the wrong colour, so this sticks around
 /// until `platform_adaptive_widgets` grows a `PlatformDivider`.
-class PlatformDivider extends StatelessWidget {
-  const new({super.key});
-
+class const PlatformDivider({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformWidget(
     materialBuilder: (_) => const Divider(),

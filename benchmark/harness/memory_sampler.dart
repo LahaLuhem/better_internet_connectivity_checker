@@ -6,13 +6,10 @@ import 'dart:io';
 ///
 /// 1 second by default. Faster is cheap, `currentRss` is just a `getrusage` syscall, but noisier.
 /// Slower misses short spikes.
-final class MemorySampler {
-  final Duration _interval;
+final class MemorySampler({final Duration _interval = const Duration(seconds: 1)}) {
   final _samples = <int>[];
   final _timestamps = <DateTime>[];
   Timer? _timer;
-
-  new({this._interval = const Duration(seconds: 1)});
 
   /// Every RSS sample so far, in bytes, oldest first.
   List<int> get samples => List.unmodifiable(_samples);

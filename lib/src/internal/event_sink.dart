@@ -5,7 +5,7 @@ part of '../internet_connection.dart';
 ///
 /// The controller is only built on the first read of [stream], so anyone who just watches
 /// `onStatusChange` never pays for one. See [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#why-events-microtask-deferred).
-final class _EventSink {
+final class _EventSink() {
   // The analyser can't follow the `??=` in `stream` through to the `close()` in `dispose`.
   // ignore: close_sinks
   StreamController<ConnectivityEvent>? _controller;

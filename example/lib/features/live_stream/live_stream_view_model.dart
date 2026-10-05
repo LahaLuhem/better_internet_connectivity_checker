@@ -10,7 +10,7 @@ import 'data/constants/const_probe_targets.dart';
 
 typedef StreamState = ({InternetStatus status, int transitions, DateTime lastUpdate});
 
-final class LiveStreamViewModel extends ViewModel {
+final class LiveStreamViewModel() extends ViewModel {
   InternetConnection? _connection;
   StreamSubscription<InternetStatus>? _subscription;
   late final Stream<void> _externalTrigger;
@@ -34,6 +34,8 @@ final class LiveStreamViewModel extends ViewModel {
 
   ValueListenable<double> get sliderValueMillisListenable => _sliderValueMillisNotifier;
 
+  // A view-event callback, named on<Event> per CODESTYLE.
+  // ignore: use_setters_to_change_properties
   void onSlowThresholdSliderChanged(double valueMs) => _sliderValueMillisNotifier.value = valueMs;
 
   Future<void> onForceRecheckPressed() async {
@@ -58,7 +60,7 @@ final class LiveStreamViewModel extends ViewModel {
     // change, so the next emission's `previous` reflects the actual
     // user-visible status before the slider move, not a fresh-state null.
     final connection = _connection;
-    if (connection == null) return _buildConnection();
+    if (connection == null) return await _buildConnection();
 
     connection.slowThreshold = newThreshold;
   }

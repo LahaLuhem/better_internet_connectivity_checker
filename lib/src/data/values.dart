@@ -3,7 +3,7 @@ import 'models/const_uri.dart';
 
 /// Defaults for the package's own classes. Not exported, so configure these through constructor
 /// arguments instead.
-abstract final class Values {
+abstract final class Values._() {
   /// `InternetConnection.checkInterval`'s default.
   static const defaultCheckInterval = Duration(seconds: 10);
 

@@ -2,9 +2,9 @@ import 'package:better_internet_connectivity_checker/better_internet_connectivit
 
 /// Keeps every event it's handed, so a test can assert what [InternetConnection] fired and in what
 /// order.
-final class RecordingObserver extends ConnectivityObserver {
+final class RecordingObserver() extends ConnectivityObserver {
   /// Creates a [RecordingObserver] with an empty log.
-  new();
+  this;
 
   /// Every event the observer has received, in order.
   final List<RecordedEvent> events = [];
@@ -40,9 +40,7 @@ final class RecordingObserver extends ConnectivityObserver {
 }
 
 /// One thing [RecordingObserver] saw.
-sealed class RecordedEvent {
-  const new();
-}
+sealed class const RecordedEvent();
 
 /// A recorded [ConnectivityObserver.onStatusChangeEmitted] event.
 final class const StatusChangeEmitted({
@@ -60,9 +58,7 @@ final class const NextCheckScheduled({
 }) extends RecordedEvent;
 
 /// A recorded [ConnectivityObserver.onExternalTriggerFired] event.
-final class ExternalTriggerFired extends RecordedEvent {
-  const new();
-}
+final class const ExternalTriggerFired() extends RecordedEvent;
 
 /// A recorded [ConnectivityObserver.onExternalTriggerError] event.
 final class const ExternalTriggerError({
@@ -83,6 +79,4 @@ final class const SlowThresholdChanged({
 }) extends RecordedEvent;
 
 /// A recorded [ConnectivityObserver.onDispose] event.
-final class DisposeEvent extends RecordedEvent {
-  const new();
-}
+final class const DisposeEvent() extends RecordedEvent;

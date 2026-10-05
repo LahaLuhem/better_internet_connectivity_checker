@@ -11,7 +11,7 @@ import 'models/schedule_context.dart';
 /// The failure streak comes in on [ScheduleContext], so the usual cases need no state of their own.
 /// It's an interface rather than a typedef for the ones that do, like a schedule that counts a
 /// slow-but-reachable result as a failure, which [ScheduleContext.consecutiveFailures] doesn't.
-abstract interface class CheckSchedule {
+abstract interface class CheckSchedule._() {
   /// The gap before the next check, asked once per scheduled check. Keep it above zero, or the
   /// scheduler busy-loops.
   Duration nextDelay(ScheduleContext scheduleContext);

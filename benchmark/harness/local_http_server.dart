@@ -12,7 +12,7 @@ final _loopback = IpAddress.tryParse('127.0.0.1')!;
 ///
 /// [setUp] and [setDown] flip it between [statusCode] and a 503, [latency] adds an artificial delay.
 /// No locking needed, since one event loop means in-flight requests see a consistent snapshot.
-final class LocalHttpServer {
+final class LocalHttpServer() {
   HttpServer? _server;
   var _isUp = true;
   Duration _latency = .zero;

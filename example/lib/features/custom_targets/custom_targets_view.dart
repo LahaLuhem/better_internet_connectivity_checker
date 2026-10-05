@@ -12,9 +12,7 @@ import '../core/widgets/core_widgets.dart';
 import 'custom_targets_view_model.dart';
 import 'data/enums/probe_method.dart';
 
-class CustomTargetsView extends StatelessWidget {
-  const new({super.key});
-
+class const CustomTargetsView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: CustomTargetsViewModel(),
@@ -144,9 +142,7 @@ class CustomTargetsView extends StatelessWidget {
   );
 }
 
-class _AutoSwitchInfoCard extends StatelessWidget {
-  const new();
-
+class const _AutoSwitchInfoCard() extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
     child: Padding(

@@ -35,9 +35,9 @@ import 'slow_callback_watchdog.dart';
 /// every timer, stream and frame on it. Keep overrides quick, or hand the heavy part to
 /// `Isolate.run`. Debug builds warn when one overruns, see [attachObserver]'s `slowCallbackThreshold`.
 /// {@endtemplate}
-abstract base class ConnectivityObserver {
+abstract base class const ConnectivityObserver() {
   /// Creates a [ConnectivityObserver]. Make subclasses const where you can.
-  const new();
+  this;
 
   // Nothing to cover: exercising these needs a do-nothing subclass that adds nothing over
   // `RecordingObserver`.

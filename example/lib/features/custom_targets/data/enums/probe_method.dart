@@ -1,8 +1,4 @@
-enum ProbeMethod {
+enum ProbeMethod(final String label) {
   head('HEAD'),
-  get('GET');
-
-  final String label;
-
-  new(this.label);
+  get('GET'),
 }

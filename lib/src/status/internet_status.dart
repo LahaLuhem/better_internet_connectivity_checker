@@ -14,7 +14,7 @@ part 'outcomes/unreachable.dart';
 ///     print('offline, ${failedProbes.length} probes failed');
 /// }
 /// ```
-sealed class InternetStatus {
+sealed class const InternetStatus() {
   /// Creates an [InternetStatus].
-  const new();
+  this;
 }

@@ -1,6 +1,6 @@
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 
-abstract final class ConstScheduleComparison {
+abstract final class ConstScheduleComparison._() {
   /// Base interval both checkers run at. Short, so the backoff ladder shows up within seconds of
   /// opening the demo.
   static const baseInterval = Duration(seconds: 2);
