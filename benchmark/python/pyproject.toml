@@ -26,7 +26,7 @@ dependencies = [
     # produce, cleaner expression API for aggregations, and the lazy frame
     # model makes large-baseline diffs cheap. Analysis stays in polars; the
     # chart script converts to pandas only at the seaborn boundary.
-    "polars>=1.0,<2.0",
+    "polars>=1.0,<3.0",
     "matplotlib>=3.8,<4.0",
     # seaborn gives publication-quality stats plots (box, violin, point with
     # CI) for ~zero boilerplate vs raw matplotlib. Pulls pandas transitively
