@@ -63,8 +63,8 @@ python_files = ["test_*.py"]
 # --strict-markers: catch typos in @pytest.mark.<name> decorators.
 # --cov / --cov-report: collect coverage for the bicc_bench package on every
 #       run; the threshold gate (--cov-fail-under) lives in CI to keep local
-#       runs frictionless, mirroring the Dart side (dart test collects,
-#       very_good's --min-coverage enforces).
+#       runs frictionless, mirroring the Dart side, where only CI's very_good
+#       run gates coverage.
 addopts = "-ra --strict-markers --cov=bicc_bench --cov-report=term-missing"
 
 # ---- coverage -------------------------------------------------------------

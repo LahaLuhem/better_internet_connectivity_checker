@@ -21,23 +21,22 @@ README for usage, APPENDIX for design rationale.
   actually consumed. [`.fvmrc`](../.fvmrc) names the local channel, not a version.
   Whatever toolchain serves it is fine, the host toolchain manager being a local
   implementation detail.
-- **`dart test`** for tests, **`dart --no-version-check analyze .`** for pedantic static
-  analysis (matching what `flutter --no-version-check analyze .` runs on a Flutter app,
-  pedantic mode is intentional, not negotiable). No Flutter dep, no platform channels.
+- **`dart test`** for tests, **`dart --no-version-check analyze --fatal-infos --fatal-warnings .`**
+  for pedantic static analysis, as CI runs it (pedantic mode is intentional, not negotiable). No
+  Flutter dep, no platform channels.
 - **`actionlint`** (GitHub workflows) runs from the
   [`linterpol`](https://github.com/LahaLuhem/linterpol) Docker image
   (`ghcr.io/lahaluhem/linterpol`), not a local install, so only Docker is needed. CI runs it
   too, with rumdl and ryl for Markdown and YAML, from
   [`.github/lint-checks.json`](../.github/lint-checks.json), which dartender's `setup.sh` writes.
-- **CHANGELOG, `version:` field, and `example/pubspec.lock` are owned by the release run,**
-  which the user starts from the Actions tab, see
-  [dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing). Do not invoke
-  `cider` commands by hand and do not edit `CHANGELOG.md`, `version:`, or
-  `example/pubspec.lock` directly, so the bump, CHANGELOG finalisation, example-lockfile resync,
-  commit, tag, and push stay in lockstep. `example/pubspec.lock` is pipeline-owned because
-  `example/pubspec.yaml` declares its parent via `path: ../`, so the lockfile records the parent
-  version at resolve time and must follow each bump. The `cider:` block in `pubspec.yaml` is
-  cider's static configuration (URLs, link templates) and may be hand-edited freely.
+- **`CHANGELOG.md`, `version:` and `example/pubspec.lock` aren't edited by hand.**
+  `changelog.yml` writes each merged PR's line. The release run, which the user starts from the
+  Actions tab ([dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing)), adds
+  Dependabot's lines, bumps `version:`, dates the section and re-resolves `example/pubspec.lock`,
+  which pins this package's version through `path: ../`. Dependabot bumps that lockfile too. So
+  never run `cider`. The one time to run `flutter pub get` in `example/` yourself is after
+  changing `example/pubspec.yaml`. The `cider:` block in `pubspec.yaml` is cider's static
+  configuration (URLs, link templates) and may be hand-edited freely.
 - **Published to pub.dev.** `.pubignore` controls what ships in the tarball.
 - **`.editorconfig`** is the source of truth for text-file conventions: line width 100,
   LF endings, UTF-8, per-language indent rules. The Dart formatter's `page_width: 100`, from
@@ -133,18 +132,14 @@ better_internet_connectivity_checker/
    *what*. The type already carries the *what*.
 5. **Semver, strictly.** Breaking changes only on a major bump. Any change to a public
    signature, deletion, or behavioural change of a documented contract is breaking.
-   `cider` enforces the version-bump discipline.
+   Nothing checks the bump against the change: whoever starts the Release run picks it.
 6. **Pure Dart, no Flutter dep in `pubspec.yaml`.** This package targets every Dart
    platform: server, CLI, web, Flutter. If platform-channel features ever become
    necessary, a sibling Flutter-plugin package can depend on this one. Don't add Flutter
    to this `pubspec.yaml`. See
    [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter). The
-   `example/` directory itself is Flutter, so any pure-Dart context resolving from the
-   root (scripts, downstream tooling) must pass `dart pub get --no-example`. Pub
-   resolves example dependencies by default and they require the Flutter SDK. Same
-   reason: scope `dart analyze` to `lib test` (not `.`) and exclude `example/**` via
-   `dart_dependency_validator.yaml` for `dependency_validator`, and both descend into
-   `example/` by default and break without Flutter.
+   `example/` directory itself is Flutter, and pub resolves it from the root by default, so
+   working here needs the Flutter SDK, which CI's jobs install too.
 7. **`CHANGELOG.md` is fully bot-owned. Do not edit any section of it, including
    `## [Unreleased]`.** Release headers and Dependabot's lines are written by the release run,
    and the running `## [Unreleased]` buffer is appended to by the post-merge automation in
@@ -153,13 +148,13 @@ better_internet_connectivity_checker/
    what becomes the changelog line, so when landing a feature do **not** curate,
    prepend, or hand-write a bullet describing it. Manual entries will be reordered or
    duplicated by the bot. The bracket-and-link-reference format (`## [Unreleased]`
-   heading, `[Unreleased]: …/compare/<last-tag>...vHEAD` reference at the bottom,
+   heading, `[Unreleased]: …/compare/<last-tag>...HEAD` reference at the bottom,
    `### Added` / `### Changed` / `### Fixed` subsections) is what cider's `link_template`
    expects, and inconsistent headings get rewritten on release. The same prohibition covers
-   the `version:` field in `pubspec.yaml` and `example/pubspec.lock` (regenerated by the
-   release run's `flutter pub get` in `example/`). Never bump or hand-resolve
-   either, nor run `cider` commands. The `cider:` block in `pubspec.yaml` is static
-   configuration (link templates, URLs) and may be hand-edited like any other yaml.
+   the `version:` field in `pubspec.yaml` and `example/pubspec.lock`, with the one exception
+   *Stack* names. Never bump or hand-edit either, nor run `cider` commands. The `cider:` block
+   in `pubspec.yaml` is static configuration (link templates, URLs) and may be hand-edited like
+   any other yaml.
 
 ## PR conventions
 Every check below is enforced by dartender's `conventions.yml`, through
