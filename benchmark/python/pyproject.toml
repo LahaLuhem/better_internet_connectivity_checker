@@ -31,7 +31,7 @@ dependencies = [
     # seaborn gives publication-quality stats plots (box, violin, point with
     # CI) for ~zero boilerplate vs raw matplotlib. Pulls pandas transitively
     # That's accepted only because seaborn requires it. Do not use pandas
-    # outside the chart-rendering helpers in run.py.
+    # outside the chart-rendering helpers in bicc_bench/data/utils/charts.py.
     "seaborn>=0.13,<1.0",
     # pyarrow is needed for polars.DataFrame.to_pandas(), and that conversion is
     # the bridge between our polars-based analysis and seaborn's pandas-only

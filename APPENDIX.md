@@ -13,17 +13,16 @@ anchor stable or grep-and-update every caller.
 <a id="ai-files-symlinked"></a>
 ## `AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`
 
-- **Decision:** the canonical text for both files lives under `.ai/`. The repo root holds
-  symlinks (`AGENTS.md → .ai/AGENTS.md`, `CLAUDE.md → .ai/CLAUDE.md`).
+- **Decision:** the canonical text for both files lives under `.ai/`. The root symlinks
+  (`AGENTS.md → .ai/AGENTS.md`, `CLAUDE.md → .ai/CLAUDE.md`) are gitignored, and each
+  contributor makes them with the
+  [README's commands](./README.md#optional-ai-agent-discovery-symlinks).
 - **Why:** Claude Code (and most other coding agents) auto-discover `CLAUDE.md` /
   `AGENTS.md` at the project root, but 2 more loose Markdown files at the root add
   visual noise to the file tree. Scoping the agent-guidance files under `.ai/` keeps them
   together, and the root symlinks preserve auto-discovery.
-- **Cross-platform note:** symlinks survive `git clone` on macOS/Linux. On Windows hosts
-  without symlink support enabled, the file may show up as a small text file containing
-  the link target. If that ever bites a contributor, the fallback is to drop the symlinks
-  and keep real files at root, hand-syncing the content (or to delete the duplicates
-  under `.ai/`).
+- **Cross-platform note:** git never checks them out, so a clone is the same everywhere. Where
+  symlinks aren't available, a real file at the root works too, as the README says.
 
 ---
 
@@ -452,7 +451,7 @@ candidate endpoints.
   committed baseline are reproducible by anyone with the repo, where vibes are not.
   The slow-observer scheduler-drift bug is the canonical example:
   scheduler stalls by hundreds of milliseconds when a slow observer is wired
-  in, which is invisible without the `tick_drift_meter` instrumentation but
+  in, which is invisible without the `event_loop_stall_meter` instrumentation but
   obvious with it. We do not want to discover the next such bug after release.
 - **Methodology** (non-negotiable, lives in [`benchmark/README.md`](./benchmark/README.md)):
   AOT compile (`dart compile exe`), record the SDK version per run, N ≥ 10 iterations
