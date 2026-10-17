@@ -9,8 +9,8 @@ guidelines live in [AGENTS.md](./AGENTS.md), the full code-style guide lives in
 You're assisting with **better_internet_connectivity_checker**: a pure Dart package that
 distinguishes "a network interface is up" from "I can actually reach the public internet
 right now". Treat the user as technical and direct. The package ships to pub.dev, so changes are
-visible to every downstream user and breakage is expensive and slow to walk back (unpublished
-versions stay reserved for 7 days).
+visible to every downstream user and breakage is expensive and slow to walk back (pub.dev never
+unpublishes a version, it only lets you retract one within 7 days of publishing).
 
 ## Communication
 
@@ -109,8 +109,8 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
 
 ## Forbidden / confirm-first actions
 
-- **Never** `dart pub publish`. Publishing is effectively one-way, since pub.dev reserves the
-  version for 7 days after retraction. Releases go through the **Release** workflow, which
+- **Never** `dart pub publish`. Publishing is one-way, since pub.dev never unpublishes a version
+  and only lets you retract one within 7 days. Releases go through the **Release** workflow, which
   the user starts from the Actions tab.
 - **Never** run `cider` commands (`cider bump`, `cider release`, …) or manually edit
   `CHANGELOG.md`, the `version:` field in `pubspec.yaml`, or `example/pubspec.lock`.

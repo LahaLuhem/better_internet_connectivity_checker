@@ -9,7 +9,7 @@ interface is up" (cheap, often wrong) from "I can actually reach the public inte
 now" (the question users typically care about). Pure Dart so it works equally well in CLI,
 server, web, and Flutter contexts.
 
-Public API in v0.1 is stable: `InternetConnection` scheduler + sealed `InternetStatus`
+The public API is stable: `InternetConnection` scheduler + sealed `InternetStatus`
 outcomes, backed by pluggable `ConnectivityProbe` and `ReachabilityPolicy` layers. See
 README for usage, APPENDIX for design rationale.
 
@@ -101,10 +101,8 @@ better_internet_connectivity_checker/
 - `strategies/` / `transports/` / `sinks/`: concrete implementations of the interface.
   Named for what they *are* (Strategy-pattern impls, transport impls, event-sink impls),
   not a generic `impl/`. Public impls (e.g. `PrintingConnectivityObserver` under
-  `observer/sinks/`) are regular libraries. Private defaults (e.g.
-  `_SilentConnectivityObserver`) can use `part of` to scope themselves to the consumer
-  library that owns them, see the `observer/sinks/silent_connectivity_observer.dart`
-  → `internet_connection.dart` linkage for the pattern.
+  `observer/sinks/`) are regular libraries. Private ones can use `part of` to scope themselves
+  to the library that owns them, as `internal/` does with `internet_connection.dart`.
 - `models/`: value types serving the feature (request/result/options).
 - `outcomes/`: sealed-class cases. Uses `part of` to share library scope with the
   parent (required by Dart's sealed-class rules, see
