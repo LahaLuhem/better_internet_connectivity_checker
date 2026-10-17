@@ -91,8 +91,9 @@ For single-file, single-concern fixes inside `lib/src/`: just do it.
 
 The release flow (`CHANGELOG.md`, `version:` in `pubspec.yaml`, and `example/pubspec.lock`) is
 **not** in this list. All 3 are pipeline-owned, see
-*Forbidden / confirm-first actions* below. Don't plan a CHANGELOG edit, a version bump,
-or an `example/` lockfile refresh, and don't make one. The `cider:` block itself is static
+*Forbidden / confirm-first actions* below. Don't plan a CHANGELOG edit or a version bump, and
+don't make one. Refresh the `example/` lockfile only after changing `example/pubspec.yaml`, with
+`flutter pub get` in `example/`. The `cider:` block itself is static
 configuration (URLs, link templates) and may be hand-edited like any other yaml.
 
 ## Commit / PR etiquette
@@ -113,8 +114,9 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
   the user starts from the Actions tab.
 - **Never** run `cider` commands (`cider bump`, `cider release`, …) or manually edit
   `CHANGELOG.md`, the `version:` field in `pubspec.yaml`, or `example/pubspec.lock`.
-  Version bumps, CHANGELOG entries, and the example-lockfile resync are owned by the release
-  run, and manual edits get reordered or overwritten. If the user asks for a release, point
+  Version bumps, Dependabot's CHANGELOG lines and the example-lockfile resync are the release
+  run's, each PR's line is `changelog.yml`'s, and manual edits get reordered or overwritten.
+  Dependabot also bumps `example/pubspec.lock`. If the user asks for a release, point
   them at the **Release** workflow, but don't start it for them (it pushes to `main` and
   triggers pub.dev publish). **The `## [Unreleased]` section is also bot-owned.**
   The post-merge CI automation in `.github/workflows/changelog.yml` runs `cider log`
@@ -131,17 +133,15 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
 
 ## Definition of done
 
-- `dart --no-version-check analyze --fatal-infos --fatal-warnings .` clean (pedantic mode,
-  non-negotiable).
-- `dart format --output=none --set-exit-if-changed .` clean.
-- `dart test` green (where tests exist).
-- When workflows change, `actionlint` clean, via the linterpol image rather than a local install:
-  `docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest actionlint`.
+- Every check `ci / ok` waits on passes on your tree: the `needs:` of the `ok` job in
+  [dartender's `ci.yml`](https://github.com/LahaLuhem/dartender/blob/main/.github/workflows/ci.yml),
+  run with this repo's inputs from [`ci.yml`](../.github/workflows/ci.yml).
 - DCM rules from the shared lints applied by hand (`dart analyze` does not run
   them): `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`,
   plus the project-wide rule that blank lines segment logical chunks inside methods.
-- `dart pub publish --dry-run` clean if the change is publish-relevant. Do **not** bump
-  the version or add a CHANGELOG entry to make the dry-run happy. The release run owns those.
+- `dart pub publish --dry-run` clean if the change is publish-relevant, apart from its warning
+  about uncommitted files, which fails it until you commit. Do **not** bump the version or add a
+  CHANGELOG entry to make the dry-run happy. The release run owns those.
 - Public API additions documented with `///` dartdoc and reflected in README.
 - Explicitly call out what you did NOT verify (e.g. "didn't exercise on a real network, only
   mocked HTTP responses").
