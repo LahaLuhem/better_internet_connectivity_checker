@@ -57,12 +57,8 @@ final class LocalHttpServer() {
   /// Toggles between up and down. Used by `flapping_network` on a timer.
   void toggle() => _isUp = !_isUp;
 
-  // Write-only knob: scenarios push runtime config in; the current value never needs reading back.
-  // ignore: avoid_setters_without_getters
   set latency(Duration value) => _latency = value;
 
-  // Write-only knob, see [latency] above.
-  // ignore: avoid_setters_without_getters
   set statusCode(int value) => _statusCode = value;
 
   Future<void> _serve() async {

@@ -125,7 +125,7 @@ Definition-of-done for any Python change in this directory:
 
 - **Never edit `uv.lock` by hand.** Run `uv sync` / `uv add` / `uv lock` to
   regenerate.
-- **Never commit `.venv/` or `__pycache__/`.** [`benchmark/.gitignore`](../../.gitignore)
+- **Never commit `.venv/` or `__pycache__/`.** [`benchmark/python/.gitignore`](../.gitignore)
   already excludes both.
 - **Never use `pip install` directly.** Always go through `uv`. Mixed
   `pip`/`uv` envs are subtly broken.
