@@ -449,10 +449,10 @@ candidate endpoints.
   we have to defend. "Trust me, it's faster" is not enough when the audience is
   every Dart developer who pulls the package. Numbers compared against a
   committed baseline are reproducible by anyone with the repo, where vibes are not.
-  The slow-observer scheduler-drift bug is the canonical example:
-  scheduler stalls by hundreds of milliseconds when a slow observer is wired
-  in, which is invisible without the `event_loop_stall_meter` instrumentation but
-  obvious with it. We do not want to discover the next such bug after release.
+  The slow-observer scenario shows the metric matters as much as the run: the
+  retired `TickDriftMeter` summed every stall into seconds of "drift", where
+  `event_loop_stall_meter` shows only the observer's own blocking time, which no
+  dispatch strategy can mask.
 - **Methodology** (non-negotiable, lives in [`benchmark/README.md`](./benchmark/README.md)):
   AOT compile (`dart compile exe`), record the SDK version per run, N ≥ 10 iterations
   per scenario, median and IQR (not mean, since GC outliers skew means), Mann-Whitney U
