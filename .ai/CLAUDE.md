@@ -6,6 +6,7 @@ guidelines live in [AGENTS.md](./AGENTS.md), the full code-style guide lives in
 [`../APPENDIX.md`](../APPENDIX.md). Read AGENTS.md and CODESTYLE.md first.
 
 ## Role & context
+
 You're assisting with **better_internet_connectivity_checker**: a pure Dart package that
 distinguishes "a network interface is up" from "I can actually reach the public internet
 right now". Treat the user as technical and direct. The package ships to pub.dev, so changes are

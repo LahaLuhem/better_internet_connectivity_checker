@@ -11,6 +11,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="ai-files-symlinked"></a>
+
 ## `AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`
 
 - **Decision:** the canonical text for both files lives under `.ai/`. The root symlinks
@@ -27,6 +28,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="pure-dart-not-flutter"></a>
+
 ## Pure-Dart package, no Flutter dependency
 
 - **Chosen:** zero Flutter dependency. [`pubspec.yaml`](./pubspec.yaml) declares only a Dart SDK
@@ -44,6 +46,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="public-api-via-single-export-file"></a>
+
 ## Public API funnelled through `lib/<package>.dart`
 
 - **Chosen:** `lib/better_internet_connectivity_checker.dart` is the only file callers
@@ -62,6 +65,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="three-layer-architecture"></a>
+
 ## Layered architecture: probe / policy / schedule / coordinator
 
 - **Chosen:** the package splits into 4 independent concerns:
@@ -98,6 +102,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="why-cadence-is-its-own-seam"></a>
+
 ## Why check cadence is its own seam, and not `package:retry`
 
 - **Chosen:** a `CheckSchedule` interface at the scheduler layer, with the failure streak handed
@@ -157,6 +162,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="sealed-status-not-enum"></a>
+
 ## `InternetStatus` is a sealed class, not an enum
 
 - **Chosen:** `sealed class InternetStatus` with 2 concrete cases: `Reachable` (carries
@@ -182,6 +188,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="policy-strategy-not-bool-flag"></a>
+
 ## Aggregation policy as a strategy interface, not a `bool`
 
 - **Chosen:** `ReachabilityPolicy` is an interface, with `AnyReachablePolicy` and
@@ -202,6 +209,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="no-response-data-on-result"></a>
+
 ## `ProbeResult` deliberately omits protocol-specific response data
 
 - **Chosen:** `ProbeResult` carries only `target`, `isSuccess`, `responseTime`, and
@@ -237,6 +245,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="probe-cancellation-via-http-abortable"></a>
+
 ## Probe cancellation via `http.Abortable`, not per-call clients
 
 - **Chosen:** `ConnectivityProbe.probe(target, {cancelSignal})` accepts an optional
@@ -284,6 +293,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="why-the-coordinator-keeps-the-deadline"></a>
+
 ## Why `InternetConnection` keeps the probe deadline, not the probe
 
 - **Chosen:** an internal `_DeadlineProbe` wraps whatever probe the caller configured, once, in
@@ -315,6 +325,7 @@ anchor stable or grep-and-update every caller.
 ---
 
 <a id="what-portal-detection-rests-on"></a>
+
 ## What captive-portal detection actually rests on
 
 All measured against local servers imitating each portal shape, plus a real-network pass over the
@@ -344,6 +355,7 @@ candidate endpoints.
 ---
 
 <a id="connectivity-hook-not-baked-in"></a>
+
 ## Connectivity-change trigger as an injectable hook, not a baked-in dependency
 
 - **Chosen:** `InternetConnection`'s constructor takes an optional
@@ -367,6 +379,7 @@ candidate endpoints.
 ---
 
 <a id="why-http-head-default-probe"></a>
+
 ## Why HTTP HEAD, not DNS / TCP, is the default probe
 
 - **Chosen:** the default `ConnectivityProbe` (`HttpProbe.head()`) issues an HTTP HEAD
@@ -394,6 +407,7 @@ candidate endpoints.
 ---
 
 <a id="why-no-perf-preset"></a>
+
 ## Why no performance-preset enum or "perf vs. memory" slider
 
 - **Considered:** a `PerformanceProfile.{battery, balanced, aggressive}` enum on the
@@ -418,6 +432,7 @@ candidate endpoints.
 ---
 
 <a id="why-no-checkonce-coalescing"></a>
+
 ## Why `checkOnce()` is not single-flighted today
 
 - **Chosen:** each `checkOnce()` call independently runs the full probe fan-out. 2
@@ -434,6 +449,7 @@ candidate endpoints.
 ---
 
 <a id="why-benchmarks-gate-refactor"></a>
+
 ## Why benchmark baselines gate refactor PRs
 
 - **Chosen:** any refactor that claims a performance, memory, or latency improvement
@@ -463,6 +479,7 @@ candidate endpoints.
 ---
 
 <a id="why-events-microtask-deferred"></a>
+
 ## Why the diagnostic stream is microtask-deferred (with a no-subscriber early-out)
 
 - **Chosen:** [`InternetConnection.events`](./lib/src/internet_connection.dart),
@@ -568,6 +585,7 @@ candidate endpoints.
 ---
 
 <a id="why-status-deduper-stays-inline"></a>
+
 ## Why the status deduper stays inline
 
 - **Chosen:** the kind-deduplication logic (`_isDistinctKind`) and its
@@ -625,6 +643,7 @@ candidate endpoints.
 ---
 
 <a id="why-event-bus-refactor"></a>
+
 ## Why the event-bus refactor is worth a major version bump
 
 - **Chosen:** version 0.3.0 (semver major) introduces a sealed
@@ -703,6 +722,7 @@ candidate endpoints.
 ---
 
 <a id="dependabot-automerge"></a>
+
 ## Dependabot's PRs auto-merge through dartender
 
 Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job in

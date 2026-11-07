@@ -1,13 +1,18 @@
 ## [1.1.0] - 2026-08-21
+
 ### Changed
+
 - \[#31\] Add MinimumReachablePolicy and stop probes following redirects
 - \[#34\] Spread the default probe targets across three operators
 
 ### Fixed
+
 - \[#30\] Bound every probe at ProbeTarget.timeout, whatever the transport does
 
 ## [1.0.0] - 2026-08-20
+
 ### Added
+
 - \[#4\] Benchmarking framework + snapshotting library performance
 - \[#5\] sealed `ConnectivityEvent` hierarchy + public `Stream<ConnectivityEvent>` on `InternetConnection.events` for reactive lifecycle observation
 - \[#5\] `attachObserver(events, observer)` top-level helper to wire `ConnectivityObserver` onto the events stream
@@ -16,38 +21,49 @@
 - \[#25\] Add jitter to ExponentialBackoffSchedule, on by default at ±25 %
 
 ### Changed
+
 - \[#26\] Use new linter mega repo
 - Bumped up Dart SDK floor to ^3.12.0
 - \[#0\] Bumped SDK to ^3.13
 - \[#26\] Move existing classes to header-form primary constructors
 
 ### Fixed
+
 - post merge fix
 - Fix some performance regressions caused by the refactor
 
 ### Removed
+
 - \[#5\] **Breaking:** `observer:` constructor parameter on `InternetConnection` — migrate via `attachObserver(connection.events, observer)`
 
 ## [0.2.0] - 2026-05-20
+
 ### Added
+
 - Better CICD
 - `setSlowThreshold` to mutate slow-classification cutoff at runtime
 - \[#1\] Add a new logging module in the form of an `ConnectivityObserver`
 
 ### Changed
+
 - `setCheckInterval` and `setSlowThreshold` renamed to setters -> `checkInterval` and `slowThreshold`
 
 ## [0.1.0] - 2026-05-18
+
 ### Added
+
 - `HttpProbe.get()` issues GET against endpoints that reject HEAD (HTTP 405) or misbehave under it. The response body is drained but not buffered, so per-call memory cost matches `HttpProbe.head()`.
 - HttpProbe.get for HTTP GET
 
 ### Changed
+
 - **Breaking:** unified the built-in HTTP probe into a single `HttpProbe` class with `HttpProbe.head()` / `HttpProbe.get()` named constructors. Replaces `HttpHeadProbe`; existing callers update via `HttpHeadProbe()` → `HttpProbe.head()`.
 - HttpProbe is split into .head(original) and .get
 
 ## [0.0.1] - 2026-05-17
+
 ### Added
+
 - InternetConnection scheduler with checkOnce() and a de-duped broadcast onStatusChange stream; sealed InternetStatus (Reachable with response time + ConnectionQuality, Unreachable with failed-probe diagnostics); slow-connection detection opt-in via slowThreshold.
 - Pluggable ConnectivityProbe interface with default HttpHeadProbe (HTTP HEAD, shared http.Client, per-target timeout); DNS / TCP / retry-decorator / mock transports drop in via constructor injection.
 - Pluggable ReachabilityPolicy interface with AnyReachablePolicy (default, any-of-N race) and AllReachablePolicy (strict, all-of-N); per-policy slow classification — winning probe under any-of-N, the slowest successful probe under all-of-N.
