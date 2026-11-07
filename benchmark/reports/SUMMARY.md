@@ -18,7 +18,6 @@ Longest single continuous window in which synchronous work blocked the event loo
 | `slow_observer` | 30 | 110,298 | 3,186 | 103,052 | 119,700 |
 | `trigger_storm` | 30 | 5,606 | 4,707 | 2,645 | 16,583 |
 
-
 ![Headline max stall](headline_max_stall.png)
 
 ## Event-loop blocked share per scenario
@@ -49,7 +48,6 @@ Peak RSS captured via `ProcessInfo.currentRss` sampled every 500 ms (every 250 m
 | `slow_observer` | 30 | 60.19 | 0.16 | 25.91 | 66.62 |
 | `trigger_storm` | 30 | 70.38 | 15.39 | 26.73 | 72.73 |
 
-
 ![Memory peak RSS](memory_peak_rss.png)
 
 ## Stability: noise floor across scenarios (slow_observer excluded)
@@ -65,7 +63,6 @@ Same metric as the headline chart, but with the `slow_observer` outlier excluded
 | `quiet_app` | 30 | 5,614 | 2,066 | 2,887 | 10,821 |
 | `trigger_storm` | 30 | 5,606 | 4,707 | 2,645 | 16,583 |
 
-
 ![Scenario stability](scenario_stability.png)
 
 ## Subscriber scaling: broadcast cost vs N listeners
@@ -79,6 +76,5 @@ From the `status_emission` micro (synchronous broadcast, isolated from the rest 
 | 25 | 30 | 2.30 | 0.065 |
 | 50 | 30 | 4.47 | 0.112 |
 | 100 | 30 | 8.96 | 0.218 |
-
 
 ![Subscriber scaling](subscriber_scaling.png)

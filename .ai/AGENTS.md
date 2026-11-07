@@ -4,6 +4,7 @@ Tool-agnostic brief for any coding agent (Copilot, Cursor, Codex, Claude Code, â
 this package. Claude-Code-specific guidance lives in [CLAUDE.md](./CLAUDE.md).
 
 ## Project goal
+
 A Dart package for **internet-connectivity checking** that tells "a network
 interface is up" (cheap, often wrong) from "I can actually reach the public internet right
 now" (the question users typically care about). Pure Dart so it works equally well in CLI,
@@ -155,6 +156,7 @@ better_internet_connectivity_checker/
    any other yaml.
 
 ## PR conventions
+
 Every check below is enforced by dartender's `conventions.yml`, through
 [`.github/workflows/conventions.yml`](../.github/workflows/conventions.yml).
 
@@ -181,6 +183,7 @@ Every check below is enforced by dartender's `conventions.yml`, through
   integrate `main`), and **commit subjects â‰¤ 82 characters**.
 
 ## Style
+
 Full guide: [`../CODESTYLE.md`](../CODESTYLE.md). The lint posture is deliberately strict
 (see the shared lints `analysis_options.yaml` includes), and rules are enforced through them
 plus the DCM checks called out in CODESTYLE. Top-level rules to keep in working memory:

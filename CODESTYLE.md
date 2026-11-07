@@ -18,13 +18,13 @@ heading text, so renames don't break callers.
 - [Constants & magic numbers](#constants-magic-numbers)
 - [Class structure](#class-structure)
 - [Idioms](#idioms)
-    * [Static dot shorthands (Dart 3.10+)](#static-dot-shorthands-dart-310)
-    * [Header-form primary constructors (Dart 3.13+)](#header-form-primary-constructors-dart-313)
-    * [Collection-for / collection-if over `Iterable.map(…).toList()`](#collection-for-collection-if-over-iterablemaptolist)
-    * [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
-    * [`Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)`](#urihttps-urihttp-over-uriparse)
-    * [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#listunmodifiable-over-unmodifiablelistview)
-    * [`part` / `part of` only when structurally needed](#part-part-of-only-when-structurally-needed)
+  - [Static dot shorthands (Dart 3.10+)](#static-dot-shorthands-dart-310)
+  - [Header-form primary constructors (Dart 3.13+)](#header-form-primary-constructors-dart-313)
+  - [Collection-for / collection-if over `Iterable.map(…).toList()`](#collection-for-collection-if-over-iterablemaptolist)
+  - [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
+  - [`Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)`](#urihttps-urihttp-over-uriparse)
+  - [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#listunmodifiable-over-unmodifiablelistview)
+  - [`part` / `part of` only when structurally needed](#part-part-of-only-when-structurally-needed)
 - [Prose & voice](#prose-voice)
 - [Comments & dartdoc](#comments-dartdoc)
 - [Testing](#testing)
@@ -35,6 +35,7 @@ heading text, so renames don't break callers.
 
 <a id="type-safety"></a>
 <!-- TOC --><a name="type-safety-nullability"></a>
+
 ## Type safety & nullability
 
 - **Type-annotate every public symbol.** Inference is fine on locals
@@ -59,6 +60,7 @@ style.
 
 <a id="naming"></a>
 <!-- TOC --><a name="naming"></a>
+
 ## Naming
 
 - **Prefer abbreviations over initialisms for domain terms.** In code, comments,
@@ -97,6 +99,7 @@ style.
 
 <a id="formatting"></a>
 <!-- TOC --><a name="formatting"></a>
+
 ## Formatting
 
 - **Wrap text-file content at 100 columns.** [`.editorconfig`](./.editorconfig) is
@@ -111,6 +114,7 @@ style.
 
 <a id="constants"></a>
 <!-- TOC --><a name="constants-magic-numbers"></a>
+
 ## Constants & magic numbers
 
 - **No magic numbers in `lib/` code.** Pull constants to named `static const`s with a
@@ -125,6 +129,7 @@ style.
 
 <a id="class-structure"></a>
 <!-- TOC --><a name="class-structure"></a>
+
 ## Class structure
 
 - **New value / config types declare their fields in the class header.** See
@@ -165,10 +170,12 @@ style.
 
 <a id="idioms"></a>
 <!-- TOC --><a name="idioms"></a>
+
 ## Idioms
 
 <a id="idioms-dot-shorthands"></a>
 <!-- TOC --><a name="static-dot-shorthands-dart-310"></a>
+
 ### Static dot shorthands (Dart 3.10+)
 
 Use static dot shorthands wherever the context type is known. They resolve from the
@@ -195,6 +202,7 @@ entirely, remove it from any `show` clauses too. Re-running analyze surfaces
 
 <a id="idioms-primary-constructors"></a>
 <!-- TOC --><a name="header-form-primary-constructors-dart-313"></a>
+
 ### Header-form primary constructors (Dart 3.13+)
 
 Declare a new value or config type's fields in the class header. A field-less type gets an empty
@@ -257,6 +265,7 @@ Retrofitting an existing class works throughout this package, `const` types, sea
 
 <a id="idioms-collection-literals"></a>
 <!-- TOC --><a name="collection-for-collection-if-over-iterablemaptolist"></a>
+
 ### Collection-for / collection-if over `Iterable.map(…).toList()`
 
 In widget trees especially, a literal list with embedded control flow reads as data, where a
@@ -292,6 +301,7 @@ because nothing else constrains the route's `T`.
 
 <a id="idioms-wait-extensions"></a>
 <!-- TOC --><a name="dartasync-wait-extensions-over-static-futurewait"></a>
+
 ### `dart:async` `wait` extensions over static `Future.wait(...)`
 
 The extensions (`Iterable<Future<T>>.wait` and the record forms `FutureRecord2`…
@@ -326,6 +336,7 @@ final results = await Future.wait(targets.map(probe.probe));
 
 <a id="idioms-uri-construction"></a>
 <!-- TOC --><a name="urihttps-urihttp-over-uriparse"></a>
+
 ### `Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)`
 
 For compile-time-known URLs, use the named constructor and pass path / query
@@ -361,6 +372,7 @@ from `lib/<package>.dart`).
 
 <a id="idioms-unmodifiable-collections"></a>
 <!-- TOC --><a name="listunmodifiable-over-unmodifiablelistview"></a>
+
 ### `List.unmodifiable(…)` over `UnmodifiableListView(…)`
 
 Default to `List.unmodifiable(…)` for exposing immutable collections (same for
@@ -391,6 +403,7 @@ class EventLog {
 
 <a id="idioms-parts"></a>
 <!-- TOC --><a name="part-part-of-only-when-structurally-needed"></a>
+
 ### `part` / `part of` only when structurally needed
 
 Not a smell on its own. Legitimate uses: sealed-class cases across files (Dart 3
@@ -403,6 +416,7 @@ dependencies and leak `_private` symbols across files within the library.
 
 <a id="prose"></a>
 <!-- TOC --><a name="prose-voice"></a>
+
 ## Prose & voice
 
 **Read <https://noslopgrenade.com/> before writing any prose here.** Open it, don't cite it from
@@ -425,6 +439,7 @@ PR and issue bodies.
 - Keep the tone informal and light. Give it a natural flow.
 
 <a id="point-dont-restate"></a>
+
 ### Point at the source, don't restate it
 
 A value that also lives in a file gets **referenced**, never copied into prose. Name the file, the
@@ -456,6 +471,7 @@ captured against a named SDK. Those say what was true then and must not be updat
 
 <a id="dartdoc"></a>
 <!-- TOC --><a name="comments-dartdoc"></a>
+
 ## Comments & dartdoc
 
 Everything in [Prose & voice](#prose) applies here first. What follows is only what's specific to
@@ -519,6 +535,7 @@ The `library;` directive is required for `@docImport` to attach to anything, but
 
 <a id="testing"></a>
 <!-- TOC --><a name="testing"></a>
+
 ## Testing
 
 Tests read as a specification via the Gherkin vocabulary in
@@ -543,6 +560,7 @@ Tests read as a specification via the Gherkin vocabulary in
 
 <a id="dcm-rules"></a>
 <!-- TOC --><a name="dcm-rules-applied-by-hand"></a>
+
 ## DCM rules (applied by hand)
 
 `dart analyze` does not run them, but the project treats them as non-negotiable:
@@ -565,6 +583,7 @@ Tests read as a specification via the Gherkin vocabulary in
 
 <a id="documentation-conventions"></a>
 <!-- TOC --><a name="documentation-conventions-markdown"></a>
+
 ## Documentation conventions (Markdown)
 
 - **APPENDIX.md is the source of truth for rationale.** Hard rules, pitfalls, and
