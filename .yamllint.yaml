@@ -1,0 +1,18 @@
+# ryl (YAML lint) config, in yamllint's format. AGENTS.md says how CI runs it.
+# Its defaults, bent to fit the repo's YAML rather than the other way round.
+extends: default
+
+rules:
+  # 100 columns, matching .editorconfig. The inline-mappings exemption covers Flutter's generated
+  # `documentation: <url>` values, single tokens with nowhere to wrap. Breakable prose still fails.
+  line-length:
+    max: 100
+    allow-non-breakable-inline-mappings: true
+  # pubspec.yaml's blank-line section dividers are intentional.
+  empty-lines:
+    max: 4
+  # Workflows use `on:`, which reads as a truthy key, so only values are checked.
+  truthy:
+    check-keys: false
+  # Single-document files here don't lead with `---`.
+  document-start: disable
