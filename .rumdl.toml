@@ -1,0 +1,22 @@
+# rumdl (Markdown lint) config. AGENTS.md says how CI runs it.
+
+[global]
+# Not hand-written docs: the bot's CHANGELOG, Flutter's platform scaffolding, and the bench's
+# generated reports (`bicc_bench.data.utils.markdown` writes SUMMARY.md, so a hand-wrap there
+# is undone on the next `report` run).
+exclude = [
+    "CHANGELOG.md",
+    "example/ios/**",
+    "example/android/**",
+    "benchmark/reports/**",
+]
+# MD033 inline HTML: intentional (<details>, <summary>, <a id> anchors, the README's screenshots).
+# MD041 first-line-heading: the README opens with a badge block, the CODESTYLEs with an intro line.
+disable = ["MD033", "MD041"]
+
+[MD013]
+# 100 to match .editorconfig. Code blocks and tables are exempt: fixed-width ASCII trees, sample
+# output and table rows can't reflow.
+line-length = 100
+code_blocks = false
+tables = false

@@ -30,6 +30,8 @@ README for usage, APPENDIX for design rationale.
   (`ghcr.io/lahaluhem/linterpol`), not a local install, so only Docker is needed. CI runs it
   too, with rumdl and ryl for Markdown and YAML, from
   [`.github/lint-checks.json`](../.github/lint-checks.json), which dartender's `setup.sh` writes.
+  Per-tool config tuned to this repo lives in [`.rumdl.toml`](../.rumdl.toml) and
+  [`.yamllint.yaml`](../.yamllint.yaml).
 - **`CHANGELOG.md`, `version:` and `example/pubspec.lock` aren't edited by hand.**
   `changelog.yml` writes each merged PR's line. The release run, which the user starts from the
   Actions tab ([dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing)), adds
