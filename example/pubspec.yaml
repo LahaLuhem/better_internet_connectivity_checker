@@ -17,7 +17,7 @@ dependencies:
   gap: ^3.1.0
   http: ^1.6.0
   material_ui: ^1.8.0
-  platform_adaptive_widgets: ^2.2.0
+  platform_adaptive_widgets: ^3.1.0
   platform_icons: ^0.1.1
   pmvvm: ^4.0.1
   tap_debouncer: ^2.2.0
