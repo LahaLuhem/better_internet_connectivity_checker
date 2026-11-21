@@ -35,7 +35,6 @@ Future<void> main(List<String> argv) async {
       probe: FakeProbe.alwaysSuccess(responseTime: .zero),
     );
 
-    forceGc();
     final microseconds = await _CheckOnceOverhead(checker).measure();
 
     writer.writeRecord(
@@ -47,7 +46,6 @@ Future<void> main(List<String> argv) async {
     );
 
     await checker.dispose();
-    forceGc();
   }
 
   await writer.close();

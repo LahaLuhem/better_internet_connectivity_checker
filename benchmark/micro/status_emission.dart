@@ -58,7 +58,6 @@ Future<void> main(List<String> argv) async {
 
   for (var i = 0; i < args.iterations; i++) {
     for (final subscriberCount in _subscriberCounts) {
-      forceGc();
       final microseconds = _StatusEmission(subscriberCount).measure();
       writer.writeRecord(
         iteration: i,

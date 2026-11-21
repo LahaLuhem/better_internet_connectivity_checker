@@ -545,42 +545,19 @@ candidate endpoints.
   `const Stream<ConnectivityEvent>.empty()`, an interned broadcast that
   fires `done` immediately, the same observable behaviour as the closed
   controller in the original eager-allocation design, without forcing a
-  re-allocation on use-after-dispose. The fix is measurable: on the
-  ephemeral construct/dispose pattern (`flapping_network` benchmark at
-  N=30, 2026-05-25), the median peak RSS shifts from 79.3 M → 78.7 M,
-  ~600 KB per 30-checker workload, ~17 KB per never-subscribed instance.
-  The `events`-using paths (`slow_observer`, `attachObserver`) are
-  unaffected, because the controller is allocated identically once subscription
-  happens.
-- **Known follow-up (open):** the ephemeral construct/dispose pattern
-  still shows a +19.8 % `flapping_network` median peak RSS gap vs the
-  pre-refactor baseline at N=30 (baseline 65.5 M → bugfix 78.5 M, the
-  lazy-allocation fix above only shaved ~1 pp off the original +20.9 %
-  gap). Both branches peak at the same ~80 M ceiling, so the divergence
-  is that the pre-refactor VM happens to trigger a major GC at iter 12
-  (heap drops to ~64 M) and the post-refactor VM doesn't on this
-  workload. 2 candidate causes (extra broadcast controller, and the
-  `InternetConnection ↔ _PeriodicScheduler._onTick` /
-  `_ExternalTriggerLink._on*` closure cycle) were tested and ruled out:
-  lazy allocation closed only ~1 pp, the cycle-breaking experiment
-  (nullable callback fields + null in collaborator dispose) delivered
-  zero measurable change and was reverted. A third hypothesis, that the
-  per-tick `async`/`await` wrapper in `_PeriodicScheduler._runTickAndReschedule`
-  inflating young-gen allocation pressure, was tested by rewriting the
-  wrapper as an `unawaited(_onTick().then(...))` continuation and
-  re-running `long_running` + `quiet_app` at N=30 on 2026-05-26. The
-  result was a regression, not an improvement: `quiet_app` median drift
-  +26 % (p=0.03), p95 drift +140 % (p=0.01), and `long_running` drift flat
-  (Δ +0.5 %, p=0.49). Variance also widened ~4× on the p95 metric. The
-  hand-rolled `.then()` form is apparently *worse* than the
-  Dart-compiler-optimised `async`/`await` desugaring on small-tick
-  scenarios, so the wrapper stays as it is and that hypothesis is
-  closed too. Remaining hypotheses (heap fragmentation from the new
-  collaborator layout, pure VM heuristic luck) are tracked in
-  `~/Desktop/bicc-gc-heuristic-investigation-2026-05-25.md`. Real-user
-  impact is bounded, since both ephemeral and long-lived patterns hit the
-  same peak, so this is doc-only until the investigation identifies a
-  structural cause.
+  re-allocation on use-after-dispose. The `events`-using paths
+  (`slow_observer`, `attachObserver`) are unaffected, because the controller
+  is allocated identically once subscription happens. The ~600 KB saving this
+  bullet used to quote came off `peak_rss_bytes` and does not survive the
+  metric fix, so the win is unmeasured rather than disproven.
+- **The peak-RSS follow-up is closed as a bad measurement.** It recorded a
+  +19.8 % `flapping_network` gap against the pre-refactor baseline and the
+  hypotheses chased for it. Every number came off `peak_rss_bytes`, which read
+  the whole process instead of the iteration, on a harness that allocated 8 MB
+  of garbage per settle. Dropping that allocation took `many_subscribers` from
+  a 67.6 M plateau to 14.6 M, so the gap was never shown to be this package's.
+  The benchmark reports `peak_rss_delta_bytes` now and has nothing left to
+  explain. Old notes: `~/Desktop/bicc-gc-heuristic-investigation-2026-05-25.md`.
 
 ---
 
@@ -635,7 +612,11 @@ candidate endpoints.
   `CheckCompletedEvent`) they sit well below the GC noise floor, so the
   pessimistic ceiling we computed (10 events/sec × 24 B = 240 B/sec
   sustained) is roughly 4 orders of magnitude under the Dart VM's
-  young-gen allocation tolerance. The N=30 capture artefacts are in
+  young-gen allocation tolerance. The `.then()` form was tried anyway on
+  2026-05-26 and came back worse: `quiet_app` median drift +26 % (p=0.03)
+  against a flat `long_running`. Read the direction and not the size, since
+  that came off the retired `TickDriftMeter`, but the hand-rolled continuation
+  loses to the compiler's desugaring here. The N=30 capture artefacts are in
   `benchmark/results-local/{baseline-c473acd,main}-n30/` and
   `benchmark/results-local/compare-pre-vs-post-n30/` (gitignored, since the
   raw JSONs are per-machine).

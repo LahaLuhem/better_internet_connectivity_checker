@@ -21,7 +21,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 
     Charts (one PNG each):
     - headline_max_stall.png   - max event-loop stall per scenario
-    - memory_peak_rss.png      - peak RSS per scenario
+    - memory_peak_rss.png      - peak RSS added per iteration
     - scenario_stability.png   - noise floor (slow_observer excluded)
     - subscriber_scaling.png   - broadcast cost vs N (from status_emission)
     """
@@ -58,7 +58,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 
     chart_paths: list[Path] = [
         charts.plot_headline_max_stall(dataframe, out_dir / "headline_max_stall.png"),
-        charts.plot_memory_peak_rss(dataframe, out_dir / "memory_peak_rss.png"),
+        charts.plot_memory_peak_rss_delta(dataframe, out_dir / "memory_peak_rss.png"),
         charts.plot_scenario_stability(dataframe, out_dir / "scenario_stability.png"),
     ]
     sub_chart = charts.plot_subscriber_scaling(dataframe, out_dir / "subscriber_scaling.png")

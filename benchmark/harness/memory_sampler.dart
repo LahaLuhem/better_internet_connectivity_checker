@@ -3,27 +3,24 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 
-/// Samples `ProcessInfo.currentRss` on a timer, to watch resident memory across a run. Coarser than
-/// heap size, but it's the right signal for spotting a leak.
+/// Samples `ProcessInfo.currentRss` across one measured window. Coarser than heap size, but it's
+/// the right signal for spotting a leak.
 ///
-/// 1 second by default. Faster is cheap, `currentRss` is just a `getrusage` syscall, but noisier.
-/// Slower misses short spikes.
-final class MemorySampler({final Duration _interval = const Duration(seconds: 1)}) {
+/// Every reading here is relative to the window's own first sample, because `currentRss` is
+/// process-wide and iterations share a process.
+final class MemorySampler() {
+  /// Sampling is a cheap syscall. The 1 second this replaced drew a "peak" out of 3 or 4 samples.
+  static const _interval = Duration(milliseconds: 250);
+
   final _samples = <int>[];
-  final _timestamps = <DateTime>[];
   Timer? _timer;
 
-  /// Every RSS sample so far, in bytes, oldest first.
+  /// Every RSS sample so far, in bytes, oldest first. The first one is this window's baseline.
   List<int> get samples => List.unmodifiableOf(_samples);
 
-  /// Timestamps matching [samples] one-to-one.
-  List<DateTime> get timestamps => List.unmodifiableOf(_timestamps);
-
-  /// Highest RSS seen, in bytes. Zero when nothing has been sampled.
-  int get peakRss => _samples.maxOrNull ?? 0;
-
-  /// Lowest RSS seen, which makes a decent idle baseline.
-  int get minRss => _samples.minOrNull ?? 0;
+  /// The most this window added on top of its baseline. Zero is normal, it means the process
+  /// reused pages it already held.
+  int get peakRssDelta => _samples.isEmpty ? 0 : _samples.max - _samples.first;
 
   /// Last sample minus the first. Climbing means growth, which means a possible leak.
   int get rssDelta => _samples.length < 2 ? 0 : _samples.last - _samples.first;
@@ -42,11 +39,5 @@ final class MemorySampler({final Duration _interval = const Duration(seconds: 1)
     _timer = null;
   }
 
-  /// Takes a sample right now, off-schedule, for a known interesting moment.
-  void sampleNow() => _take();
-
-  void _take() {
-    _samples.add(ProcessInfo.currentRss);
-    _timestamps.add(DateTime.now().toUtc());
-  }
+  void _take() => _samples.add(ProcessInfo.currentRss);
 }

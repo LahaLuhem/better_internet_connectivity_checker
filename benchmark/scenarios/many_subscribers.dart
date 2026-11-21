@@ -36,7 +36,6 @@ Future<void> main(List<String> argv) async {
         iteration: i,
         writer: writer,
       );
-      forceGc();
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
   }
@@ -66,7 +65,6 @@ Future<void> _runOneConfig({
       checker.onStatusChange.listen((_) => perSubscriberCounts[i]++),
   ];
 
-  forceGc();
   await Future<void>.delayed(Duration(seconds: durationSeconds));
 
   stallMeter.stop();
@@ -95,7 +93,7 @@ Future<void> _runOneConfig({
       'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,
       'total_blocked_microseconds': stallMeter.totalBlocked.inMicroseconds,
       'blocked_duty_ratio': stallMeter.blockedDutyRatio,
-      'peak_rss_bytes': memorySampler.peakRss,
+      'peak_rss_delta_bytes': memorySampler.peakRssDelta,
       'rss_delta_bytes': memorySampler.rssDelta,
     },
   );
