@@ -105,11 +105,11 @@ def cmd_compare(args: argparse.Namespace) -> int:
 def _print_compare_table(rows: list[CompareRow]) -> None:
     """Print the Mann-Whitney significance table to stdout for interactive use."""
     header = (
-        f"{'scenario':<24} {'metric':<28} "
+        f"{'scenario':<24} {'metric':<38} {'source':<8} "
         f"{'baseline':>12} {'current':>12} {'delta':>10} {'p-value':>10} {'sig?':<5}"
     )
     print(header)
-    print("-" * 105)
+    print("-" * 125)
 
     any_significant = False
     for row in rows:
@@ -117,7 +117,7 @@ def _print_compare_table(rows: list[CompareRow]) -> None:
         sig_marker = "*" if row.significant else ""
         delta_str = f"{row.delta_pct:>+9.1f}%" if math.isfinite(row.delta_pct) else "       inf"
         print(
-            f"{row.scenario:<24} {row.metric:<28} "
+            f"{row.scenario:<24} {row.metric:<38} {row.source:<8} "
             f"{row.baseline_median:>12.3f} {row.current_median:>12.3f} "
             f"{delta_str} {row.p_value:>10.4f} {sig_marker:<5}"
         )

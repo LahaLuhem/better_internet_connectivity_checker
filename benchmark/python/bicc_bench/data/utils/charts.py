@@ -406,7 +406,10 @@ def plot_compare_forest(rows: list[CompareRow], out_path: Path) -> Path:
     # horizontal bar chart (which renders the first row at the bottom).
     plot_rows = sorted(plot_rows, key=lambda r: abs(r.delta_pct))
 
-    labels = [f"{r.scenario} / {r.metric}" for r in plot_rows]
+    labels = [
+        f"{r.scenario} / {r.metric}" + (" (summary)" if r.source == "summary" else "")
+        for r in plot_rows
+    ]
     deltas = [r.delta_pct for r in plot_rows]
     colors = [_forest_colour(r) for r in plot_rows]
 

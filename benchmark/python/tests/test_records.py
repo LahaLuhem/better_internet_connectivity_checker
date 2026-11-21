@@ -13,6 +13,7 @@ class TestCompareRow:
         row = CompareRow(
             scenario="x",
             metric="y",
+            source="samples",
             baseline_median=100.0,
             current_median=50.0,
             delta_pct=-50.0,
@@ -25,6 +26,7 @@ class TestCompareRow:
         row = CompareRow(
             scenario="x",
             metric="y",
+            source="samples",
             baseline_median=100.0,
             current_median=100.0,
             delta_pct=0.0,
@@ -36,6 +38,7 @@ class TestCompareRow:
         row = CompareRow(
             scenario="x",
             metric="y",
+            source="samples",
             baseline_median=100.0,
             current_median=110.0,
             delta_pct=10.0,
@@ -47,6 +50,7 @@ class TestCompareRow:
         row = CompareRow(
             scenario="x",
             metric="y",
+            source="samples",
             baseline_median=0.0,
             current_median=10.0,
             delta_pct=math.inf,
@@ -61,6 +65,7 @@ class TestCompareRow:
         row = CompareRow(
             scenario="x",
             metric="y",
+            source="samples",
             baseline_median=1.0,
             current_median=2.0,
             delta_pct=100.0,

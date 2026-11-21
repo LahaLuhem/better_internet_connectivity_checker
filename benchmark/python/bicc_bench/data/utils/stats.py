@@ -1,10 +1,10 @@
 """Statistical helpers - pure math, no I/O. Highest-value test target.
 
 `median` is hand-rolled (no numpy) because we never have enough samples to
-matter, and the small surface keeps the dep graph clean. `group_samples`
-flattens raw `samples` arrays across records for Mann-Whitney input.
-`compute_compare_rows` is the cmd_compare workhorse extracted for unit-
-testability.
+matter, and the small surface keeps the dep graph clean. `group_samples` and
+`group_summaries` flatten the two halves of a record for Mann-Whitney input,
+and `group_by_source` keys them apart. `compute_compare_rows` is the
+cmd_compare workhorse extracted for unit-testability.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 
 from bicc_bench.config import MULTI_RECORD_SCENARIOS
-from bicc_bench.data.dtos.compare_row import CompareRow
+from bicc_bench.data.dtos.compare_row import CompareRow, MetricSource
 from bicc_bench.data.dtos.result_record import ResultRecord
 
 
@@ -52,6 +52,43 @@ def group_samples(
                 float(v) for v in values if isinstance(v, int | float)
             )
     return groups
+
+
+def group_summaries(
+    records: list[ResultRecord],
+) -> dict[tuple[str, str], list[float]]:
+    """Flatten records into `{(scenario, metric): [one scalar per record]}`.
+
+    These are the metrics no tick array carries, `max_stall_microseconds` and
+    `peak_rss_delta_bytes` among them. One value per record is far less statistical
+    power than a tick array, so read a non-significant row here as weak evidence
+    rather than as proof nothing moved.
+    """
+    groups: dict[tuple[str, str], list[float]] = {}
+    for rec in records:
+        scenario: str = rec.get("scenario", "?")
+        summary: dict[str, object] = rec.get("summary", {})
+        for metric, value in summary.items():
+            if not isinstance(value, int | float):
+                continue
+            groups.setdefault((scenario, metric), []).append(float(value))
+    return groups
+
+
+def group_by_source(
+    records: list[ResultRecord],
+) -> dict[tuple[str, str, MetricSource], list[float]]:
+    """Both halves of every record, keyed so the two can never pool into one series."""
+    grouped: dict[tuple[str, str, MetricSource], list[float]] = {
+        (scenario, metric, "samples"): values
+        for (scenario, metric), values in group_samples(records).items()
+    }
+    grouped.update(
+        ((scenario, metric, "summary"), values)
+        for (scenario, metric), values in group_summaries(records).items()
+    )
+
+    return grouped
 
 
 def records_per_scenario(records: list[ResultRecord]) -> int:
@@ -96,12 +133,12 @@ def compute_compare_rows(
     """
     from scipy import stats as scipy_stats
 
-    base_groups = group_samples(baseline_records)
-    curr_groups = group_samples(current_records)
+    base_groups = group_by_source(baseline_records)
+    curr_groups = group_by_source(current_records)
 
     rows: list[CompareRow] = []
     for key in sorted(set(base_groups) | set(curr_groups)):
-        scenario, metric = key
+        scenario, metric, source = key
         base_samples = base_groups.get(key, [])
         curr_samples = curr_groups.get(key, [])
         if not base_samples or not curr_samples:
@@ -123,6 +160,7 @@ def compute_compare_rows(
             CompareRow(
                 scenario=scenario,
                 metric=metric,
+                source=source,
                 baseline_median=base_median,
                 current_median=curr_median,
                 delta_pct=delta_pct,

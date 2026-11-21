@@ -315,7 +315,14 @@ anchor stable or grep-and-update every caller.
 - **Cost:** `target.timeout` now covers one whole `probe()` call, so a probe that retries internally
   has to fit its attempts inside that budget. A probe called on its own, outside
   `InternetConnection`, is unbounded by design, which is why the example's `MethodAwareProbe` keeps
-  its own `Future.timeout`.
+  its own `Future.timeout`. At runtime it is about 116 ns per `probe()` call, measured 2026-11-21
+  on Dart 3.14.0 in AOT at N=30 by rebuilding with the wrapper dropped and nothing else.
+  `check_once_overhead` reads that as a large percentage only because `FakeProbe` answers
+  instantly, leaving coordinator overhead as the whole measurement.
+- **Why not make it cheaper:** `HttpProbe` has no deadline of its own, so moving it down means the
+  same `Future.timeout` a layer lower. An opt-out re-opens the bug above, and that probe would
+  merge deadline with sibling cancellation itself, which is this class again. One timer per check
+  instead of per target costs `ProbeTarget.timeout` its per-target meaning.
 - **Not solved by this:** the socket. Aborting needs a request to act on, so a bounded probe leaves
   the connect in `SYN_SENT` until the OS reaps it. Only the transport can cut that, and only off the
   web: `HttpClient.connectionTimeout` returned at 1019 ms with the socket gone, against 2014 ms and

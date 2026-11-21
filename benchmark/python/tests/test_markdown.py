@@ -196,6 +196,7 @@ class TestRenderCompareTableMarkdown:
         return CompareRow(
             scenario=scenario,
             metric=metric,
+            source="samples",
             baseline_median=baseline,
             current_median=current,
             delta_pct=delta,
@@ -301,6 +302,7 @@ class TestRenderCompareMarkdown:
         return CompareRow(
             scenario=scenario,
             metric=metric,
+            source="samples",
             baseline_median=baseline,
             current_median=current,
             delta_pct=delta,
