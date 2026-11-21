@@ -55,7 +55,7 @@ def sample_records() -> list[ResultRecord]:
                 "stall_microseconds": [100, 200, 300],
             },
             summary={
-                "peak_rss_bytes": 32_000_000,
+                "peak_rss_delta_bytes": 2_000_000,
                 "max_stall_microseconds": 300,
                 "total_blocked_microseconds": 600,
                 "blocked_duty_ratio": 0.0001,
@@ -65,11 +65,11 @@ def sample_records() -> list[ResultRecord]:
             "quiet_app",
             1,
             samples={
-                "rss_bytes": [30_500_000, 31_500_000, 32_500_000],
+                "rss_bytes": [30_500_000, 31_500_000, 33_000_000],
                 "stall_microseconds": [110, 210, 310],
             },
             summary={
-                "peak_rss_bytes": 32_500_000,
+                "peak_rss_delta_bytes": 2_500_000,
                 "max_stall_microseconds": 310,
                 "total_blocked_microseconds": 630,
                 "blocked_duty_ratio": 0.0001,
@@ -79,11 +79,11 @@ def sample_records() -> list[ResultRecord]:
             "quiet_app",
             2,
             samples={
-                "rss_bytes": [31_000_000, 32_000_000, 33_000_000],
+                "rss_bytes": [31_000_000, 32_000_000, 34_000_000],
                 "stall_microseconds": [120, 220, 320],
             },
             summary={
-                "peak_rss_bytes": 33_000_000,
+                "peak_rss_delta_bytes": 3_000_000,
                 "max_stall_microseconds": 320,
                 "total_blocked_microseconds": 660,
                 "blocked_duty_ratio": 0.0001,

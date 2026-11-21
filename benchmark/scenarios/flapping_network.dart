@@ -27,7 +27,6 @@ Future<void> main(List<String> argv) async {
 
   for (var i = 0; i < args.iterations; i++) {
     await _runIteration(args, iteration: i, writer: writer);
-    forceGc();
     await Future<void>.delayed(const Duration(milliseconds: 100));
   }
 
@@ -66,7 +65,6 @@ Future<void> _runIteration(
   // Flap the server every 3 seconds. Independent of the checker's tick clock.
   final toggleTimer = Timer.periodic(const Duration(seconds: 3), (_) => server.toggle());
 
-  forceGc();
   await Future<void>.delayed(Duration(seconds: args.durationSeconds));
 
   toggleTimer.cancel();
@@ -92,7 +90,7 @@ Future<void> _runIteration(
       'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,
       'total_blocked_microseconds': stallMeter.totalBlocked.inMicroseconds,
       'blocked_duty_ratio': stallMeter.blockedDutyRatio,
-      'peak_rss_bytes': memorySampler.peakRss,
+      'peak_rss_delta_bytes': memorySampler.peakRssDelta,
       'rss_delta_bytes': memorySampler.rssDelta,
     },
   );

@@ -71,12 +71,3 @@ final class ResultWriter._({
     await _sink.close();
   }
 }
-
-/// Nudges a young-gen GC by allocating a pile of garbage and dropping it. The VM is free to ignore
-/// you, but it's the usual "clean slate before measuring" move. Call it just before a window opens.
-void forceGc() {
-  // Allocate ~8 MB of unreachable garbage to provoke young-gen collection.
-  // Drop the reference immediately; the VM should reclaim before the next synchronous chunk.
-  // ignore: unused_local_variable
-  final pressure = List<List<int>>.generate(64, (_) => List<int>.filled(16384, 0));
-}

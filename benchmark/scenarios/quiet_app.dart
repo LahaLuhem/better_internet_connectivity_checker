@@ -28,10 +28,7 @@ Future<void> main(List<String> argv) async {
 
   for (var i = 0; i < args.iterations; i++) {
     await _runIteration(args, iteration: i, writer: writer);
-    // Settle between iterations: forceGc drops young-gen pressure. The small delay gives the event
-    // loop time to drain any deferred microtasks from the previous iteration's dispose chain before
-    // we open the next checker.
-    forceGc();
+    // Let the previous iteration's dispose chain drain before the next checker opens.
     await Future<void>.delayed(const Duration(milliseconds: 100));
   }
 
@@ -51,13 +48,12 @@ Future<void> _runIteration(
     checkInterval: const Duration(milliseconds: 500),
   );
 
-  final memorySampler = MemorySampler(interval: const Duration(milliseconds: 500))..start();
+  final memorySampler = MemorySampler()..start();
   final stallMeter = EventLoopStallMeter()..start();
 
   var emissionCount = 0;
   final subscription = checker.onStatusChange.listen((_) => emissionCount++);
 
-  forceGc();
   // Let the scheduler tick for the configured duration.
   await Future<void>.delayed(Duration(seconds: args.durationSeconds));
 
@@ -77,8 +73,7 @@ Future<void> _runIteration(
       'stall_microseconds': stallMeter.stallMicroseconds,
     },
     summary: {
-      'peak_rss_bytes': memorySampler.peakRss,
-      'min_rss_bytes': memorySampler.minRss,
+      'peak_rss_delta_bytes': memorySampler.peakRssDelta,
       'rss_delta_bytes': memorySampler.rssDelta,
       'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,
       'total_blocked_microseconds': stallMeter.totalBlocked.inMicroseconds,

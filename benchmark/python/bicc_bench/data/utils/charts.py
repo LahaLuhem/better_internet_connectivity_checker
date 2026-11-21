@@ -85,31 +85,31 @@ def plot_headline_max_stall(dataframe: pl.DataFrame, out_path: Path) -> Path:
     return out_path
 
 
-def plot_memory_peak_rss(dataframe: pl.DataFrame, out_path: Path) -> Path:
-    """Box plot of peak_rss_bytes per scenario, MB on y-axis."""
-    metric = "peak_rss_bytes"
+def plot_memory_peak_rss_delta(dataframe: pl.DataFrame, out_path: Path) -> Path:
+    """Box plot of peak_rss_delta_bytes per scenario, MB on y-axis."""
+    metric = "peak_rss_delta_bytes"
     plot_df = (
         dataframe.filter(pl.col(metric).is_not_null()).select(["scenario", metric]).to_pandas()
     )
     if plot_df.empty:
-        write_empty_chart(out_path, "No peak_rss data found.")
+        write_empty_chart(out_path, "No peak_rss_delta data found.")
         return out_path
 
-    plot_df["peak_rss_mb"] = plot_df[metric] / (1024.0 * 1024.0)
+    plot_df["peak_rss_delta_mb"] = plot_df[metric] / (1024.0 * 1024.0)
 
     fig, ax = plt.subplots(figsize=(9, 5))
     sns.boxplot(
         data=plot_df,
         x="scenario",
-        y="peak_rss_mb",
+        y="peak_rss_delta_mb",
         ax=ax,
         order=sorted(plot_df["scenario"].unique()),
         hue="scenario",
         legend=False,
     )
-    ax.set_ylabel("Peak RSS (MB)")
+    ax.set_ylabel("Peak RSS added (MB)")
     ax.set_xlabel("")
-    ax.set_title("Peak resident set size per scenario")
+    ax.set_title("Peak RSS added within an iteration")
     plt.xticks(rotation=30, ha="right")
     plt.tight_layout()
     fig.savefig(out_path, dpi=CHART_DPI)
@@ -270,31 +270,31 @@ def plot_compare_headline_max_stall(paired: pl.DataFrame, out_path: Path) -> Pat
     return out_path
 
 
-def plot_compare_memory_peak_rss(paired: pl.DataFrame, out_path: Path) -> Path:
-    """Paired box plot of peak RSS per scenario, MB on y-axis."""
-    metric = "peak_rss_bytes"
+def plot_compare_memory_peak_rss_delta(paired: pl.DataFrame, out_path: Path) -> Path:
+    """Paired box plot of peak_rss_delta_bytes per scenario, MB on y-axis."""
+    metric = "peak_rss_delta_bytes"
     plot_df = (
         paired.filter(pl.col(metric).is_not_null()).select(["scenario", metric, "run"]).to_pandas()
     )
     if plot_df.empty:
-        write_empty_chart(out_path, "No peak_rss data in both runs.")
+        write_empty_chart(out_path, "No peak_rss_delta data in both runs.")
         return out_path
 
-    plot_df["peak_rss_mb"] = plot_df[metric] / (1024.0 * 1024.0)
+    plot_df["peak_rss_delta_mb"] = plot_df[metric] / (1024.0 * 1024.0)
 
     fig, ax = plt.subplots(figsize=(11, 5))
     sns.boxplot(
         data=plot_df,
         x="scenario",
-        y="peak_rss_mb",
+        y="peak_rss_delta_mb",
         hue="run",
         ax=ax,
         order=sorted(plot_df["scenario"].unique()),
         hue_order=["baseline", "current"],
     )
-    ax.set_ylabel("Peak RSS (MB)")
+    ax.set_ylabel("Peak RSS added (MB)")
     ax.set_xlabel("")
-    ax.set_title("Peak resident set size: baseline vs current")
+    ax.set_title("Peak RSS added within an iteration: baseline vs current")
     ax.legend(title="", loc="best")
     plt.xticks(rotation=30, ha="right")
     plt.tight_layout()

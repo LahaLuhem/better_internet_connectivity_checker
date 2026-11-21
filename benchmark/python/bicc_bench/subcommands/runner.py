@@ -4,7 +4,7 @@ Renamed from `run.py` to `runner.py` so it doesn't shadow the top-level
 `run.py` entry script when Python resolves imports from `benchmark/python/`.
 Iterations are batched into one subprocess per scenario - saves N-1 process
 startups per scenario without breaking measurement isolation (each iteration
-runs alone inside the process, with `forceGc` + 100 ms settle between).
+runs alone inside the process, with a 100 ms settle between).
 """
 
 from __future__ import annotations

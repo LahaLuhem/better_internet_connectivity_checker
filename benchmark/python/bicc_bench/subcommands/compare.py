@@ -25,7 +25,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
     Output files in `<out>/`:
       - compare_headline_max_stall.png   - paired box plot of max stall
-      - compare_memory_peak_rss.png      - paired box plot of peak RSS
+      - compare_memory_peak_rss.png      - paired box plot of RSS added
       - compare_scenario_stability.png   - paired box plot, slow_observer excluded
       - compare_subscriber_scaling.png   - paired line plot from status_emission
       - compare_forest.png               - % deltas, colored by sig + direction
@@ -74,7 +74,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
     chart_paths: list[Path] = [
         charts.plot_compare_headline_max_stall(paired, out_dir / "compare_headline_max_stall.png"),
-        charts.plot_compare_memory_peak_rss(paired, out_dir / "compare_memory_peak_rss.png"),
+        charts.plot_compare_memory_peak_rss_delta(paired, out_dir / "compare_memory_peak_rss.png"),
         charts.plot_compare_scenario_stability(paired, out_dir / "compare_scenario_stability.png"),
     ]
     sub_chart = charts.plot_compare_subscriber_scaling(
