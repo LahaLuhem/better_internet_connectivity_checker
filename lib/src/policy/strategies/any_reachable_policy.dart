@@ -21,16 +21,12 @@ final class const AnyReachablePolicy() implements ReachabilityPolicy {
     required ConnectivityProbe probe,
     required Duration? slowThreshold,
   }) {
-    if (targets.isEmpty) return Future.value(const Unreachable(failedProbes: []));
+    if (targets.isEmpty) return .syncValue(const Unreachable(failedProbes: []));
 
     final completer = Completer<InternetStatus>();
     final cancelCompleter = Completer<void>();
     final failures = <ProbeResult>[];
     var remaining = targets.length;
-
-    void releasePendingProbes() {
-      if (!cancelCompleter.isCompleted) cancelCompleter.complete();
-    }
 
     for (final target in targets) {
       unawaited(
@@ -42,7 +38,7 @@ final class const AnyReachablePolicy() implements ReachabilityPolicy {
               Reachable.fromResponseTime(result.responseTime, slowThreshold: slowThreshold),
             );
 
-            return releasePendingProbes();
+            return _releasePendingProbes(cancelCompleter);
           }
 
           failures.add(result);
@@ -50,12 +46,16 @@ final class const AnyReachablePolicy() implements ReachabilityPolicy {
 
           if (remaining == 0) {
             completer.complete(Unreachable(failedProbes: failures));
-            releasePendingProbes();
+            _releasePendingProbes(cancelCompleter);
           }
         }),
       );
     }
 
     return completer.future;
+  }
+
+  static void _releasePendingProbes(Completer<void> cancelCompleter) {
+    if (!cancelCompleter.isCompleted) cancelCompleter.complete();
   }
 }

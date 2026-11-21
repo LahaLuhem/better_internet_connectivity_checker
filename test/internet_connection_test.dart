@@ -90,7 +90,7 @@ void main() {
         final hangingTarget = ProbeTarget(uri: Uri.https('slow.example.com'), timeout: roomySpan);
         final probe = StubProbe(
           (target) => target == winningTarget
-              ? Future.value(ProbeResult.success(target: target, responseTime: Duration.zero))
+              ? .syncValue(ProbeResult.success(target: target, responseTime: Duration.zero))
               : Completer<ProbeResult>().future,
         );
         final connection = InternetConnection(
