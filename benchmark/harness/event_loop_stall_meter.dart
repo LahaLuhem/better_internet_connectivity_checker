@@ -15,9 +15,9 @@ import 'package:collection/collection.dart';
 /// **Why gaps and not drift.** The retired `TickDriftMeter` measured each heartbeat against a
 /// schedule that advanced once per *received* callback. Since the VM coalesces missed ticks, its
 /// `maxDrift` was really a running total of lost time scaled by run duration, not a latency: a 5 s
-/// run read ~2.75 s of "drift" when no single stall passed ~50 ms. Gaps keep each blocking window
-/// separate, so [maxStall] compares across run lengths. `Timer.tick` correction is no help either, it
-/// self-adjusts past the coalescing and hides the stall completely.
+/// run read ~2.75 s of "drift" when the worst single stall was two observer sleeps. Gaps keep each
+/// blocking window separate, so [maxStall] compares across run lengths. `Timer.tick` correction is
+/// no help either, it self-adjusts past the coalescing and hides the stall completely.
 ///
 /// ```dart
 /// final meter = EventLoopStallMeter()..start();

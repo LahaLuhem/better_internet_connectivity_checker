@@ -186,11 +186,12 @@ can't be defended.
 
 The **headline metric** is `max_stall_microseconds` on the `slow_observer`
 scenario, the package's worst case under a deliberately-blocking synchronous
-observer. Expect it to pin at the observer's own per-callback delay (~50 ms):
-a Dart isolate is single-threaded, so no dispatch strategy can shrink it. What
-the package *does* control is its check cadence under that load
-(`observer_call_count` ÷ run duration, which should hold ~10/s at the 100 ms
-interval) and the noise floor on every other scenario.
+observer. Expect about twice the observer's per-callback delay: a Dart isolate is
+single-threaded, so no dispatch strategy can shrink a sleep, and the opening check
+fires a status change and a check-completed callback in one turn. Every later
+window holds one. What the package *does* control is its check cadence under
+that load (`observer_call_count` ÷ run duration, which should hold ~10/s at the
+100 ms interval) and the noise floor on every other scenario.
 
 ## Result JSON schema
 
@@ -303,8 +304,8 @@ set.
 ### `report` outputs (single dataset)
 
 - `headline_max_stall.png`: box plot of `max_stall_microseconds` per
-  scenario on a log y-axis. `slow_observer` sits at its observer's own
-  blocking time (~50k µs), and the rest is the package's noise floor.
+  scenario on a log y-axis. `slow_observer` sits at about twice its observer's
+  per-callback delay, and the rest is the package's noise floor.
 - `memory_peak_rss.png`: peak RSS per scenario in MB.
 - `scenario_stability.png`: `max_stall_microseconds` per scenario with
   `slow_observer` excluded so the noise floor is readable. Narrow boxes =

@@ -6,7 +6,7 @@ Captured **2026-11-21** against `1.1.0` at `11d668f` on Dart SDK 3.14.0. N=30 it
 
 ## Headline: worst-case event-loop stall per scenario
 
-Longest single continuous window in which synchronous work blocked the event loop (gap between 1 ms heartbeats, minus the heartbeat interval). The `slow_observer` scenario wires a deliberately-misbehaving observer that sleeps 50 ms per callback, so its box should sit at ~50k us - the observer's own blocking time, which no dispatch strategy can mask on a single-threaded isolate. The other scenarios show the package's intrinsic noise floor.
+Longest single continuous window in which synchronous work blocked the event loop (gap between 1 ms heartbeats, minus the heartbeat interval). The `slow_observer` scenario wires a deliberately-misbehaving observer that sleeps 50 ms per callback, which no dispatch strategy can mask on a single-threaded isolate. Expect about twice that here: the opening check fires a status change and a check-completed callback in the same turn, and every later window holds one. The other scenarios show the package's intrinsic noise floor.
 
 | Scenario | N | Median (us) | IQR (us) | Min (us) | Max (us) |
 |---|---:|---:|---:|---:|---:|
