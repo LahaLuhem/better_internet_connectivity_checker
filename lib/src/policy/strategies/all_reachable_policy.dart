@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 import '../../probe/connectivity_probe.dart';
 import '../../probe/models/probe_target.dart';
 import '../../status/internet_status.dart';
@@ -24,10 +26,9 @@ final class const AllReachablePolicy() implements ReachabilityPolicy {
     final failedProbes = probeResults.where((result) => !result.isSuccess).toList(growable: false);
     if (failedProbes.isNotEmpty) return Unreachable(failedProbes: failedProbes);
 
-    final worstDuration = probeResults
-        .map((result) => result.responseTime)
-        .reduce((a, b) => a > b ? a : b);
-
-    return Reachable.fromResponseTime(worstDuration, slowThreshold: slowThreshold);
+    return Reachable.fromResponseTime(
+      probeResults.map((result) => result.responseTime).max,
+      slowThreshold: slowThreshold,
+    );
   }
 }

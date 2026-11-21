@@ -721,6 +721,135 @@ candidate endpoints.
 
 ---
 
+<a id="why-collection-is-declared"></a>
+
+## Why `package:collection` is a declared dependency
+
+- **Decision:** `collection` sits in `dependencies:`, not `dev_dependencies:`, so `lib/` reaches
+  for it on the same terms as `test/`, `benchmark/` and `example/`. The rule that follows from it
+  is [Collections](./CODESTYLE.md#collections).
+- **Why it costs downstream nothing:** `http` already drags `collection` in, by 4 separate paths
+  (`async`, `http_parser`, `source_span`, `typed_data`). Depend on this package alone and you get
+  `collection` anyway, so declaring it adds nothing to anybody's closure. It has no dependencies of
+  its own, so there is no tail behind it either.
+- **What it buys:** names for folds that were hand-rolled, `max` and `min` in place of
+  `reduce((a, b) => a > b ? a : b)`, plus `firstWhereOrNull`, `whereNot`, `sortedBy`,
+  `groupListsBy` and `slices` when they come up.
+- **What it costs:** one more version constraint to keep current, and an import that is now a
+  judgement call instead of simply unavailable.
+- **Rejected, dev-only.** It would have split the rule by directory and left `lib/` as the one
+  place a hand-rolled fold was still the right answer, in exchange for a closure saving of zero.
+
+---
+
+<a id="what-runs-and-when"></a>
+
+## What a lazy chain runs, and when
+
+`list.map(f)` builds nothing. It hands back a `MappedListIterable` that calls `f` only when asked
+for an item, and takes its length and every position straight from `list`.
+
+| On `list.map(f)`                                | Runs `f`                     |
+|-------------------------------------------------|------------------------------|
+| `length`, `isEmpty`                              | never                        |
+| `elementAt(i)`, `first`, `last`, `skip`, `take`  | once per item it touches     |
+| `toList()`, a for-in, `contains`                 | once per item, on every walk |
+| `.map(g)` on top                                 | in the same pass as `f`      |
+
+Counted with an AOT probe on Dart 3.14 over a 10-element list: `chain.length` ran `f` zero times,
+two walks of the same named chain ran it 20 times, and two walks of the same data materialised
+first ran it 10. That last line is the whole argument for materialising where the data is made. A
+stacked `.map(g)` interleaves rather than adding a pass, `f1 g1 f2 g2 f3 g3` over 3 items, and
+`first`, `last`, `take(2)` and a matching `contains` each touched only what they needed.
+
+Operations also split on whether each input still produces exactly one output, in place:
+
+| Keeps `length` and `elementAt` cheap   | Walks from the start for them      |
+|----------------------------------------|------------------------------------|
+| `map`, `cast`, `indexed`                | `where`, `whereType`, `nonNulls`   |
+| `skip`, `take`, `followedBy` of 2 such  | `expand`, `skipWhile`, `takeWhile` |
+
+The right-hand ones can't know how many items come out, or where item `i` sits, without walking,
+and everything chained after them inherits that. Same probe: `map(f).elementAt(9)` ran `f` once,
+where `where(p).elementAt(4)` ran `p` over all 10 items. A `Set` or a `Map.values` knows its own
+length but has no positions, so `elementAt` walks it too.
+
+Reading a lazy filter by index is the quadratic case.
+[`UnmodifiableListView`](https://api.dart.dev/dart-collection/UnmodifiableListView-class.html)
+keeps the iterable it was given and serves `[i]` through `elementAt`, so over a `where` every read
+walks to its match again: reading the 5 matches out of those 10 items ran the filter 30 times.
+
+---
+
+<a id="what-it-costs"></a>
+
+## What a chain costs
+
+Measured with `dart compile exe` (Dart 3.14.0, Apple Silicon) over 200 `ProbeTarget`s mapped into
+`ProbeResult`s the way
+[`AllReachablePolicy`](./lib/src/policy/strategies/all_reachable_policy.dart) does it, then read
+back for `responseTime`. Median of 15 shuffled rounds, 2 runs, warmup dropped. The probe was
+throwaway, since [`benchmark/`](./benchmark/) is where claims about this package itself go.
+
+| Shape                                                              | µs per 200 elements |
+|--------------------------------------------------------------------|---------------------|
+| `targets.map(toResult).toList(growable: false)`                      | 3.03 to 3.04        |
+| that finished list, then `.map(toDuration).toList(growable: false)`  | 5.17 to 5.18        |
+| `targets.map(toResult).map(toDuration).toList(growable: false)`      | 4.52 to 4.87        |
+
+**Fusing a second `map` in saves the intermediate list and nothing else**, here 0.3 to 0.7 µs over
+200 elements. That is a couple of nanoseconds an element, against a probe sat waiting on a
+network round trip. Hand a caller the lazy chain and they gain exactly that, then pay for a full
+rerun of every callback the moment they walk it twice
+([what a lazy chain runs](#what-runs-and-when)). Materialise where the data is made.
+
+---
+
+<a id="three-kinds-of-list"></a>
+
+## Three kinds of list
+
+The type system can't tell them apart. Each one is a `List<E>`, and breaking the wrong one throws
+at runtime, so the line that builds it is the only place that says which.
+
+| Kind                   | Built by                                 | Length  | Slots (`list[i] = x`) |
+|------------------------|------------------------------------------|---------|-----------------------|
+| Growable               | `[]`, `toList()`                         | changes | settable              |
+| Fixed-length, an array | `toList(growable: false)`, `List.filled` | locked  | settable              |
+| Unmodifiable           | `List.unmodifiableOf`                    | locked  | locked                |
+
+From the VM sources (Dart 3.14's `array_patch.dart` and `growable_array.dart`):
+
+- **Fixed-length is the lighter object.** It is one array of exactly the length. A growable list is
+  a wrapper holding a backing array plus a `_capacity` of its own.
+- **Unmodifiable is a fixed-length list, locked.** `List.unmodifiable` builds one through
+  `List.from(…, growable: false)` and flips it read-only in place with
+  `makeFixedListUnmodifiable`.
+- **`List.unmodifiableOf` is the typed one.** Added in 3.13, it takes an `Iterable<E>` and
+  redirects to `List.unmodifiable`, whose source carries its own deprecation written out and
+  commented. `Map.unmodifiableOf` is the same pair, and `Set.unmodifiable` was typed from the
+  start.
+
+Same probe as [above](#what-it-costs), 200 elements:
+
+| Shape                              | `f` a field read, µs | `f` building a `ProbeResult`, µs |
+|------------------------------------|----------------------|----------------------------------|
+| `.toList()`                        | 1.40 to 1.41         | 2.91 to 2.92                     |
+| `.toList(growable: false)`         | 1.65 to 1.68         | 3.02 to 3.06                     |
+| `List.unmodifiableOf(…)`           | 1.67 to 1.68         | 3.05 to 3.10                     |
+| `List.unmodifiable(…)`             | 2.14 to 2.37         | 3.63 to 3.65                     |
+
+The first 3 sit a few nanoseconds per element apart, and the growable one, the heaviest object of
+the three, is the quickest to build. Cost doesn't pick the kind. What each one locks down does.
+
+The untyped `List.unmodifiable` is the one real outlier, around 18 % over its `…Of` twin on both
+workloads. A duplicate-shape control in the same run rules out harness bias. Both land at the same
+factory, and `List.from`'s own comment names what the typed path skips: a type test per element.
+The rule picks `…Of` for the element type its signature accepts, not for that. It just means the
+deprecated form has nothing going for it either.
+
+---
+
 <a id="dependabot-automerge"></a>
 
 ## Dependabot's PRs auto-merge through dartender

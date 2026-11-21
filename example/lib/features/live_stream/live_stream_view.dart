@@ -126,39 +126,37 @@ class const _ThresholdSlider({
   static const _errorBandUpperStop = 0.6;
 
   @override
-  Widget build(BuildContext context) => Stack(
-    alignment: .center,
-    children: [
-      Container(
-        height: _bandHeight,
-        width: double.infinity,
-        margin: const .symmetric(horizontal: 24),
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          gradient: LinearGradient(
-            colors:
-                [
-                      ConstTheme.orange(context),
-                      ConstTheme.orange(context),
-                      ConstTheme.green(context),
-                      ConstTheme.green(context),
-                    ]
-                    .map((colour) => colour.withValues(alpha: ConstTheme.statusOutlineAlpha))
-                    .toList(growable: false),
-            stops: const [0, _errorBandLowerStop, _errorBandUpperStop, 1],
+  Widget build(BuildContext context) {
+    final slowColour = ConstTheme.orange(context).withValues(alpha: ConstTheme.statusOutlineAlpha);
+    final goodColour = ConstTheme.green(context).withValues(alpha: ConstTheme.statusOutlineAlpha);
+
+    return Stack(
+      alignment: .center,
+      children: [
+        Container(
+          height: _bandHeight,
+          width: double.infinity,
+          margin: const .symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            gradient: LinearGradient(
+              // Repeated so each colour holds flat, then ramps between the 2 middle stops.
+              colors: [slowColour, slowColour, goodColour, goodColour],
+              stops: const [0, _errorBandLowerStop, _errorBandUpperStop, 1],
+            ),
           ),
         ),
-      ),
-      PlatformSlider(
-        max: ConstDurations.maxSelectableLiveStreamSlowThreshold.inMilliseconds.toDouble(),
-        divisions: ConstValues.liveStreamSlowThresholdSliderDivisions,
-        value: sliderValueMs,
-        onChanged: viewModel.onSlowThresholdSliderChanged,
-        onChangeEnd: (value) => unawaited(viewModel.onSlowThresholdSliderReleased(value)),
-        materialSliderData: MaterialSliderData(
-          label: sliderValueMs <= 0 ? 'off' : '${sliderValueMs.round()} ms',
+        PlatformSlider(
+          max: ConstDurations.maxSelectableLiveStreamSlowThreshold.inMilliseconds.toDouble(),
+          divisions: ConstValues.liveStreamSlowThresholdSliderDivisions,
+          value: sliderValueMs,
+          onChanged: viewModel.onSlowThresholdSliderChanged,
+          onChangeEnd: (value) => unawaited(viewModel.onSlowThresholdSliderReleased(value)),
+          materialSliderData: MaterialSliderData(
+            label: sliderValueMs <= 0 ? 'off' : '${sliderValueMs.round()} ms',
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }

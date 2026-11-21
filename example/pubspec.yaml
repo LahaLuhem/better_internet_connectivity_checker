@@ -13,6 +13,7 @@ dependencies:
   better_internet_connectivity_checker:
     path: ../
 
+  collection: ^1.19.1
   connectivity_plus: ^7.3.2
   cupertino_ui: ^1.1.7
   gap: ^3.1.0

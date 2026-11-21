@@ -3,6 +3,8 @@ library;
 
 import 'dart:async';
 
+import 'package:collection/collection.dart';
+
 /// Measures how long the event loop goes unresponsive, off a 1 ms heartbeat timer.
 ///
 /// Each heartbeat records the gap since the last. A gap past `stallFloor`, 2 ms by default, counts as
@@ -32,15 +34,19 @@ final class EventLoopStallMeter({
   Timer? _timer;
   Stopwatch? _stopwatch;
   Duration _lastFire = .zero;
+  Duration _totalBlocked = .zero;
 
-  /// Every stall, in order. Mostly zeros on a healthy loop, with blocking windows as lone spikes.
-  List<Duration> get stalls => List.unmodifiable(_stalls);
+  /// Every stall, in order. Microseconds because that's what the result JSON takes. Mostly zeros
+  /// on a healthy loop, with blocking windows as lone spikes.
+  List<int> get stallMicroseconds =>
+      _stalls.map((stall) => stall.inMicroseconds).toList(growable: false);
 
   /// Longest single continuous stall seen so far. Zero if no samples.
-  Duration get maxStall => _stalls.isEmpty ? .zero : _stalls.reduce((a, b) => a > b ? a : b);
+  Duration get maxStall => _stalls.maxOrNull ?? .zero;
 
-  /// Total event-loop time lost to stalls over the measured window.
-  Duration get totalBlocked => _stalls.fold(.zero, (a, b) => a + b);
+  /// Total event-loop time lost to stalls over the measured window. Added up as they land, so
+  /// reading it mid-run is free.
+  Duration get totalBlocked => _totalBlocked;
 
   /// Share of the window spent stalled, `0.0` to `1.0`. Works mid-run, reads zero before [start].
   ///
@@ -74,6 +80,8 @@ final class EventLoopStallMeter({
     // One stall is one oversized gap, because the VM coalesces the missed heartbeats into a single
     // late callback. Sub-floor gaps are timer granularity rather than blocking, and summing that
     // jitter would inflate `blockedDutyRatio` into a big phantom floor, so they record zero.
-    _stalls.add(gap > _stallFloor ? gap - _interval : .zero);
+    final stallDuration = gap > _stallFloor ? gap - _interval : Duration.zero;
+    _stalls.add(stallDuration);
+    _totalBlocked += stallDuration;
   }
 }

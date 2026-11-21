@@ -33,7 +33,7 @@ final class FakeProbe implements ConnectivityProbe {
       _mode = .scripted,
       _responseTime = .zero,
       _error = null,
-      _script = List.unmodifiable(script);
+      _script = List.unmodifiableOf(script);
 
   /// Number of probe calls served so far. Useful for assertions in tests and for sanity-checking scenario behaviour.
   int get callCount => _callCount;
