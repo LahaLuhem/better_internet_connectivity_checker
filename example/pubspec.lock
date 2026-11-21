@@ -157,6 +157,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  functional_listener:
+    dependency: transitive
+    description:
+      name: functional_listener
+      sha256: "026d1bd4f66367f11d9ec9f1f1ddb42b89e4484b356972c76d983266cf82f33f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.1"
   gap:
     dependency: "direct main"
     description:
@@ -221,6 +229,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.1"
+  listenable_collections:
+    dependency: "direct main"
+    description:
+      name: listenable_collections
+      sha256: "6918f11f1e110824c447bde1481724a274542be53dfd605e4f08119fd316d281"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   matcher:
     dependency: transitive
     description:

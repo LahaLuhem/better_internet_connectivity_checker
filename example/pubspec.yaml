@@ -18,6 +18,7 @@ dependencies:
   cupertino_ui: ^1.1.7
   gap: ^3.1.0
   http: ^1.6.0
+  listenable_collections: ^3.0.0
   material_ui: ^1.11.1
   platform_adaptive_widgets: ^3.2.0
   platform_icons: ^0.1.1
