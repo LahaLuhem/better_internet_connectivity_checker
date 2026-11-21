@@ -72,8 +72,8 @@ addopts = "-ra --strict-markers --cov=bicc_bench --cov-report=term-missing"
 [tool.coverage.run]
 # Coverage scope = the unit-testable, deterministic surface. Per
 # `benchmark/python/.ai/AGENTS.md`:
-#   - `charts.py`  - PNG-rendering, smoke-only (chart byte comparison is
-#                    brittle; end-to-end smoke covers it).
+#   - `charts.py`  - PNG-rendering, smoke-only. Pixel comparison is brittle,
+#                    so tests/test_charts.py gates byte-reproducibility only.
 #   - `subcommands/*` - argparse-dispatch + I/O orchestration, smoke-only
 #                       (the pure helpers they call live in data/utils and
 #                       are unit-tested individually).

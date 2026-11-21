@@ -91,12 +91,15 @@ benchmark/python/
 - Shared fixtures live in [`tests/conftest.py`](../tests/conftest.py) -
   synthetic `ResultRecord` lists, not on-disk fixture JSON files.
 - **Test the deterministic surface**: math, formatting, table rendering,
-  CLI arg parsing. Skip chart PNG comparison, which is brittle. The end-to-end smoke run covers
-  chart rendering.
+  CLI arg parsing. Chart *pixels* stay untested, which is the brittle part. Chart *bytes* don't:
+  [`tests/test_charts.py`](../tests/test_charts.py) re-renders each committed report PNG and
+  compares, because `benchmark/reports/*.png` is in git and an unseeded renderer rewrites it on
+  every run. The end-to-end smoke covers the rest.
 - **Coverage scope** is configured in [`pyproject.toml`](../pyproject.toml)
   under `[tool.coverage.run]`. `charts.py` and `subcommands/*` are
   `omit`-ed because they're smoke-only by design, so they appear in neither the numerator nor the
-  denominator. Everything else (config,
+  denominator. `tests/test_charts.py` doesn't change that, since it gates byte-reproducibility
+  rather than branch coverage. Everything else (config,
   data/dtos, data/utils minus charts) sits inside the scope and is
   expected to be unit-tested. **CI gate is 95%** (`python-min-coverage: 95`
   in [`.github/workflows/ci.yml`](../../../.github/workflows/ci.yml)).
