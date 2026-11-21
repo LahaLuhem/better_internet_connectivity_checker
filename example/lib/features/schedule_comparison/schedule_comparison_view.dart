@@ -63,27 +63,31 @@ class const ScheduleComparisonView({super.key}) extends StatelessWidget {
               ),
             ),
             const Gap(16),
-            ValueListenableBuilder(
-              valueListenable: viewModel.ladderStateListenable,
-              builder: (context, ladderState, _) => Column(
-                spacing: 16,
-                children: [
-                  _LadderCard(
+            Column(
+              spacing: 16,
+              children: [
+                // A ladder each, so a tick on one does not rebuild the other.
+                ValueListenableBuilder(
+                  valueListenable: viewModel.fixedRungsListenable,
+                  builder: (context, rungs, _) => _LadderCard(
                     title: 'FixedIntervalSchedule (default)',
                     blurb:
                         'Same gap every check: '
                         '${ConstFormatters.humanReadableDuration(ConstScheduleComparison.baseInterval)}.',
-                    rungs: ladderState.fixed,
+                    rungs: rungs,
                   ),
-                  _LadderCard(
+                ),
+                ValueListenableBuilder(
+                  valueListenable: viewModel.backoffRungsListenable,
+                  builder: (context, rungs, _) => _LadderCard(
                     title: 'ExponentialBackoffSchedule',
                     blurb:
                         'Doubles from the second failure, capped at '
                         '${ConstFormatters.humanReadableDuration(ConstScheduleComparison.maxBackoffDelay)}.',
-                    rungs: ladderState.backoff,
+                    rungs: rungs,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:listenable_collections/listenable_collections.dart';
 import 'package:pmvvm/pmvvm.dart';
 
 import 'data/constants/const_schedule_comparison.dart';
@@ -9,22 +10,22 @@ import 'data/constants/const_schedule_comparison.dart';
 /// One rung of a ladder: the delay a schedule asked for, and the streak behind it.
 typedef ScheduledRung = ({Duration delay, int consecutiveFailures});
 
-/// Both ladders, always written together as one tick.
-typedef LadderState = ({List<ScheduledRung> fixed, List<ScheduledRung> backoff});
-
 final class ScheduleComparisonViewModel() extends ViewModel {
   InternetConnection? _fixedConnection;
   InternetConnection? _backoffConnection;
   final _subscriptions = <StreamSubscription<void>>[];
 
-  final _ladderStateNotifier = ValueNotifier<LadderState>((fixed: [], backoff: []));
+  final _fixedRungsNotifier = ListNotifier<ScheduledRung>();
+  final _backoffRungsNotifier = ListNotifier<ScheduledRung>();
   final _shouldProbeReachableTargetNotifier = ValueNotifier(false);
   final _shouldJitterNotifier = ValueNotifier(false);
 
   @override
   void init() => _buildConnections();
 
-  ValueListenable<LadderState> get ladderStateListenable => _ladderStateNotifier;
+  ValueListenable<List<ScheduledRung>> get fixedRungsListenable => _fixedRungsNotifier;
+
+  ValueListenable<List<ScheduledRung>> get backoffRungsListenable => _backoffRungsNotifier;
 
   ValueListenable<bool> get shouldProbeReachableTargetListenable =>
       _shouldProbeReachableTargetNotifier;
@@ -46,7 +47,8 @@ final class ScheduleComparisonViewModel() extends ViewModel {
     // late event from a disposed connection cannot reach a cancelled subscription.
     unawaited(_teardown());
 
-    _ladderStateNotifier.value = (fixed: [], backoff: []);
+    _fixedRungsNotifier.clear();
+    _backoffRungsNotifier.clear();
 
     final targets = _shouldProbeReachableTargetNotifier.value
         ? ConstScheduleComparison.reachableTargets
@@ -63,9 +65,9 @@ final class ScheduleComparisonViewModel() extends ViewModel {
       // caller actually gets, since the package jitters by default.
       schedule: ExponentialBackoffSchedule(
         maxDelay: ConstScheduleComparison.maxBackoffDelay,
-        randomizationFactor: _shouldJitterNotifier.value
-            ? ConstScheduleComparison.demoRandomizationFactor
-            : 0,
+        randomizationFactor: !_shouldJitterNotifier.value
+            ? 0
+            : ConstScheduleComparison.demoRandomizationFactor,
       ),
     );
 
@@ -84,26 +86,22 @@ final class ScheduleComparisonViewModel() extends ViewModel {
   StreamSubscription<ConnectivityEvent> _recordLadder(
     InternetConnection connection, {
     required bool isBackoff,
-  }) => connection.events.listen((event) {
+  }) => connection.events.listen((event) => recordRung(event, isBackoff: isBackoff));
+
+  /// Split out so a test can drive it without standing up a real connection.
+  @visibleForTesting
+  void recordRung(ConnectivityEvent event, {required bool isBackoff}) {
     if (event case NextCheckScheduledEvent(:final delay, :final scheduleContext)) {
-      final currentLadderState = _ladderStateNotifier.value;
-      final existingRungs = isBackoff ? currentLadderState.backoff : currentLadderState.fixed;
+      final rungsNotifier = isBackoff ? _backoffRungsNotifier : _fixedRungsNotifier;
       // Keeps the first rungs, which are the interesting ones: past the cap every
       // later delay is identical. Bailing out also spares a tick per capped check.
-      if (existingRungs.length >= ConstScheduleComparison.ladderLength) return;
+      if (rungsNotifier.length >= ConstScheduleComparison.ladderLength) return;
 
-      final updatedRungs = [
-        ...existingRungs,
-        (delay: delay, consecutiveFailures: scheduleContext.consecutiveFailures),
-      ];
-
-      _ladderStateNotifier.value = isBackoff
-          ? (fixed: currentLadderState.fixed, backoff: updatedRungs)
-          : (fixed: updatedRungs, backoff: currentLadderState.backoff);
+      rungsNotifier.add((delay: delay, consecutiveFailures: scheduleContext.consecutiveFailures));
     }
-  });
+  }
 
-  Future<void> _teardown() async {
+  Future<void> _teardown() {
     final pendingFutures = [
       ..._subscriptions.map((subscription) => subscription.cancel()),
       ?_fixedConnection?.dispose(),
@@ -113,15 +111,17 @@ final class ScheduleComparisonViewModel() extends ViewModel {
     _fixedConnection = null;
     _backoffConnection = null;
 
-    await pendingFutures.wait;
+    return pendingFutures.wait;
   }
 
   @override
   void dispose() {
     unawaited(_teardown());
-    _ladderStateNotifier.dispose();
+    _fixedRungsNotifier.dispose();
+    _backoffRungsNotifier.dispose();
     _shouldProbeReachableTargetNotifier.dispose();
     _shouldJitterNotifier.dispose();
+
     super.dispose();
   }
 }
