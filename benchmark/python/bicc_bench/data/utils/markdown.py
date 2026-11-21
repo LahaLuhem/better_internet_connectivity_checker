@@ -184,11 +184,10 @@ def render_summary_markdown(
 
     parts.extend(
         [
-            "## Peak resident set size per scenario\n",
-            "Peak RSS captured via `ProcessInfo.currentRss` sampled every 500 ms "
-            "(every 250 ms in `long_running`). The package's memory footprint "
-            "baseline, and future refactors should not regress it without reason.\n",
-            metric_table(dataframe, "peak_rss_bytes", units="MB"),
+            "## Peak RSS added per iteration\n",
+            "How far RSS climbed above where the iteration found it. Zero is "
+            "the normal reading, not a sign the iteration was free.\n",
+            metric_table(dataframe, "peak_rss_delta_bytes", units="MB"),
         ]
     )
     if "memory_peak_rss.png" in chart_names:
@@ -282,10 +281,9 @@ def render_compare_markdown(
 
     parts.extend(
         [
-            "## Memory: peak RSS, baseline vs current\n",
-            "Steady-state memory footprint should not regress. A shift > "
-            "5-10 MB warrants investigation, and below that is noise on most "
-            "machines.\n",
+            "## Memory: peak RSS added per iteration, baseline vs current\n",
+            "Both sides should sit near zero. A side that keeps climbing every "
+            "iteration is the leak.\n",
         ]
     )
     if "compare_memory_peak_rss.png" in chart_names:

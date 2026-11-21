@@ -46,7 +46,6 @@ Future<void> main(List<String> argv) async {
   for (var i = 0; i < args.iterations; i++) {
     final observer = _NoopCountingObserver();
 
-    forceGc();
     final microseconds = _ObserverDispatch(observer, previous, next).measure();
 
     writer.writeRecord(

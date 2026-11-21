@@ -1,6 +1,6 @@
 /// Scenario: long-running stability.
 ///
-/// Quiet-app shape, but sampling memory harder. The default 10 seconds is a smoke test, so pass
+/// Quiet-app shape, run long. The default duration is a smoke test, so pass
 /// `--duration-seconds 3600` for the real bake.
 ///
 /// Watch `rss_delta_bytes`. Climbing over a long run is a leak, hovering around the baseline is fine.
@@ -29,7 +29,6 @@ Future<void> main(List<String> argv) async {
 
   for (var i = 0; i < args.iterations; i++) {
     await _runIteration(args, iteration: i, writer: writer);
-    forceGc();
     await Future<void>.delayed(const Duration(milliseconds: 100));
   }
 
@@ -49,15 +48,12 @@ Future<void> _runIteration(
     checkInterval: const Duration(seconds: 5),
   );
 
-  // Sample every 250 ms, a finer resolution for leak detection. For 1 h runs
-  // that's ~14k samples (~120 KB of int data). Acceptable.
-  final memorySampler = MemorySampler(interval: const Duration(milliseconds: 250))..start();
+  final memorySampler = MemorySampler()..start();
   final stallMeter = EventLoopStallMeter()..start();
 
   var emissionCount = 0;
   final subscription = checker.onStatusChange.listen((_) => emissionCount++);
 
-  forceGc();
   await Future<void>.delayed(Duration(seconds: args.durationSeconds));
 
   stallMeter.stop();
@@ -79,8 +75,7 @@ Future<void> _runIteration(
       'stall_microseconds': stallMeter.stallMicroseconds,
     },
     summary: {
-      'peak_rss_bytes': memorySampler.peakRss,
-      'min_rss_bytes': memorySampler.minRss,
+      'peak_rss_delta_bytes': memorySampler.peakRssDelta,
       'rss_delta_bytes': memorySampler.rssDelta,
       'rss_growth_bytes_per_minute': rssGrowthPerMinute,
       'max_stall_microseconds': stallMeter.maxStall.inMicroseconds,

@@ -36,7 +36,6 @@ Future<void> main(List<String> argv) async {
 
   for (var i = 0; i < args.iterations; i++) {
     await _runIteration(args, iteration: i, writer: writer);
-    forceGc();
     await Future<void>.delayed(const Duration(milliseconds: 100));
   }
 
@@ -62,7 +61,6 @@ Future<void> _runIteration(
   var emissionCount = 0;
   final subscription = checker.onStatusChange.listen((_) => emissionCount++);
 
-  forceGc();
   await Future<void>.delayed(Duration(seconds: args.durationSeconds));
 
   stallMeter.stop();
@@ -85,7 +83,7 @@ Future<void> _runIteration(
       'blocked_duty_ratio': stallMeter.blockedDutyRatio,
       'emission_count': emissionCount,
       'observer_call_count': totalObserverCalls,
-      'peak_rss_bytes': memorySampler.peakRss,
+      'peak_rss_delta_bytes': memorySampler.peakRssDelta,
     },
   );
 }

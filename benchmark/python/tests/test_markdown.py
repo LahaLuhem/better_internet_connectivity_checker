@@ -148,8 +148,8 @@ class TestMetricTable:
     ) -> None:
         df = pl.DataFrame(flatten_records(sample_records), infer_schema_length=None)
         # Exclude the only scenario - placeholder triggers
-        result = metric_table(df, "peak_rss_bytes", units="MB", exclude_scenario="quiet_app")
-        assert "no `peak_rss_bytes` data" in result
+        result = metric_table(df, "peak_rss_delta_bytes", units="MB", exclude_scenario="quiet_app")
+        assert "no `peak_rss_delta_bytes` data" in result
 
 
 class TestSubscriberScalingTable:
@@ -254,7 +254,7 @@ class TestRenderSummaryMarkdown:
         # All five h2 sections rendered
         assert "## Headline: worst-case event-loop stall per scenario" in result
         assert "## Event-loop blocked share per scenario" in result
-        assert "## Peak resident set size per scenario" in result
+        assert "## Peak RSS added per iteration" in result
         assert "## Stability: noise floor across scenarios" in result
         assert "## Subscriber scaling: broadcast cost vs N listeners" in result
         # All four chart embeds
@@ -279,7 +279,7 @@ class TestRenderSummaryMarkdown:
         # their tables even without the chart).
         assert "## Headline: worst-case event-loop stall per scenario" in result
         assert "## Event-loop blocked share per scenario" in result
-        assert "## Peak resident set size per scenario" in result
+        assert "## Peak RSS added per iteration" in result
         assert "## Stability: noise floor across scenarios" in result
         # Subscriber scaling section is wrapped in `if chart present`, so
         # without the chart its h2 should NOT appear.

@@ -98,8 +98,8 @@ uv run python run.py compare ../results-local/baseline/aggregated.json \
 
 Iteration *batching* (one subprocess per scenario instead of per iteration)
 is a different optimisation, preserving measurement isolation because
-each iteration still runs alone in the process, with `forceGc` + a 100 ms
-settle between iterations.
+each iteration still runs alone in the process, with a 100 ms settle
+between iterations.
 
 ### Linting the Python side
 
@@ -125,8 +125,7 @@ can't be defended.
   change invalidates the baseline.
 - **N ≥ 10 iterations** per scenario for routine sanity checks. **Bump to
   N=30 minimum** before claiming a regression or improvement on
-  `many_subscribers` stall metrics or `flapping_network` `rss_bytes`,
-  those 2 metric/scenario pairs swing wildly at N=10. Real example
+  `many_subscribers` stall metrics, which swing wildly at N=10. Real example
   (captured with the pre-redesign `TickDriftMeter`, whose integral
   semantics amplified jitter): the `many_subscribers` drift delta across
   4 N=10 captures of the in-progress event-bus refactor read +95 %,
@@ -138,12 +137,24 @@ can't be defended.
   be less duration-sensitive, but re-verify the noise floor before
   relaxing the N=30 rule. Report **median and IQR**, never mean, because GC
   outliers skew means heavily on a single-threaded VM.
+- **Memory is a per-iteration climb, not an absolute.** `peak_rss_delta_bytes`
+  is how far RSS rose above where the iteration found it. Zero is the normal
+  reading, not a sign the iteration was free. The absolute it replaced read
+  `ProcessInfo.currentRss` straight, which is process-wide, so it pinned after
+  an iteration or 2 and every later record just repeated it. Old files keep the
+  old `peak_rss_bytes` key and will not pair with new ones.
+- **Re-run the old binary before calling an RSS delta a regression.** Build it
+  from the old SHA and run it now, next to the new one. A reproducible
+  after-value is not a control: 2 post-change runs once agreed to 0.1 MB and
+  the old binary then matched them.
 - **Mann-Whitney U** (`scipy.stats.mannwhitneyu`) for significance claims.
   Nonparametric, robust to GC outliers, doesn't assume normality. p < 0.05
   for "significant difference" claims.
 - **Warmup iterations discarded**, the first 2 of every 10.
-- **GC forced before each measurement window** via a pressure-allocation
-  helper (`harness/result_writer.dart`'s `forceGc()`).
+- **No forced GC.** An isolate can't trigger one. The pressure-allocation
+  trick that used to stand in for it allocated 8 MB inside the window it was
+  meant to clean, and dropping it took `many_subscribers` from a 67.6 MB
+  plateau to 14.6 MB. Iterations settle for 100 ms between runs instead.
 - **AC power, no competing apps.** The Dart VM is single-threaded, so CPU
   contention shows up directly as wall-clock drift.
 - **Localhost only**, no DNS and no real network. All HTTP probes hit a
