@@ -18,6 +18,7 @@ heading text, so renames don't break callers.
 - [ViewModel member ordering](#viewmodel-member-ordering)
 - [Separation of concerns](#separation-of-concerns)
 - [Widget composition](#widget-composition)
+  - [Collection-for / collection-if in widget trees](#collection-for-collection-if-in-widget-trees)
   - [Native widget parameters](#native-widget-parameters)
   - [Spacing: rule of 8](#spacing-rule-of-8)
   - [Platform-adaptive widgets](#platform-adaptive-widgets)
@@ -198,6 +199,44 @@ backtracking.
 <!-- TOC --><a name="widget-composition"></a>
 
 ## Widget composition
+
+<a id="widget-collection-literals"></a>
+<!-- TOC --><a name="collection-for-collection-if-in-widget-trees"></a>
+
+### Collection-for / collection-if in widget trees
+
+A literal list with embedded control flow reads as data, where a `.map(…).toList()` reads as a
+pipeline that incidentally produces data. The literal form also doesn't bloat the file with
+`<T>` annotations the list-literal context already infers:
+
+```dart
+// Prefer:
+DropdownButton(
+  value: viewModel.probeMethod,
+  items: [
+    for (final method in ProbeMethod.values)
+      DropdownMenuItem(value: method, child: Text(method.label)),
+  ],
+  onChanged: …,
+)
+
+// Over:
+DropdownButton<ProbeMethod>(
+  value: viewModel.probeMethod,
+  items: ProbeMethod.values
+      .map((m) => DropdownMenuItem<ProbeMethod>(value: m, child: Text(m.label)))
+      .toList(),
+  onChanged: …,
+)
+```
+
+Drop explicit generic type arguments when the surrounding context (other args, the
+assignment target, the return slot) already pins them. Keep them when inference would
+otherwise fall back to `dynamic`. For example `MaterialPageRoute<void>(builder: …)` stays,
+because nothing else constrains the route's `T`.
+
+This is the one place the chain loses. Away from the widget tree, in the library and in this app's
+view models, chain instead, see [Collections](../CODESTYLE.md#collections).
 
 <a id="widget-native-params"></a>
 <!-- TOC --><a name="native-widget-parameters"></a>

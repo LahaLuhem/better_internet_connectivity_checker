@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
@@ -126,13 +127,13 @@ final class CustomTargetsViewModel() extends ViewModel {
     return allowSeen;
   }
 
-  static ProbeMethod? _parseAllowedMethod(String allow) {
-    final probeMethodNames = allow.split(',').map((method) => method.trim().toUpperCase()).toSet();
-    for (final candidate in ProbeMethod.values) {
-      if (probeMethodNames.contains(candidate.label)) return candidate;
-    }
+  static ProbeMethod? _parseAllowedMethod(String allowMethodsRaw) {
+    final probeMethodNames = allowMethodsRaw
+        .split(',')
+        .map((method) => method.trim().toUpperCase())
+        .toSet();
 
-    return null;
+    return .values.firstWhereOrNull((method) => probeMethodNames.contains(method.label));
   }
 
   @override
@@ -143,6 +144,7 @@ final class CustomTargetsViewModel() extends ViewModel {
     _timeoutSecondsNotifier.dispose();
     _lastOutcomeNotifier.dispose();
     _urlErrorNotifier.dispose();
+
     super.dispose();
   }
 }

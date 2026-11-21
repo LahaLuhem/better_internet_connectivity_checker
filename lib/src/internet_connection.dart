@@ -56,7 +56,7 @@ final class InternetConnection({
   Stream<void>? externalRecheckTrigger,
 }) {
   final List<ProbeTarget> _targets = targets != null
-      ? List.unmodifiable(targets)
+      ? List.unmodifiableOf(targets)
       : Values.defaultProbeTargets;
   final ConnectivityProbe _probe = _DeadlineProbe(probe ?? HttpProbe.head());
   final _externalTrigger = externalRecheckTrigger;
@@ -168,10 +168,14 @@ final class InternetConnection({
     final status = await checkOnce();
     if (_disposed || !_statusController.hasListener) return _checkInterval;
 
-    _eventSink.emit(CheckCompletedEvent(status));
+    // emit() drops these when nobody reads `events`, but the event is already built by then.
+    final hasEventListener = _eventSink.hasListener;
+    if (hasEventListener) _eventSink.emit(CheckCompletedEvent(status));
 
     if (_isDistinctKind(_lastStatus, status)) {
-      _eventSink.emit(StatusEmittedEvent(previous: _lastStatus, next: status));
+      if (hasEventListener) {
+        _eventSink.emit(StatusEmittedEvent(previous: _lastStatus, next: status));
+      }
       _statusController.add(status);
     }
     _lastStatus = status;
@@ -183,7 +187,9 @@ final class InternetConnection({
       lastStatus: status,
     );
     final nextDelay = _schedule.nextDelay(scheduleContext);
-    _eventSink.emit(NextCheckScheduledEvent(delay: nextDelay, scheduleContext: scheduleContext));
+    if (hasEventListener) {
+      _eventSink.emit(NextCheckScheduledEvent(delay: nextDelay, scheduleContext: scheduleContext));
+    }
 
     return nextDelay;
   }
