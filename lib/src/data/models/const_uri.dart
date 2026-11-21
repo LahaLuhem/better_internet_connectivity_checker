@@ -15,7 +15,8 @@ final class const ConstUri(final String _uri) implements Uri {
   /// Wraps a URI string. Nothing is parsed until you read a member.
   this;
 
-  Uri get _delegate => _cache.putIfAbsent(_uri, () => Uri.parse(_uri));
+  // `putIfAbsent` would build its closure on every hit too.
+  Uri get _delegate => _cache[_uri] ??= Uri.parse(_uri);
 
   @override
   String get authority => _delegate.authority;

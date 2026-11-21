@@ -13,8 +13,7 @@ final class const NextCheckScheduledEvent({
 }) extends ConnectivityEvent {
   /// Creates a [NextCheckScheduledEvent].
   this;
-  // coverage:ignore-start
+
   @override
   String toString() => 'NextCheckScheduledEvent(delay: $delay, scheduleContext: $scheduleContext)';
-  // coverage:ignore-end
 }

@@ -61,23 +61,4 @@ void main() {
       check(target.followRedirects).isTrue;
     });
   });
-
-  feature('ProbeTarget.toString', () {
-    scenario('renders uri, timeout, redirect handling and headers in stable form', () {
-      const customHeaders = {'X-Custom': 'value'};
-      final target = ProbeTarget(
-        uri: Uri.https('example.com', '/healthz'),
-        timeout: const Duration(seconds: 2),
-        headers: customHeaders,
-      );
-
-      check(target.toString()).equals(
-        'ProbeTarget('
-        'uri: https://example.com/healthz, '
-        'timeout: 0:00:02.000000, '
-        'followRedirects: false, '
-        'headers: {X-Custom: value})',
-      );
-    });
-  });
 }

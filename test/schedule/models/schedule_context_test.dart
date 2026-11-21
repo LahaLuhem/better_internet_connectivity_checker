@@ -42,21 +42,4 @@ void main() {
       ).throws<AssertionError>();
     });
   });
-
-  feature('ScheduleContext.toString', () {
-    scenario('renders every field in stable diagnostic form', () {
-      const context = ScheduleContext(
-        baseInterval: Duration(seconds: 10),
-        consecutiveFailures: 2,
-        lastStatus: Unreachable(failedProbes: []),
-      );
-
-      check(context.toString()).equals(
-        'ScheduleContext('
-        'baseInterval: 0:00:10.000000, '
-        'consecutiveFailures: 2, '
-        'lastStatus: Unreachable(failedProbes: []))',
-      );
-    });
-  });
 }

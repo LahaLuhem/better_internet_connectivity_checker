@@ -2,295 +2,74 @@ import 'dart:async';
 
 import 'package:better_internet_connectivity_checker/better_internet_connectivity_checker.dart';
 import 'package:checks/checks.dart';
-import 'package:fake_async/fake_async.dart';
 import 'package:test/scaffolding.dart';
 
 import 'support/bdd.dart';
 import 'support/recording_observer.dart';
-import 'support/stub_probe.dart';
 
 void main() {
-  final target = ProbeTarget(uri: Uri.https('example.com'));
+  const reachable = Reachable(responseTime: Duration(milliseconds: 50), quality: .good);
+  const unreachable = Unreachable(failedProbes: []);
+  const shortInterval = Duration(seconds: 3);
+  const longInterval = Duration(seconds: 5);
+  const scheduleContext = ScheduleContext(
+    baseInterval: longInterval,
+    consecutiveFailures: 2,
+    lastStatus: unreachable,
+  );
+  const triggerError = FormatException('bad signal');
 
-  ProbeResult successResult(ProbeTarget t) =>
-      ProbeResult.success(target: t, responseTime: const Duration(milliseconds: 50));
-
-  ProbeResult failureResult(ProbeTarget t) =>
-      ProbeResult.failure(target: t, responseTime: const Duration(milliseconds: 50));
-
-  feature('ConnectivityObserver', () {
-    scenario('an omitted observer stays silent and never throws on any lifecycle event', () {
-      // Exercises the private default no-op observer indirectly by running
-      // a full check / emit / interval-change / dispose sequence without
-      // passing one.
-      final probe = StubProbe((t) async => successResult(t));
-      final trigger = StreamController<void>.broadcast();
-      addTearDown(trigger.close);
-
-      fakeAsync((async) {
-        final connection = InternetConnection(
-          targets: [target],
-          probe: probe,
-          externalRecheckTrigger: trigger.stream,
-          checkInterval: const Duration(seconds: 5),
-        );
-        final sub = connection.onStatusChange.listen(noopWithVal);
-        async.flushMicrotasks();
-
-        connection.checkInterval = const Duration(seconds: 3);
-        trigger.add(null);
-        async.elapse(const Duration(seconds: 3));
-
-        unawaited(sub.cancel());
-        unawaited(connection.dispose());
-      });
-    });
-
-    scenario('onCheckCompleted fires after every scheduled check', () {
-      final probe = StubProbe((t) async => successResult(t));
-
-      fakeAsync((async) {
-        final observer = RecordingObserver();
-        final connection = InternetConnection(
-          targets: [target],
-          probe: probe,
-          checkInterval: const Duration(seconds: 5),
-        );
-        attachObserver(connection.events, observer);
-        connection.onStatusChange.listen(noopWithVal);
-
-        async
-          ..flushMicrotasks()
-          ..elapse(const Duration(seconds: 10));
-
-        // 1 first-listener check + 2 timer ticks.
-        final checks = observer.events.whereType<CheckCompleted>().toList();
-        check(checks).length.equals(3);
-        check(checks.first.result).isA<Reachable>();
-
-        unawaited(connection.dispose());
-      });
-    });
-
-    scenario('onNextCheckScheduled reports the delay and the streak behind it', () {
-      final probe = StubProbe(
-        (t) async => ProbeResult.failure(target: t, responseTime: const Duration(milliseconds: 10)),
-      );
-
-      fakeAsync((async) {
-        final observer = RecordingObserver();
-        final connection = InternetConnection(
-          targets: [target],
-          probe: probe,
-          checkInterval: const Duration(seconds: 4),
-          schedule: const ExponentialBackoffSchedule(
-            maxDelay: Duration(minutes: 1),
-            randomizationFactor: 0,
-          ),
-        );
-        attachObserver(connection.events, observer);
-        connection.onStatusChange.listen(noopWithVal);
-
-        async
-          ..flushMicrotasks()
-          ..elapse(const Duration(seconds: 4))
-          ..flushMicrotasks();
-
-        final scheduled = observer.events.whereType<NextCheckScheduled>().toList();
-        check(scheduled.map((event) => event.delay).toList())
-            .deepEquals([const Duration(seconds: 4), const Duration(seconds: 8)]);
-        check(scheduled.last.scheduleContext.consecutiveFailures).equals(2);
-        check(scheduled.last.scheduleContext.lastStatus).isA<Unreachable>();
-
-        unawaited(connection.dispose());
-      });
-    });
-
-    scenario('checkOnce does not fire onCheckCompleted', () async {
-      final probe = StubProbe((t) async => successResult(t));
+  feature('attachObserver', () {
+    // When each event fires belongs to InternetConnection, and lives in
+    // internet_connection_events_test.dart. All that is left here is the routing on top.
+    scenario('hands every event to its matching callback, payload intact', () async {
+      final events = StreamController<ConnectivityEvent>();
       final observer = RecordingObserver();
-      final connection = InternetConnection(targets: [target], probe: probe);
-      attachObserver(connection.events, observer);
-      addTearDown(connection.dispose);
+      final subscription = attachObserver(events.stream, observer);
+      addTearDown(subscription.cancel);
 
-      await connection.checkOnce();
+      <ConnectivityEvent>[
+        const StatusEmittedEvent(previous: unreachable, next: reachable),
+        const CheckCompletedEvent(reachable),
+        const NextCheckScheduledEvent(delay: shortInterval, scheduleContext: scheduleContext),
+        const ExternalTriggerFiredEvent(),
+        const ExternalTriggerErrorEvent(triggerError, StackTrace.empty),
+        const CheckIntervalChangedEvent(previous: longInterval, next: shortInterval),
+        const SlowThresholdChangedEvent(previous: null, next: shortInterval),
+        const DisposedEvent(),
+      ].forEach(events.add);
+      await events.close();
 
-      check(observer.events.whereType<CheckCompleted>()).isEmpty;
-    });
+      check(observer.events.map((recorded) => recorded.runtimeType).toList()).deepEquals([
+        StatusChangeEmitted,
+        CheckCompleted,
+        NextCheckScheduled,
+        ExternalTriggerFired,
+        ExternalTriggerError,
+        CheckIntervalChanged,
+        SlowThresholdChanged,
+        DisposeEvent,
+      ]);
 
-    scenario('onStatusChangeEmitted fires only on kind transitions', () {
-      var reachable = false;
-      final probe = StubProbe((t) async => reachable ? successResult(t) : failureResult(t));
-
-      fakeAsync((async) {
-        final observer = RecordingObserver();
-        final connection = InternetConnection(
-          targets: [target],
-          probe: probe,
-          checkInterval: const Duration(seconds: 5),
-        );
-        attachObserver(connection.events, observer);
-        connection.onStatusChange.listen(noopWithVal);
-
-        async
-          ..flushMicrotasks()
-          // No transition between consecutive Unreachables.
-          ..elapse(const Duration(seconds: 5));
-
-        reachable = true;
-        async.elapse(const Duration(seconds: 5));
-
-        final emits = observer.events.whereType<StatusChangeEmitted>().toList();
-        check(emits).length.equals(2);
-        // First emit on a fresh stream: previous is null.
-        check(emits.first.previous).isNull;
-        check(emits.first.next).isA<Unreachable>();
-        // Second emit: Unreachable -> Reachable.
-        check(emits.last.previous).isA<Unreachable>();
-        check(emits.last.next).isA<Reachable>();
-
-        unawaited(connection.dispose());
-      });
-    });
-
-    scenario('onExternalTriggerFired fires when the trigger emits', () {
-      final probe = StubProbe((t) async => successResult(t));
-      final trigger = StreamController<void>.broadcast();
-      addTearDown(trigger.close);
-
-      fakeAsync((async) {
-        final observer = RecordingObserver();
-        final connection = InternetConnection(
-          targets: [target],
-          probe: probe,
-          externalRecheckTrigger: trigger.stream,
-          checkInterval: const Duration(seconds: 60),
-        );
-        attachObserver(connection.events, observer);
-        connection.onStatusChange.listen(noopWithVal);
-        async.flushMicrotasks();
-
-        trigger.add(null);
-        async.flushMicrotasks();
-
-        check(observer.events.whereType<ExternalTriggerFired>()).length.equals(1);
-
-        unawaited(connection.dispose());
-      });
-    });
-
-    scenario('onExternalTriggerError forwards trigger-stream errors', () {
-      final probe = StubProbe((t) async => successResult(t));
-      final trigger = StreamController<void>.broadcast();
-      addTearDown(trigger.close);
-
-      fakeAsync((async) {
-        final observer = RecordingObserver();
-        final connection = InternetConnection(
-          targets: [target],
-          probe: probe,
-          externalRecheckTrigger: trigger.stream,
-          checkInterval: const Duration(seconds: 60),
-        );
-        attachObserver(connection.events, observer);
-        connection.onStatusChange.listen(noopWithVal);
-        async.flushMicrotasks();
-
-        trigger.addError(const FormatException('bad signal'), StackTrace.empty);
-        async.flushMicrotasks();
-
-        final errors = observer.events.whereType<ExternalTriggerError>().toList();
-        check(errors).length.equals(1);
-        check(errors.single.error).isA<FormatException>();
-
-        unawaited(connection.dispose());
-      });
-    });
-
-    scenario('onCheckIntervalChanged carries previous and next intervals', () {
-      final probe = StubProbe((t) async => successResult(t));
-
-      fakeAsync((async) {
-        final observer = RecordingObserver();
-        final connection = InternetConnection(
-          targets: [target],
-          probe: probe,
-          checkInterval: const Duration(seconds: 5),
-        );
-        attachObserver(connection.events, observer);
-
-        connection.checkInterval = const Duration(seconds: 3);
-        async.flushMicrotasks();
-
-        final changes = observer.events.whereType<CheckIntervalChanged>().toList();
-        check(changes).length.equals(1);
-        check(changes.single.previous).equals(const Duration(seconds: 5));
-        check(changes.single.next).equals(const Duration(seconds: 3));
-
-        unawaited(connection.dispose());
-      });
-    });
-
-    scenario('onSlowThresholdChanged carries previous and next thresholds', () {
-      final probe = StubProbe((t) async => successResult(t));
-
-      fakeAsync((async) {
-        final observer = RecordingObserver();
-        final connection = InternetConnection(
-          targets: [target],
-          probe: probe,
-          slowThreshold: const Duration(milliseconds: 200),
-        );
-        attachObserver(connection.events, observer);
-
-        connection
-          ..slowThreshold = const Duration(milliseconds: 50)
-          ..slowThreshold = null;
-        async.flushMicrotasks();
-
-        final changes = observer.events.whereType<SlowThresholdChanged>().toList();
-        check(changes).length.equals(2);
-        check(changes.first.previous).equals(const Duration(milliseconds: 200));
-        check(changes.first.next).equals(const Duration(milliseconds: 50));
-        check(changes.last.previous).equals(const Duration(milliseconds: 50));
-        check(changes.last.next).isNull;
-
-        unawaited(connection.dispose());
-      });
-    });
-
-    scenario('onDispose fires exactly once across multiple dispose calls', () async {
-      final probe = StubProbe((t) async => successResult(t));
-      final observer = RecordingObserver();
-      final connection = InternetConnection(targets: [target], probe: probe);
-      attachObserver(connection.events, observer);
-
-      await connection.dispose();
-      await connection.dispose();
-
-      check(observer.events.whereType<DisposeEvent>()).length.equals(1);
-    });
-  });
-
-  feature('PrintingConnectivityObserver', () {
-    scenario('is const-constructible with the default name and every method is safe to call', () {
-      const observer = PrintingConnectivityObserver();
-      check(observer).isA<PrintingConnectivityObserver>();
-
-      // Smoke-check: every method should be safely callable without
-      // throwing. dart:developer.log writes to the runtime log channel,
-      // there is no per-test assertion target, but the lack of a thrown
-      // exception is the contract.
-      observer
-        ..onExternalTriggerFired()
-        ..onCheckIntervalChanged(const Duration(seconds: 5), const Duration(seconds: 3))
-        ..onDispose();
-    });
-
-    scenario('accepts a custom logger name', () {
-      const observer = PrintingConnectivityObserver(name: 'my_app.connectivity');
-
-      check(observer).isA<ConnectivityObserver>();
+      // Same-typed pairs are what a mis-wired callback silently swaps.
+      check(observer.events.whereType<StatusChangeEmitted>().single)
+        ..has('previous', (recorded) => recorded.previous).equals(unreachable)
+        ..has('next', (recorded) => recorded.next).equals(reachable);
+      check(observer.events.whereType<CheckIntervalChanged>().single)
+        ..has('previous', (recorded) => recorded.previous).equals(longInterval)
+        ..has('next', (recorded) => recorded.next).equals(shortInterval);
+      check(observer.events.whereType<SlowThresholdChanged>().single)
+        ..has('previous', (recorded) => recorded.previous).isNull
+        ..has('next', (recorded) => recorded.next).equals(shortInterval);
+      check(observer.events.whereType<ExternalTriggerError>().single)
+          .has('error', (recorded) => recorded.error)
+          .equals(triggerError);
+      check(observer.events.whereType<NextCheckScheduled>().single)
+        ..has('delay', (recorded) => recorded.delay).equals(shortInterval)
+        ..has('scheduleContext', (recorded) => recorded.scheduleContext).equals(scheduleContext);
+      check(observer.events.whereType<CheckCompleted>().single)
+          .has('result', (recorded) => recorded.result)
+          .equals(reachable);
     });
   });
 }

@@ -11,8 +11,7 @@ final class const SlowThresholdChangedEvent({
 }) extends ConnectivityEvent {
   /// Creates a [SlowThresholdChangedEvent].
   this;
-  // coverage:ignore-start
+
   @override
   String toString() => 'SlowThresholdChangedEvent(previous: $previous, next: $next)';
-  // coverage:ignore-end
 }
