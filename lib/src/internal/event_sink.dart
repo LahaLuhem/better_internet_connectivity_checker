@@ -11,8 +11,8 @@ final class _EventSink() {
   StreamController<ConnectivityEvent>? _controller;
   var _disposed = false;
 
-  /// The event stream. The first read builds the controller. After [dispose] you get an empty stream
-  /// that's already done, rather than a fresh controller.
+  /// The event stream. The first read builds the controller. After [dispose] you get an empty
+  /// stream that's already done, rather than a fresh controller.
   Stream<ConnectivityEvent> get stream {
     if (_disposed) return const Stream<ConnectivityEvent>.empty();
 
@@ -25,29 +25,29 @@ final class _EventSink() {
   /// Queues [event] for the next microtask. Dropped outright when nobody is listening yet or the
   /// controller has closed, which is fine: late subscribers never see past events anyway.
   void emit(ConnectivityEvent event) {
-    final controller = _controller;
-    if (controller == null || !controller.hasListener) return;
+    final eventController = _controller;
+    if (eventController == null || !eventController.hasListener) return;
 
     scheduleMicrotask(() {
-      if (controller.isClosed) return;
+      if (eventController.isClosed) return;
 
-      controller.add(event);
+      eventController.add(event);
     });
   }
 
-  /// Emits [DisposedEvent], waits for it to flush, then closes. Does nothing if no controller was
-  /// ever built.
+  /// Emits [DisposedEvent], waits for it to flush, then closes. Does nothing if no controller
+  /// was ever built.
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
 
-    final controller = _controller;
-    if (controller == null) return;
+    final eventController = _controller;
+    if (eventController == null) return;
 
     emit(const DisposedEvent());
     await Future<void>.value();
 
-    await controller.close();
+    await eventController.close();
     _controller = null;
   }
 }

@@ -3,9 +3,9 @@ abstract final class ConstFormatters._() {
     if (duration.inMilliseconds < Duration.millisecondsPerSecond) {
       return '${duration.inMilliseconds} ms';
     }
-    final seconds = duration.inMilliseconds / Duration.millisecondsPerSecond;
+    final fractionalSeconds = duration.inMilliseconds / Duration.millisecondsPerSecond;
 
-    return '${seconds.toStringAsFixed(2)} s';
+    return '${fractionalSeconds.toStringAsFixed(2)} s';
   }
 
   static String describeProbeError(Object? error) {

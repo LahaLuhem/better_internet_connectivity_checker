@@ -29,6 +29,7 @@ heading text, so renames don't break callers.
 - [Prose & voice](#prose-voice)
 - [Comments & dartdoc](#comments-dartdoc)
 - [Testing](#testing)
+  - [What earns a test](#what-earns-a-test)
 - [DCM rules (applied by hand)](#dcm-rules-applied-by-hand)
 - [Documentation conventions (Markdown)](#documentation-conventions-markdown)
 
@@ -84,13 +85,11 @@ style.
   ```dart
   // Prefer:
   final probeResults = await targets.map(probe.probe).wait;
-  final worstDuration = probeResults
-      .map((result) => result.responseTime)
-      .reduce((a, b) => a > b ? a : b);
+  final failedProbes = probeResults.where((result) => !result.isSuccess).toList(growable: false);
 
   // Over:
   final results = await targets.map(probe.probe).wait;
-  final worst = results.map((r) => r.responseTime).reduce((a, b) => a > b ? a : b);
+  final failed = results.where((r) => !r.isSuccess).toList(growable: false);
   ```
 
   Strong format-string conventions (`hh`/`mm`/`ss` in a timestamp formatter, etc.)
@@ -600,6 +599,30 @@ Tests read as a specification via the Gherkin vocabulary in
   A test with no lifecycle hooks imports just `checks`, `bdd.dart`, and the code under test.
 - **Test support lives under [`test/support/`](./test/support/)**: the `bdd.dart` helper plus
   doubles (`StubProbe`, `RecordingObserver`). Keep production code free of test scaffolding.
+
+<a id="test-conventions"></a>
+<!-- TOC --><a name="what-earns-a-test"></a>
+
+### What earns a test
+
+- **Test this package, not its dependencies.** What `package:http` or the SDK does on its own (a
+  client reusing a connection, a broadcast stream dropping late subscribers) is their authors' to
+  test. Test what this package adds: which probe settles the race, when the deduper swallows an
+  emission, what the schedule hands back.
+- **A test pins a behaviour a caller would agree with, said as a sentence.** A value that only
+  carries it (a default, a log line, an enum's name) isn't one: compare against its source, or
+  against the state before.
+- **A guarantee the design rests on is a behaviour too,** with nothing user-visible to show it
+  breaking: `checkOnce()` leaves the timer, `lastStatus` and `onStatusChange` untouched.
+- **One behaviour, one scenario.** A check another scenario already makes goes, one 2 scenarios
+  share moves into its own, and each `examples` row takes a branch no other row does.
+- **Assert what the caller gets, not the string,** unless 2 messages mean different things.
+- **Prove a regression test fails:** break what it guards, watch it go red, put it back.
+- **A scenario asserting that nothing happened needs the same in reverse:** break the mechanism
+  itself, or it passes just as happily when the feature never worked.
+- **`// coverage:ignore-*` marks only code no test can usefully reach:** unreachable today, guarded
+  another way, or with no effect to see. Its reason goes on a `//` line above, since anything but
+  plain words after the marker switches it off.
 
 ---
 

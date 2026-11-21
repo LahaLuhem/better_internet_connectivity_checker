@@ -86,25 +86,25 @@ final class ScheduleComparisonViewModel() extends ViewModel {
     required bool isBackoff,
   }) => connection.events.listen((event) {
     if (event case NextCheckScheduledEvent(:final delay, :final scheduleContext)) {
-      final current = _ladderStateNotifier.value;
-      final existing = isBackoff ? current.backoff : current.fixed;
+      final currentLadderState = _ladderStateNotifier.value;
+      final existingRungs = isBackoff ? currentLadderState.backoff : currentLadderState.fixed;
       // Keeps the first rungs, which are the interesting ones: past the cap every
       // later delay is identical. Bailing out also spares a tick per capped check.
-      if (existing.length >= ConstScheduleComparison.ladderLength) return;
+      if (existingRungs.length >= ConstScheduleComparison.ladderLength) return;
 
-      final updated = [
-        ...existing,
+      final updatedRungs = [
+        ...existingRungs,
         (delay: delay, consecutiveFailures: scheduleContext.consecutiveFailures),
       ];
 
       _ladderStateNotifier.value = isBackoff
-          ? (fixed: current.fixed, backoff: updated)
-          : (fixed: updated, backoff: current.backoff);
+          ? (fixed: currentLadderState.fixed, backoff: updatedRungs)
+          : (fixed: updatedRungs, backoff: currentLadderState.backoff);
     }
   });
 
   Future<void> _teardown() async {
-    final pending = [
+    final pendingFutures = [
       ..._subscriptions.map((subscription) => subscription.cancel()),
       ?_fixedConnection?.dispose(),
       ?_backoffConnection?.dispose(),
@@ -113,7 +113,7 @@ final class ScheduleComparisonViewModel() extends ViewModel {
     _fixedConnection = null;
     _backoffConnection = null;
 
-    await pending.wait;
+    await pendingFutures.wait;
   }
 
   @override

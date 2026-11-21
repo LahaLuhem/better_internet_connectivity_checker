@@ -117,9 +117,9 @@ final class InternetConnection({
 
   /// Updates the periodic check interval and resets any running timer.
   set checkInterval(Duration interval) {
-    final previous = _checkInterval;
+    final previousInterval = _checkInterval;
     _checkInterval = interval;
-    _eventSink.emit(CheckIntervalChangedEvent(previous: previous, next: interval));
+    _eventSink.emit(CheckIntervalChangedEvent(previous: previousInterval, next: interval));
     _scheduler.rescheduleAfter(interval);
   }
 
@@ -128,9 +128,9 @@ final class InternetConnection({
   /// Nothing else moves: no timer reset, no check, [lastStatus] survives. That last part is why this
   /// beats rebuilding the whole thing when only the threshold changed.
   set slowThreshold(Duration? threshold) {
-    final previous = _slowThreshold;
+    final previousThreshold = _slowThreshold;
     _slowThreshold = threshold;
-    _eventSink.emit(SlowThresholdChangedEvent(previous: previous, next: threshold));
+    _eventSink.emit(SlowThresholdChangedEvent(previous: previousThreshold, next: threshold));
   }
 
   /// Tears down the stream, timer and trigger subscription. Don't use the instance afterwards.
