@@ -94,7 +94,7 @@ void main() {
       );
 
       check(status).isA<Unreachable>();
-      check((status as Unreachable).failedProbes).isEmpty();
+      check((status as Unreachable).failedProbes).isEmpty;
     });
 
     scenario('does not pass a cancelSignal to its probes', () async {
@@ -109,8 +109,8 @@ void main() {
         slowThreshold: null,
       );
 
-      check(probe.cancelSignalFor(t1)).isNull();
-      check(probe.cancelSignalFor(t2)).isNull();
+      check(probe.cancelSignalFor(t1)).isNull;
+      check(probe.cancelSignalFor(t2)).isNull;
     });
   });
 }

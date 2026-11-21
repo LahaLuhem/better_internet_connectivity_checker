@@ -147,7 +147,8 @@ can't be defended.
 - **AC power, no competing apps.** The Dart VM is single-threaded, so CPU
   contention shows up directly as wall-clock drift.
 - **Localhost only**, no DNS and no real network. All HTTP probes hit a
-  configurable `HttpServer.bind('127.0.0.1', 0)` (`harness/local_http_server.dart`).
+  configurable local `HttpServer` on the loopback address
+  (`harness/local_http_server.dart`).
 
 ## Metrics tracked
 

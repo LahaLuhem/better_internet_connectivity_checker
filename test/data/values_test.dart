@@ -15,7 +15,7 @@ void main() {
 
     scenario('sticks to HTTPS, so an interception cannot answer in place of a target', () {
       check(Values.defaultProbeTargets.map((probeTarget) => probeTarget.uri.scheme))
-          .every((schemeSubject) => schemeSubject.equals('https'));
+          .every(.it()..equals('https'));
     });
   });
 

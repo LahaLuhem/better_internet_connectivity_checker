@@ -32,8 +32,8 @@ void main() {
       var dispatched = false;
       watchdogWith(warnings).measure(checkCompleted, () => dispatched = true);
 
-      check(dispatched).isTrue();
-      check(warnings).isEmpty();
+      check(dispatched).isTrue;
+      check(warnings).isEmpty;
     });
 
     scenario('overrunning callback warns once with observer type and callback name', () {

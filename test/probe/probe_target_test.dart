@@ -15,22 +15,22 @@ void main() {
     scenario('uses an empty headers map', () {
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
-      check(target.headers).isEmpty();
+      check(target.headers).isEmpty;
     });
 
     scenario('does not follow redirects', () {
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
-      check(target.followRedirects).isFalse();
+      check(target.followRedirects).isFalse;
     });
 
     scenario('default predicate accepts HTTP 200 only', () {
       final target = ProbeTarget(uri: Uri.https('example.com'));
 
-      check(target.isSuccess(http.Response('', 200))).isTrue();
-      check(target.isSuccess(http.Response('', 204))).isFalse();
-      check(target.isSuccess(http.Response('', 301))).isFalse();
-      check(target.isSuccess(http.Response('', 500))).isFalse();
+      check(target.isSuccess(http.Response('', 200))).isTrue;
+      check(target.isSuccess(http.Response('', 204))).isFalse;
+      check(target.isSuccess(http.Response('', 301))).isFalse;
+      check(target.isSuccess(http.Response('', 500))).isFalse;
     });
   });
 
@@ -39,8 +39,8 @@ void main() {
       bool accept2xx(http.Response r) => r.statusCode >= 200 && r.statusCode < 300;
       final target = ProbeTarget(uri: Uri.https('example.com'), isSuccess: accept2xx);
 
-      check(target.isSuccess(http.Response('', 204))).isTrue();
-      check(target.isSuccess(http.Response('', 301))).isFalse();
+      check(target.isSuccess(http.Response('', 204))).isTrue;
+      check(target.isSuccess(http.Response('', 301))).isFalse;
     });
 
     scenario('forwards a custom timeout and headers', () {
@@ -58,7 +58,7 @@ void main() {
     scenario('forwards redirect following when opted in', () {
       final target = ProbeTarget(uri: Uri.https('example.com'), followRedirects: true);
 
-      check(target.followRedirects).isTrue();
+      check(target.followRedirects).isTrue;
     });
   });
 

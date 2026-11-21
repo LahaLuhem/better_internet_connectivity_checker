@@ -127,7 +127,7 @@ void main() {
       await connection.checkOnce();
       await Future<void>.delayed(Duration.zero);
 
-      check(events.whereType<NextCheckScheduledEvent>()).isEmpty();
+      check(events.whereType<NextCheckScheduledEvent>()).isEmpty;
     });
   });
 
@@ -193,7 +193,7 @@ void main() {
 
         final emissions = events.whereType<StatusEmittedEvent>().toList();
         check(emissions).length.equals(2);
-        check(emissions.first.previous).isNull();
+        check(emissions.first.previous).isNull;
         check(emissions.first.next).isA<Unreachable>();
         check(emissions.last.previous).isA<Unreachable>();
         check(emissions.last.next).isA<Reachable>();
@@ -336,9 +336,9 @@ void main() {
         unawaited(connection.dispose());
         async.flushMicrotasks();
 
-        check(events).isNotEmpty();
+        check(events).isNotEmpty;
         check(events.last).isA<DisposedEvent>();
-        check(closed).isTrue();
+        check(closed).isTrue;
       });
     });
 
@@ -360,7 +360,7 @@ void main() {
         connection.checkInterval = const Duration(seconds: 7);
         // Setter returned synchronously. The event has been queued but not
         // delivered to subscribers yet.
-        check(events).isEmpty();
+        check(events).isEmpty;
 
         async.flushMicrotasks();
         // After microtasks drain, the subscriber receives the event.

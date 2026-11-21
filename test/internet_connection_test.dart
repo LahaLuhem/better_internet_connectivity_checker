@@ -37,7 +37,7 @@ void main() {
 
       await connection.checkOnce();
 
-      check(connection.lastStatus).isNull();
+      check(connection.lastStatus).isNull;
     });
   });
 
@@ -104,7 +104,7 @@ void main() {
         unawaited(probe.cancelSignalFor(hangingTarget)!.whenComplete(() => released = true));
 
         async.elapse(const Duration(seconds: 1));
-        check(released).isTrue();
+        check(released).isTrue;
 
         unawaited(connection.dispose());
       });
@@ -127,10 +127,10 @@ void main() {
         unawaited(probe.cancelSignalFor(cappedTarget)!.whenComplete(() => released = true));
 
         async.elapse(const Duration(seconds: 1));
-        check(released).isFalse();
+        check(released).isFalse;
 
         async.elapse(const Duration(seconds: 1));
-        check(released).isTrue();
+        check(released).isTrue;
 
         unawaited(connection.dispose());
       });
@@ -254,7 +254,7 @@ void main() {
         unawaited(sub.cancel());
         async.flushMicrotasks();
 
-        check(connection.lastStatus).isNull();
+        check(connection.lastStatus).isNull;
 
         unawaited(connection.dispose());
       });
@@ -378,7 +378,7 @@ void main() {
       addTearDown(connection.dispose);
 
       connection.slowThreshold = null;
-      check(connection.slowThreshold).isNull();
+      check(connection.slowThreshold).isNull;
 
       final status = await connection.checkOnce();
       check((status as Reachable).quality).equals(.good);
@@ -444,7 +444,7 @@ void main() {
         trigger.addError(Exception('boom'));
         async.flushMicrotasks();
 
-        check(statusErrors).isEmpty();
+        check(statusErrors).isEmpty;
 
         unawaited(connection.dispose());
       });
@@ -617,7 +617,7 @@ void main() {
       await connection.checkOnce();
       await connection.checkOnce();
 
-      check(schedule.receivedContexts).isEmpty();
+      check(schedule.receivedContexts).isEmpty;
     });
   });
 
