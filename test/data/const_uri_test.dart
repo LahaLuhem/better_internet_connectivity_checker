@@ -72,7 +72,7 @@ void main() {
       check(wrapped.hasQuery).equals(reference.hasQuery);
       check(wrapped.hasScheme).equals(reference.hasScheme);
       check(wrapped.isAbsolute).equals(reference.isAbsolute);
-      check(wrapped.isScheme('https')).isTrue();
+      check(wrapped.isScheme('https')).isTrue;
       check(wrapped.origin).equals(reference.origin);
       check(wrapped.pathSegments.length).equals(reference.pathSegments.length);
       check(wrapped.pathSegments.first).equals(reference.pathSegments.first);
@@ -80,7 +80,7 @@ void main() {
       check(wrapped.queryParameters['offset']).equals('2');
       check(wrapped.queryParametersAll['limit']?.length).equals(1);
       check(wrapped.userInfo).equals(reference.userInfo);
-      check(wrapped.data).isNull();
+      check(wrapped.data).isNull;
     });
 
     scenario('normalizePath, removeFragment, resolveUri delegate correctly', () {
@@ -111,7 +111,7 @@ void main() {
       const a = ConstUri('https://example.com');
       const b = ConstUri('https://example.com');
 
-      check(a == b).isTrue();
+      check(a == b).isTrue;
       check(a.hashCode).equals(b.hashCode);
     });
 
@@ -119,8 +119,8 @@ void main() {
       const wrapped = ConstUri('https://example.com');
       final parsed = Uri.parse('https://example.com');
 
-      check(wrapped == parsed).isTrue();
-      check(parsed == wrapped).isTrue();
+      check(wrapped == parsed).isTrue;
+      check(parsed == wrapped).isTrue;
       check(wrapped.hashCode).equals(parsed.hashCode);
     });
 
@@ -128,7 +128,7 @@ void main() {
       const a = ConstUri('https://example.com');
       const b = ConstUri('https://other.com');
 
-      check(a == b).isFalse();
+      check(a == b).isFalse;
     });
   });
 

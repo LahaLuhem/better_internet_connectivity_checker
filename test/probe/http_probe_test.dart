@@ -16,8 +16,8 @@ void main() {
 
       final result = await probe.probe(target);
 
-      check(result.isSuccess).isTrue();
-      check(result.error).isNull();
+      check(result.isSuccess).isTrue;
+      check(result.error).isNull;
       check(result.target).equals(target);
     });
 
@@ -28,8 +28,8 @@ void main() {
 
       final result = await probe.probe(target);
 
-      check(result.isSuccess).isFalse();
-      check(result.error).isNull();
+      check(result.isSuccess).isFalse;
+      check(result.error).isNull;
     });
 
     scenario('captures exceptions raised by the underlying transport', () async {
@@ -40,7 +40,7 @@ void main() {
 
       final result = await probe.probe(target);
 
-      check(result.isSuccess).isFalse();
+      check(result.isSuccess).isFalse;
       check(result.error).equals(boom);
     });
 
@@ -100,9 +100,9 @@ void main() {
 
       final result = await probe.probe(target);
 
-      check(result.isSuccess).isTrue();
+      check(result.isSuccess).isTrue;
       check(observed.statusCode).equals(200);
-      check(observed.body).isEmpty();
+      check(observed.body).isEmpty;
     });
 
     scenario('returns a failed result when the predicate rejects the response', () async {
@@ -112,8 +112,8 @@ void main() {
 
       final result = await probe.probe(target);
 
-      check(result.isSuccess).isFalse();
-      check(result.error).isNull();
+      check(result.isSuccess).isFalse;
+      check(result.error).isNull;
     });
   });
 
@@ -141,7 +141,7 @@ void main() {
       final result = await HttpProbe.head(client: client)
           .probe(ProbeTarget(uri: Uri.https('example.com')));
 
-      check(result.isSuccess).isFalse();
+      check(result.isSuccess).isFalse;
     });
   });
 
@@ -168,11 +168,11 @@ void main() {
       var triggered = false;
       unawaited(abortable.abortTrigger!.whenComplete(() => triggered = true));
       await Future<void>.delayed(.zero);
-      check(triggered).isFalse();
+      check(triggered).isFalse;
 
       cancelCompleter.complete();
       await Future<void>.delayed(.zero);
-      check(triggered).isTrue();
+      check(triggered).isTrue;
 
       responseCompleter.complete(http.StreamedResponse(const Stream.empty(), 200));
     });
@@ -203,7 +203,7 @@ void main() {
       final result = await probe.probe(target, cancelSignal: cancelCompleter.future);
       stopwatch.stop();
 
-      check(result.isSuccess).isFalse();
+      check(result.isSuccess).isFalse;
       check(result.error).isA<http.RequestAbortedException>();
       check(stopwatch.elapsed).isLessThan(const Duration(seconds: 1));
     });

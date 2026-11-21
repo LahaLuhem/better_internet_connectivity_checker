@@ -115,7 +115,7 @@ void main() {
 
       await connection.checkOnce();
 
-      check(observer.events.whereType<CheckCompleted>()).isEmpty();
+      check(observer.events.whereType<CheckCompleted>()).isEmpty;
     });
 
     scenario('onStatusChangeEmitted fires only on kind transitions', () {
@@ -143,7 +143,7 @@ void main() {
         final emits = observer.events.whereType<StatusChangeEmitted>().toList();
         check(emits).length.equals(2);
         // First emit on a fresh stream: previous is null.
-        check(emits.first.previous).isNull();
+        check(emits.first.previous).isNull;
         check(emits.first.next).isA<Unreachable>();
         // Second emit: Unreachable -> Reachable.
         check(emits.last.previous).isA<Unreachable>();
@@ -253,7 +253,7 @@ void main() {
         check(changes.first.previous).equals(const Duration(milliseconds: 200));
         check(changes.first.next).equals(const Duration(milliseconds: 50));
         check(changes.last.previous).equals(const Duration(milliseconds: 50));
-        check(changes.last.next).isNull();
+        check(changes.last.next).isNull;
 
         unawaited(connection.dispose());
       });

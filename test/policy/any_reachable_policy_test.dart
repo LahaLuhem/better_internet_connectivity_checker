@@ -102,7 +102,7 @@ void main() {
       );
 
       check(status).isA<Unreachable>();
-      check((status as Unreachable).failedProbes).isEmpty();
+      check((status as Unreachable).failedProbes).isEmpty;
     });
 
     scenario('passes a cancelSignal to every probe', () async {
