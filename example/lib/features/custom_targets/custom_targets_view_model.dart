@@ -93,10 +93,10 @@ final class CustomTargetsViewModel() extends ViewModel {
 
     if (status is! Unreachable) return;
 
-    final allowSeen = await _inspectAllowHeader(target, probeMethod);
-    if (allowSeen == null) return;
+    final allowHeader = await _inspectAllowHeader(target, probeMethod);
+    if (allowHeader == null) return;
 
-    final suggestedProbeMethod = _parseAllowedMethod(allowSeen);
+    final suggestedProbeMethod = _parseAllowedMethod(allowHeader);
     if (suggestedProbeMethod == null || suggestedProbeMethod == probeMethod) return;
 
     _probeMethodNotifier.value = suggestedProbeMethod;
@@ -106,7 +106,7 @@ final class CustomTargetsViewModel() extends ViewModel {
         showPlatformToast(
           context: context,
           message:
-              'Server replied 405 with allow: $allowSeen, switched '
+              'Server replied 405 with allow: $allowHeader, switched '
               '${probeMethod.label} → ${suggestedProbeMethod.label}'
               '${allowRetry ? ' and retrying.' : '.'}',
         ),
@@ -117,14 +117,14 @@ final class CustomTargetsViewModel() extends ViewModel {
   }
 
   Future<String?> _inspectAllowHeader(ProbeTarget target, ProbeMethod probeMethod) async {
-    String? allowSeen;
+    String? allowHeader;
     final inspector = MethodAwareProbe(
       httpMethod: probeMethod.label,
-      onAllowHeader: (value) => allowSeen = value,
+      onAllowHeader: (value) => allowHeader = value,
     );
     await inspector.probe(target);
 
-    return allowSeen;
+    return allowHeader;
   }
 
   static ProbeMethod? _parseAllowedMethod(String allowMethodsRaw) {

@@ -36,10 +36,10 @@ final class const MinimumReachablePolicy({
     );
     if (targets.length < _minimum) return .syncValue(const Unreachable(failedProbes: []));
 
-    final completer = Completer<InternetStatus>();
+    final statusCompleter = Completer<InternetStatus>();
     final cancelCompleter = Completer<void>();
-    final failures = <ProbeResult>[];
-    var successes = 0;
+    final failedProbes = <ProbeResult>[];
+    var successCount = 0;
 
     void releasePendingProbes() {
       if (!cancelCompleter.isCompleted) cancelCompleter.complete();
@@ -48,28 +48,28 @@ final class const MinimumReachablePolicy({
     for (final target in targets) {
       unawaited(
         probe.probe(target, cancelSignal: cancelCompleter.future).then((result) {
-          if (completer.isCompleted) return;
+          if (statusCompleter.isCompleted) return;
 
           if (result.isSuccess) {
-            successes += 1;
-            if (successes < _minimum) return;
+            successCount += 1;
+            if (successCount < _minimum) return;
 
-            completer.complete(
+            statusCompleter.complete(
               Reachable.fromResponseTime(result.responseTime, slowThreshold: slowThreshold),
             );
 
             return releasePendingProbes();
           }
 
-          failures.add(result);
-          if (targets.length - failures.length >= _minimum) return;
+          failedProbes.add(result);
+          if (targets.length - failedProbes.length >= _minimum) return;
 
-          completer.complete(Unreachable(failedProbes: failures));
+          statusCompleter.complete(Unreachable(failedProbes: failedProbes));
           releasePendingProbes();
         }),
       );
     }
 
-    return completer.future;
+    return statusCompleter.future;
   }
 }
