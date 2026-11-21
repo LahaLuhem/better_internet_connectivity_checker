@@ -3,10 +3,6 @@ import 'dart:io';
 
 import 'package:minted_network/minted_network.dart';
 
-/// Loopback address the server binds to. Parsed once so the literal isn't written out twice. The
-/// bang is the `int.parse('42')` case: an author-controlled literal.
-final _loopback = IpAddress.tryParse('127.0.0.1')!;
-
 /// An HTTP server on `127.0.0.1`, so scenarios get a real transport without DNS, TLS, packet loss or
 /// NAT muddying the numbers. Binds to port 0, and you read [boundPort] after [start].
 ///
@@ -29,7 +25,7 @@ final class LocalHttpServer() {
   }
 
   /// What clients should target, `http://127.0.0.1:<port>`. Throws before [start].
-  Uri get baseUri => Uri.http('${_loopback.value}:${boundPort.value}');
+  Uri get baseUri => Uri.http('${IpAddressConstants.loopbackV4.value}:${boundPort.value}');
 
   /// Total HTTP requests received since [start]. Reset on [stop].
   int get requestCount => _requestCount;
@@ -37,7 +33,10 @@ final class LocalHttpServer() {
   Future<void> start() async {
     if (_server != null) throw StateError('already started');
     _requestCount = 0;
-    _server = await HttpServer.bind(_loopback.value, 0);
+    _server = await HttpServer.bind(
+      IpAddressConstants.loopbackV4.value,
+      PortConstants.wildcard.value,
+    );
     unawaited(_serve());
   }
 

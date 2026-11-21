@@ -57,7 +57,7 @@ class const CustomTargetsView({super.key}) extends StatelessWidget {
                 ValueListenableBuilder(
                   valueListenable: viewModel.probeMethodListenable,
                   builder: (context, probeMethod, _) => PlatformSegmentButton<ProbeMethod>(
-                    choices: ProbeMethod.values,
+                    choices: ProbeMethod.values.toSet(),
                     selectedChoice: probeMethod,
                     segmentBuilder: (method) => Text(method.label),
                     onSelectionChanged: (method) {

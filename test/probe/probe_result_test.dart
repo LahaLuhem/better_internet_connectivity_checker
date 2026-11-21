@@ -13,8 +13,8 @@ void main() {
         responseTime: const Duration(milliseconds: 42),
       );
 
-      check(result.isSuccess).isTrue();
-      check(result.error).isNull();
+      check(result.isSuccess).isTrue;
+      check(result.error).isNull;
       check(result.responseTime).equals(const Duration(milliseconds: 42));
       check(result.target).equals(target);
     });
@@ -29,7 +29,7 @@ void main() {
         error: error,
       );
 
-      check(result.isSuccess).isFalse();
+      check(result.isSuccess).isFalse;
       check(result.error).equals(error);
       check(result.responseTime).equals(const Duration(milliseconds: 100));
     });
@@ -40,8 +40,8 @@ void main() {
         responseTime: const Duration(milliseconds: 100),
       );
 
-      check(result.isSuccess).isFalse();
-      check(result.error).isNull();
+      check(result.isSuccess).isFalse;
+      check(result.error).isNull;
     });
   });
 
