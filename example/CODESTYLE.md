@@ -310,12 +310,12 @@ all iOS-only (Android's Material `Scaffold` masks them):
   They *are* the adaptive default this example showcases, so their whole surface should
   be reachable, and a `show` list buries that and goes stale every time a screen reaches for
   one more `Platform*` widget. Reserve `show` for 2 cases only: (1) `material_ui` /
-  `flutter/cupertino` imports, where the narrow list is a deliberate, auditable signal
+  `cupertino_ui` imports, where the narrow list is a deliberate, auditable signal
   that this file is *diverging* from the platform look (e.g. `show Icons`, `show
   CupertinoIcons`, `show Colors`), and (2) a genuine name collision that the analyzer
   flags. Don't add `show` to an adaptive import just to mirror the house habit. There's
   no collision today between the 2 packages (`PlatformIcon` / `PlatformIcons` /
-  `PlatformTarget`), `material_ui`, or `cupertino`.
+  `PlatformTarget`), `material_ui`, or `cupertino_ui`.
 
 Verify iOS-only layout in `flutter test` with
 `debugDefaultTargetPlatformOverride = TargetPlatform.iOS`, reset in a `finally`,

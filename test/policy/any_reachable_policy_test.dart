@@ -52,14 +52,14 @@ void main() {
     scenario('returns on first success without waiting for slow pending probes', () async {
       final probe = StubProbe((target) {
         if (target == t1) {
-          return Future.delayed(
+          return .delayed(
             const Duration(milliseconds: 10),
             () =>
                 ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 10)),
           );
         }
 
-        return Future.delayed(
+        return .delayed(
           const Duration(seconds: 30),
           () => ProbeResult.success(target: target, responseTime: const Duration(seconds: 30)),
         );
@@ -125,7 +125,7 @@ void main() {
       final slowProbeResult = Completer<ProbeResult>();
       final probe = StubProbe((target) {
         if (target == t1) {
-          return Future.value(
+          return .syncValue(
             ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 10)),
           );
         }

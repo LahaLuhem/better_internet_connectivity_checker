@@ -33,14 +33,14 @@ void main() {
     scenario('reports the deciding success as the response time, not the fastest one', () async {
       final probe = StubProbe(
         (target) => target == t1
-            ? Future.delayed(
+            ? .delayed(
                 const Duration(milliseconds: 10),
                 () => ProbeResult.success(
                   target: target,
                   responseTime: const Duration(milliseconds: 10),
                 ),
               )
-            : Future.delayed(
+            : .delayed(
                 const Duration(milliseconds: 60),
                 () => ProbeResult.success(
                   target: target,
@@ -60,13 +60,13 @@ void main() {
       () async {
         final probe = StubProbe((target) {
           if (target == t3) {
-            return Future.delayed(
+            return .delayed(
               const Duration(seconds: 30),
               () => ProbeResult.success(target: target, responseTime: const Duration(seconds: 30)),
             );
           }
 
-          return Future.value(
+          return .syncValue(
             ProbeResult.failure(target: target, responseTime: const Duration(milliseconds: 20)),
           );
         });
@@ -138,7 +138,7 @@ void main() {
       final probe = StubProbe(
         (target) => target == t3
             ? stragglerResult.future
-            : Future.value(
+            : .syncValue(
                 ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 10)),
               ),
       );
