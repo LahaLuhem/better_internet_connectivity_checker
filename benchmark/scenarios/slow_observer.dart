@@ -2,7 +2,8 @@
 ///
 /// The observer sleeps 50 ms per callback against a 100 ms check interval. The numbers belong to the
 /// observer, not to dispatch: one isolate means 50 ms of sync work parks the loop for 50 ms whichever
-/// queue it came off. Expect `max_stall_microseconds` near the per-callback delay, and
+/// queue it came off. Expect `max_stall_microseconds` near twice the per-callback delay, since the
+/// opening check fires `onStatusChangeEmitted` and `onCheckCompleted` in one turn, and
 /// `blocked_duty_ratio` near delay over interval, so roughly 0.5 here.
 ///
 /// What the event-bus refactor did change is cadence. The next tick is armed before observer

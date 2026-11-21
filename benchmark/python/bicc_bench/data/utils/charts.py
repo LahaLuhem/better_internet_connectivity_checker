@@ -52,9 +52,10 @@ def plot_headline_max_stall(dataframe: pl.DataFrame, out_path: Path) -> Path:
     """Box plot of max_stall_microseconds per scenario, log y-scale.
 
     `slow_observer` blocks the event loop with sleep(50ms) per callback, so
-    its box sits at the observer's own blocking time (~50k us) - roughly an
-    order of magnitude above the other scenarios' noise floor on the log
-    axis. That gap is the single-isolate blocking cost, not a package bug.
+    its box sits roughly an order of magnitude above the other scenarios'
+    noise floor on the log axis. That gap is the single-isolate blocking
+    cost, not a package bug. The box lands at about twice the per-callback
+    delay, because the opening check fires two callbacks in one turn.
     """
     metric = "max_stall_microseconds"
     plot_df = (
@@ -120,8 +121,8 @@ def plot_memory_peak_rss_delta(dataframe: pl.DataFrame, out_path: Path) -> Path:
 def plot_scenario_stability(dataframe: pl.DataFrame, out_path: Path) -> Path:
     """Box plot of max_stall_microseconds EXCLUDING slow_observer.
 
-    Slow observer's stall ceiling is its observer's 50 ms sleep - an order
-    of magnitude above the others - so it dominates the y-scale of the
+    Slow observer's stall ceiling is two of its observer's sleeps, an order
+    of magnitude above the others, so it dominates the y-scale of the
     headline chart. Excluding it here lets the noise floor of the other
     scenarios be readable. Narrow boxes = reproducible.
     """

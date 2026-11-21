@@ -24,8 +24,9 @@ def value_formatter(units: str) -> Callable[[float | int | None], str]:
 
     Precision tier (for "us" / freeform): values >= 1000 round to integers
     with thousands separators; values 1-1000 get two decimal places; sub-1
-    values get three. Keeps both the slow_observer headline (~50k us) and
-    the status_emission micro (~0.13 us / emit) readable in the same table.
+    values get three. Keeps both the slow_observer headline (five figures of
+    us) and the status_emission micro (sub-1 us per emit) readable in the
+    same table.
 
     "MB" divides byte-valued numbers by 1024^2 and shows two decimals.
     "%" multiplies ratio-valued numbers (0..1) by 100 and appends a percent
@@ -161,10 +162,12 @@ def render_summary_markdown(
         "Longest single continuous window in which synchronous work blocked "
         "the event loop (gap between 1 ms heartbeats, minus the heartbeat "
         "interval). The `slow_observer` scenario wires a deliberately-"
-        "misbehaving observer that sleeps 50 ms per callback, so its box "
-        "should sit at ~50k us - the observer's own blocking time, which no "
-        "dispatch strategy can mask on a single-threaded isolate. The other "
-        "scenarios show the package's intrinsic noise floor.\n",
+        "misbehaving observer that sleeps 50 ms per callback, which no "
+        "dispatch strategy can mask on a single-threaded isolate. Expect "
+        "about twice that here: the opening check fires a status change and "
+        "a check-completed callback in the same turn, and every later window "
+        "holds one. The other scenarios show the package's intrinsic noise "
+        "floor.\n",
         metric_table(dataframe, "max_stall_microseconds", units="us"),
     ]
 
@@ -270,7 +273,7 @@ def render_compare_markdown(
         [
             "## Headline: max event-loop stall, baseline vs current\n",
             "Paired box plot per scenario. `slow_observer`'s box is pinned "
-            "at its observer's per-callback blocking time (~50k us) by "
+            "at about twice its observer's per-callback delay by "
             "design - a code change cannot move it, only a change to the "
             "harness observer can. The other scenarios are the noise floor "
             "and should not move significantly.\n",
