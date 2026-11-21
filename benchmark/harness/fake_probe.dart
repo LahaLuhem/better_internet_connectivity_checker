@@ -43,7 +43,7 @@ final class FakeProbe implements ConnectivityProbe {
   Future<ProbeResult> probe(ProbeTarget target, {Future<void>? cancelSignal}) {
     _callCount++;
 
-    return Future.syncValue(switch (_mode) {
+    return .syncValue(switch (_mode) {
       .alwaysSuccess => .success(target: target, responseTime: _responseTime),
       .alwaysFailure => .failure(target: target, responseTime: _responseTime, error: _error),
       .scripted => _nextScripted(target),

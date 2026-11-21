@@ -86,8 +86,8 @@ LAN-only networks.
 dart pub add better_internet_connectivity_checker
 ```
 
-Requires Dart 3.13 or newer. Pure Dart, so it works the same in a Flutter app, a CLI, a
-server, or on the web.
+Requires the Dart that [`pubspec.yaml`](pubspec.yaml)'s `environment.sdk` names. Pure Dart, so it
+works the same in a Flutter app, a CLI, a server, or on the web.
 
 ## Platform setup
 

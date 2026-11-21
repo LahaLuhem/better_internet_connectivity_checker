@@ -34,7 +34,7 @@ final class const MinimumReachablePolicy({
       targets.length >= _minimum,
       'minimum ($_minimum) exceeds the target count (${targets.length}), so no check can pass',
     );
-    if (targets.length < _minimum) return Future.value(const Unreachable(failedProbes: []));
+    if (targets.length < _minimum) return .syncValue(const Unreachable(failedProbes: []));
 
     final completer = Completer<InternetStatus>();
     final cancelCompleter = Completer<void>();
