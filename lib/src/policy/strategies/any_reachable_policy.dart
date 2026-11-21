@@ -23,36 +23,36 @@ final class const AnyReachablePolicy() implements ReachabilityPolicy {
   }) {
     if (targets.isEmpty) return .syncValue(const Unreachable(failedProbes: []));
 
-    final completer = Completer<InternetStatus>();
+    final statusCompleter = Completer<InternetStatus>();
     final cancelCompleter = Completer<void>();
-    final failures = <ProbeResult>[];
-    var remaining = targets.length;
+    final failedProbes = <ProbeResult>[];
+    var remainingCount = targets.length;
 
     for (final target in targets) {
       unawaited(
         probe.probe(target, cancelSignal: cancelCompleter.future).then((result) {
-          if (completer.isCompleted) return;
+          if (statusCompleter.isCompleted) return;
 
           if (result.isSuccess) {
-            completer.complete(
+            statusCompleter.complete(
               Reachable.fromResponseTime(result.responseTime, slowThreshold: slowThreshold),
             );
 
             return _releasePendingProbes(cancelCompleter);
           }
 
-          failures.add(result);
-          remaining -= 1;
+          failedProbes.add(result);
+          remainingCount -= 1;
 
-          if (remaining == 0) {
-            completer.complete(Unreachable(failedProbes: failures));
+          if (remainingCount == 0) {
+            statusCompleter.complete(Unreachable(failedProbes: failedProbes));
             _releasePendingProbes(cancelCompleter);
           }
         }),
       );
     }
 
-    return completer.future;
+    return statusCompleter.future;
   }
 
   static void _releasePendingProbes(Completer<void> cancelCompleter) {

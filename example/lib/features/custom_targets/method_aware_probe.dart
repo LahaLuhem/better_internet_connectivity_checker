@@ -28,8 +28,8 @@ final class MethodAwareProbe({
       final response = await http.Response.fromStream(streamedResponse);
       stopwatch.stop();
 
-      final allow = response.headers['allow'];
-      if (allow != null && allow.isNotEmpty) onAllowHeader?.call(allow);
+      final allowHeader = response.headers['allow'];
+      if (allowHeader != null && allowHeader.isNotEmpty) onAllowHeader?.call(allowHeader);
 
       return target.isSuccess(response)
           ? .success(target: target, responseTime: stopwatch.elapsed)
