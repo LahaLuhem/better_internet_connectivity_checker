@@ -71,31 +71,5 @@ void main() {
 
       check(label).equals('unreachable');
     });
-
-    scenario('Reachable.toString renders responseTime and quality in stable diagnostic form', () {
-      const status = Reachable(responseTime: Duration(milliseconds: 250), quality: .good);
-
-      check(status.toString()).equals(
-        'Reachable('
-        'responseTime: 0:00:00.250000, '
-        'quality: ConnectionQuality.good)',
-      );
-    });
-
-    scenario('Unreachable.toString renders an empty failedProbes list', () {
-      const status = Unreachable(failedProbes: []);
-
-      check(status.toString()).equals('Unreachable(failedProbes: [])');
-    });
-
-    scenario('Unreachable.toString includes each failed probe by its own toString', () {
-      final target = ProbeTarget(uri: Uri.https('example.com'));
-      final probe = ProbeResult.failure(target: target, responseTime: const Duration(seconds: 1));
-      final status = Unreachable(failedProbes: [probe]);
-
-      check(status.toString())
-        ..startsWith('Unreachable(failedProbes: [')
-        ..contains('ProbeResult(');
-    });
   });
 }

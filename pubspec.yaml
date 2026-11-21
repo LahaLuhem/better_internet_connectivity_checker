@@ -41,6 +41,7 @@ dependencies:
 
 
 dev_dependencies:
+  analyzer: ^14.7.0
   benchmark_harness: ^2.4.0
   checks: ^0.4.0
   dartender_lints:

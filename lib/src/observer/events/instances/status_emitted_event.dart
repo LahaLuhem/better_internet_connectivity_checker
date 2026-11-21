@@ -10,8 +10,7 @@ final class const StatusEmittedEvent({
 }) extends ConnectivityEvent {
   /// Creates a [StatusEmittedEvent].
   this;
-  // coverage:ignore-start
+
   @override
   String toString() => 'StatusEmittedEvent(previous: $previous, next: $next)';
-  // coverage:ignore-end
 }
