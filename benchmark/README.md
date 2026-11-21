@@ -150,6 +150,13 @@ can't be defended.
 - **Mann-Whitney U** (`scipy.stats.mannwhitneyu`) for significance claims.
   Nonparametric, robust to GC outliers, doesn't assume normality. p < 0.05
   for "significant difference" claims.
+- **A quiet `summary` row proves nothing.** `compare`'s table has a `Source`
+  column. `samples` rows pool every tick, so thousands of values. `summary`
+  rows hold one value per iteration, so N is your iteration count and
+  nothing more. That is enough to catch something as loud as a doubled
+  stall, and nowhere near enough to call a 5 % move absent. Read a
+  non-significant `summary` row as "this run can't tell", not as "nothing
+  changed", and raise N before you report either way.
 - **Warmup iterations discarded**, the first 2 of every 10.
 - **No forced GC.** An isolate can't trigger one. The pressure-allocation
   trick that used to stand in for it allocated 8 MB inside the window it was

@@ -326,15 +326,17 @@ def render_compare_markdown(
 
 def render_compare_table_markdown(rows: list[CompareRow]) -> str:
     """Render the per-(scenario, metric) Mann-Whitney table as markdown."""
-    header = "| Scenario | Metric | Baseline median | Current median | Delta | p-value | Sig? |"
-    sep = "|---|---|---:|---:|---:|---:|:---:|"
+    header = (
+        "| Scenario | Metric | Source | Baseline median | Current median | Delta | p-value | Sig? |"
+    )
+    sep = "|---|---|---|---:|---:|---:|---:|:---:|"
     out = [header, sep]
     fmt = value_formatter("us")
     for r in rows:
         delta_str = f"{r.delta_pct:+.1f}%" if r.delta_finite else "inf"
         sig_str = "**Yes**" if r.significant else ""
         out.append(
-            f"| `{r.scenario}` | `{r.metric}` | "
+            f"| `{r.scenario}` | `{r.metric}` | {r.source} | "
             f"{fmt(r.baseline_median)} | {fmt(r.current_median)} | "
             f"{delta_str} | {r.p_value:.4f} | {sig_str} |"
         )

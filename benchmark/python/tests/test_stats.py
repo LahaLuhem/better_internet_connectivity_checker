@@ -1,8 +1,8 @@
 """Tests for `bicc_bench.data.utils.stats`.
 
 The math here is pure and deterministic - perfect regression-prevention
-target. Covers median, group_samples, records_per_scenario, and
-compute_compare_rows (the cmd_compare workhorse).
+target. Covers median, group_samples, group_summaries, records_per_scenario,
+and compute_compare_rows (the cmd_compare workhorse).
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from bicc_bench.data.dtos.result_record import ResultRecord
 from bicc_bench.data.utils.stats import (
     compute_compare_rows,
     group_samples,
+    group_summaries,
     median,
     records_per_scenario,
 )
@@ -207,3 +208,59 @@ class TestComputeCompareRows:
         assert len(rows) == 1
         assert rows[0].p_value == 1.0
         assert not rows[0].significant
+
+
+class TestGroupSummaries:
+    def test_empty_returns_empty(self) -> None:
+        assert group_summaries([]) == {}
+
+    def test_one_scalar_per_record(self) -> None:
+        records: list[ResultRecord] = [
+            {"scenario": "quiet_app", "summary": {"max_stall_microseconds": 10}},
+            {"scenario": "quiet_app", "summary": {"max_stall_microseconds": 30}},
+        ]
+
+        assert group_summaries(records) == {("quiet_app", "max_stall_microseconds"): [10.0, 30.0]}
+
+    def test_non_numeric_values_skipped(self) -> None:
+        records: list[ResultRecord] = [
+            {"scenario": "quiet_app", "summary": {"sdk": "3.14.0", "emission_count": 2}},
+        ]
+
+        assert group_summaries(records) == {("quiet_app", "emission_count"): [2.0]}
+
+
+class TestCompareRowsAcrossSources:
+    """A summary scalar is comparable, and never pools with a same-named tick array."""
+
+    @staticmethod
+    def _records(stall: float, peak: float) -> list[ResultRecord]:
+        return [
+            {
+                "scenario": "quiet_app",
+                "samples": {"stall_microseconds": [stall, stall]},
+                "summary": {"peak_rss_delta_bytes": peak},
+            }
+        ]
+
+    def test_summary_only_metric_is_compared(self) -> None:
+        rows = compute_compare_rows(self._records(1.0, 100.0), self._records(1.0, 400.0))
+        peak = [r for r in rows if r.metric == "peak_rss_delta_bytes"]
+
+        assert [(r.source, r.baseline_median, r.current_median) for r in peak] == [
+            ("summary", 100.0, 400.0)
+        ]
+
+    def test_same_name_in_both_halves_stays_two_series(self) -> None:
+        records: list[ResultRecord] = [
+            {
+                "scenario": "status_emission",
+                "samples": {"microseconds_per_emission": [1.0, 1.0, 1.0, 1.0]},
+                "summary": {"microseconds_per_emission": 9.0},
+            }
+        ]
+
+        rows = compute_compare_rows(records, records)
+        by_source = {r.source: r.baseline_median for r in rows}
+
+        assert by_source == {"samples": 1.0, "summary": 9.0}
