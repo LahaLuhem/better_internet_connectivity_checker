@@ -74,6 +74,10 @@ MULTI_RECORD_SCENARIOS: Final[frozenset[str]] = frozenset(
 CHART_DPI: Final[int] = 150
 CHART_PALETTE: Final[str] = "Set2"
 
+# seaborn's stripplot jitter draws from numpy's global RNG, so an unseeded run
+# rewrites a committed PNG that nothing actually changed.
+CHART_JITTER_SEED: Final[int] = 20260820
+
 # Forest plot colours - direction + significance encoded into one bar.
 FOREST_COLOUR_REGRESSION: Final[str] = "#c0392b"  # red
 FOREST_COLOUR_IMPROVEMENT: Final[str] = "#27ae60"  # green

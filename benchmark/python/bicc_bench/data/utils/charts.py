@@ -16,12 +16,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import polars as pl
 import seaborn as sns
 
 from bicc_bench.config import (
     CHART_DPI,
+    CHART_JITTER_SEED,
     CHART_PALETTE,
     FOREST_COLOUR_IMPROVEMENT,
     FOREST_COLOUR_NOT_SIG,
@@ -147,6 +149,8 @@ def plot_scenario_stability(dataframe: pl.DataFrame, out_path: Path) -> Path:
         hue="scenario",
         legend=False,
     )
+    # Seeded so this committed PNG only changes when the data does.
+    np.random.seed(CHART_JITTER_SEED)
     sns.stripplot(
         data=plot_df,
         x="scenario",
