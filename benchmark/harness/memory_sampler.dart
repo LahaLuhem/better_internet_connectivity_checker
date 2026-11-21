@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
+
 /// Samples `ProcessInfo.currentRss` on a timer, to watch resident memory across a run. Coarser than
 /// heap size, but it's the right signal for spotting a leak.
 ///
@@ -12,16 +14,16 @@ final class MemorySampler({final Duration _interval = const Duration(seconds: 1)
   Timer? _timer;
 
   /// Every RSS sample so far, in bytes, oldest first.
-  List<int> get samples => List.unmodifiable(_samples);
+  List<int> get samples => List.unmodifiableOf(_samples);
 
   /// Timestamps matching [samples] one-to-one.
-  List<DateTime> get timestamps => List.unmodifiable(_timestamps);
+  List<DateTime> get timestamps => List.unmodifiableOf(_timestamps);
 
   /// Highest RSS seen, in bytes. Zero when nothing has been sampled.
-  int get peakRss => _samples.isEmpty ? 0 : _samples.reduce((a, b) => a > b ? a : b);
+  int get peakRss => _samples.maxOrNull ?? 0;
 
   /// Lowest RSS seen, which makes a decent idle baseline.
-  int get minRss => _samples.isEmpty ? 0 : _samples.reduce((a, b) => a < b ? a : b);
+  int get minRss => _samples.minOrNull ?? 0;
 
   /// Last sample minus the first. Climbing means growth, which means a possible leak.
   int get rssDelta => _samples.length < 2 ? 0 : _samples.last - _samples.first;

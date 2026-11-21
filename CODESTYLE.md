@@ -20,11 +20,12 @@ heading text, so renames don't break callers.
 - [Idioms](#idioms)
   - [Static dot shorthands (Dart 3.10+)](#static-dot-shorthands-dart-310)
   - [Header-form primary constructors (Dart 3.13+)](#header-form-primary-constructors-dart-313)
-  - [Collection-for / collection-if over `Iterable.map(…).toList()`](#collection-for-collection-if-over-iterablemaptolist)
-  - [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
   - [`Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)`](#urihttps-urihttp-over-uriparse)
-  - [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#listunmodifiable-over-unmodifiablelistview)
   - [`part` / `part of` only when structurally needed](#part-part-of-only-when-structurally-needed)
+- [Collections](#collections)
+  - [Library pipeline methods over hand-rolled loops](#library-pipeline-methods-over-hand-rolled-loops)
+  - [The tightest list its use allows](#the-tightest-list-its-use-allows)
+  - [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
 - [Prose & voice](#prose-voice)
 - [Comments & dartdoc](#comments-dartdoc)
 - [Testing](#testing)
@@ -250,7 +251,7 @@ in the initializer list, leaving `this :` for asserts alone:
 ```dart
 final class Conn({List<ProbeTarget>? targets}) {
   final List<ProbeTarget> _targets =
-      targets != null ? List.unmodifiable(targets) : Values.defaultProbeTargets;
+      targets != null ? List.unmodifiableOf(targets) : Values.defaultProbeTargets;
 
   /// Creates a [Conn].
   this : assert(targets == null || targets.isNotEmpty, 'targets must be non-empty');
@@ -262,77 +263,6 @@ body, the way `HttpProbe.head()` / `.get()` already delegate to `HttpProbe._`.
 
 Retrofitting an existing class works throughout this package, `const` types, sealed subclasses and
 `part` files included. Land such a sweep as its own change, never folded into a feature diff.
-
-<a id="idioms-collection-literals"></a>
-<!-- TOC --><a name="collection-for-collection-if-over-iterablemaptolist"></a>
-
-### Collection-for / collection-if over `Iterable.map(…).toList()`
-
-In widget trees especially, a literal list with embedded control flow reads as data, where a
-`.map(…).toList()` reads as a pipeline that incidentally produces data. The literal
-form also doesn't bloat the file with `<T>` annotations the list-literal context
-already infers:
-
-```dart
-// Prefer:
-DropdownButton(
-  value: viewModel.probeMethod,
-  items: [
-    for (final method in ProbeMethod.values)
-      DropdownMenuItem(value: method, child: Text(method.label)),
-  ],
-  onChanged: …,
-)
-
-// Over:
-DropdownButton<ProbeMethod>(
-  value: viewModel.probeMethod,
-  items: ProbeMethod.values
-      .map((m) => DropdownMenuItem<ProbeMethod>(value: m, child: Text(m.label)))
-      .toList(),
-  onChanged: …,
-)
-```
-
-Drop explicit generic type arguments when the surrounding context (other args, the
-assignment target, the return slot) already pins them. Keep them when inference would
-otherwise fall back to `dynamic`. For example `MaterialPageRoute<void>(builder: …)` stays,
-because nothing else constrains the route's `T`.
-
-<a id="idioms-wait-extensions"></a>
-<!-- TOC --><a name="dartasync-wait-extensions-over-static-futurewait"></a>
-
-### `dart:async` `wait` extensions over static `Future.wait(...)`
-
-The extensions (`Iterable<Future<T>>.wait` and the record forms `FutureRecord2`…
-`FutureRecord9`) live in `dart:async`'s `future_extensions.dart` and supersede the
-static call for everyday use.
-
-- **Fixed number of differently-typed futures → record form.** `(f1, f2).wait`
-  returns `Future<(T1, T2)>` and destructures directly. Never await a list literal and
-  index into the result by `.first` / `[1]` / etc., which collapses element types to
-  the common supertype and isn't type-checked against slot order, so a swap reads as
-  valid until runtime.
-- **Dynamic number of same-typed futures → iterable form.** `iterable.wait` returns
-  `Future<List<T>>` just like `Future.wait(iterable)`, but errors surface as
-  `ParallelWaitError` carrying both per-slot values and per-slot errors, which lets
-  callers dispose successful results when a sibling future fails.
-
-```dart
-// Prefer (fixed-size, mixed types):
-final (anyStatus, allStatus) = await (any.checkOnce(), all.checkOnce()).wait;
-
-// Over:
-final results = await Future.wait([any.checkOnce(), all.checkOnce()]);
-final anyStatus = results.first;
-final allStatus = results[1];
-
-// Prefer (dynamic-size):
-final results = await targets.map(probe.probe).wait;
-
-// Over:
-final results = await Future.wait(targets.map(probe.probe));
-```
 
 <a id="idioms-uri-construction"></a>
 <!-- TOC --><a name="urihttps-urihttp-over-uriparse"></a>
@@ -370,26 +300,113 @@ deferred `Uri.parse`. The trade-off only pays off when the enclosing type is
 payoff to justify the indirection) and never in public-API code (anything re-exported
 from `lib/<package>.dart`).
 
+<a id="idioms-parts"></a>
+<!-- TOC --><a name="part-part-of-only-when-structurally-needed"></a>
+
+### `part` / `part of` only when structurally needed
+
+Not a smell on its own. Legitimate uses: sealed-class cases across files (Dart 3
+requires same library for sealed subtypes, see `lib/src/status/outcomes/`),
+code-generation outputs (`*.g.dart` from freezed, json_serializable, drift, etc.).
+Avoid for general code organisation. Imports and exports are explicit, parts hide
+dependencies and leak `_private` symbols across files within the library.
+
+---
+
+<a id="collections"></a>
+<!-- TOC --><a name="collections"></a>
+
+## Collections
+
+- **Chain, don't fill an empty collection in a loop.** `map`, `where`, `nonNulls` and `fold` say
+  what the transformation is, see [Library pipeline methods](#collections-pipelines). In the
+  example app's widget trees it goes the other way round, see
+  [Collection-for in widget trees](./example/CODESTYLE.md#widget-collection-literals).
+- **Take the helper from the first place that has it:** `dart:core`'s own `Iterable` / `List` /
+  `Set` / `Map` methods, then `dart:collection`, then
+  [`package:collection`](https://pub.dev/packages/collection) (`max`, `min`, `firstWhereOrNull`,
+  `whereNot`, `sortedBy`, `groupListsBy`, `slices`). It is a declared dependency and adds nothing
+  to a downstream closure, see [why](./APPENDIX.md#why-collection-is-declared).
+- **Pick the collection that says what you mean.** A `Set` for no order and no duplicates, a `Map`
+  for lookup, a `List` when the order is the data. Give it that type where the data is made and on
+  the parameters that take it, so every caller inherits the guarantee and the cheap `contains`.
+- **Test membership against a `Set`, or a `Map`'s keys, built once.** `contains` or `any` on a
+  `List` walks it again for every item tested.
+- **A lazy chain reruns its callbacks on every walk.** Materialise once where the data is made and
+  hand that out, never the chain. A caller fusing its own `map` into it saves one intermediate
+  list and nothing else ([what it costs](./APPENDIX.md#what-it-costs)).
+- **Hand out an `Iterable` only where laziness skips real work:** an endless or generated source,
+  or costly work per item that a caller may stop early on. Mapping models isn't costly.
+- **`length` and `elementAt` stay cheap through `map`, `cast`, `indexed`, `skip` and `take`.** A
+  `where`, `whereType`, `nonNulls`, `expand`, `skipWhile` or `takeWhile` makes both walk, and so
+  does everything chained after it, so materialise first
+  ([what runs, and when](./APPENDIX.md#what-runs-and-when)).
+
+> Swapping a literal for a chain can change the meaning. A map literal keyed by X keeps the last
+> match, where `package:collection`'s `distinctBy` keeps the first.
+
+<a id="collections-pipelines"></a>
+<!-- TOC --><a name="library-pipeline-methods-over-hand-rolled-loops"></a>
+
+### Library pipeline methods over hand-rolled loops
+
+Transforming, filtering, flattening or reducing is a chain that names what it does. The tell is an
+accumulator declared empty and then filled in a loop.
+
+```dart
+// Prefer:
+final worstDuration = probeResults.map((result) => result.responseTime).max;
+
+// Over:
+var worstDuration = Duration.zero;
+for (final result in probeResults) {
+  if (result.responseTime > worstDuration) worstDuration = result.responseTime;
+}
+```
+
+- **A loop that races or settles early is not a pipeline.**
+  [`AnyReachablePolicy`](./lib/src/policy/strategies/any_reachable_policy.dart) and
+  [`MinimumReachablePolicy`](./lib/src/policy/strategies/minimum_reachable_policy.dart) fire every
+  probe in a `for` and settle a `Completer` on the first answer that decides the check. No
+  collection comes out, so there is no chain to write.
+- **Stay lazy as far as the one call that walks it.** Pass the chain unnamed into the call that
+  consumes it. Naming it invites a second walk, which reruns every callback in it.
+- **Materialise for a second pass, or for an API that wants a `List`,** with the tightest kind its
+  use allows, see [below](#idioms-unmodifiable-collections).
+- **This package's lists are a handful of targets long** (`Values.defaultProbeTargets`), so the
+  shape of a chain costs nothing worth weighing. A change that claims otherwise ships numbers from
+  [`benchmark/`](./benchmark/), see [why](./APPENDIX.md#why-benchmarks-gate-refactor).
+
 <a id="idioms-unmodifiable-collections"></a>
-<!-- TOC --><a name="listunmodifiable-over-unmodifiablelistview"></a>
+<!-- TOC --><a name="the-tightest-list-its-use-allows"></a>
 
-### `List.unmodifiable(…)` over `UnmodifiableListView(…)`
+### The tightest list its use allows
 
-Default to `List.unmodifiable(…)` for exposing immutable collections (same for
-`Set.unmodifiable` / `Map.unmodifiable` vs their `…View` counterparts in
-`dart:collection`). The constructor *copies*: snapshot semantics, decoupled from
-whatever the caller passed in. The `…View` only *wraps*: anyone who still holds the
-underlying collection can mutate it, and the view silently follows. That footgun
-outweighs the saved copy in almost every case.
+All 3 kinds are a `List<E>` to the type system, and breaking one throws at runtime, so the line
+that builds it is the only place that says which ([why](./APPENDIX.md#three-kinds-of-list)).
 
-Reach for `UnmodifiableListView` only when you specifically want **read-through
-visibility** into private mutable internal state, e.g. a future logging /
-event-buffer class whose consumers should see new entries appended live.
+| Once built, the list…               | Build it with                               |
+|-------------------------------------|---------------------------------------------|
+| never changes                       | `List.unmodifiableOf(…)`                    |
+| keeps its length, its slots get set | `toList(growable: false)`, `List.filled(…)` |
+| grows or shrinks                    | `toList()`, `[]`                            |
+
+Sets and maps lock the same way, with `Set.unmodifiable(…)` and `Map.unmodifiableOf(…)`. Never
+`List.unmodifiable(…)` or `Map.unmodifiable(…)`, which take an untyped `Iterable` / `Map`: the SDK
+has their deprecation in favour of the `…Of` ones written already, commented out in `list.dart`
+and `map.dart`. `Set.unmodifiable` was typed from the start, so it has no `…Of` twin. Cost never
+picks the kind.
+
+**The `…Of` constructors copy, `UnmodifiableListView` wraps.** `List.unmodifiableOf(…)` is a
+snapshot, decoupled from whatever the caller passed in. The `…View` counterparts in
+`dart:collection` only wrap, so anyone still holding the underlying collection can mutate what the
+view shows. That is the point when you want read-through visibility into private mutable state,
+and a footgun everywhere else.
 
 ```dart
 // Prefer: defensive snapshot, caller-supplied list cannot mutate our state:
 class Foo {
-  Foo(List<X> input) : _xs = List.unmodifiable(input);
+  Foo(List<X> input) : _xs = List.unmodifiableOf(input);
   final List<X> _xs;
 }
 
@@ -401,16 +418,44 @@ class EventLog {
 }
 ```
 
-<a id="idioms-parts"></a>
-<!-- TOC --><a name="part-part-of-only-when-structurally-needed"></a>
+A view over data that never changes once built only saves the copy, and the call site has to say
+why it cannot change. Never one over a `where`, which the view walks again on every read
+([what runs, and when](./APPENDIX.md#what-runs-and-when)).
 
-### `part` / `part of` only when structurally needed
+<a id="idioms-wait-extensions"></a>
+<!-- TOC --><a name="dartasync-wait-extensions-over-static-futurewait"></a>
 
-Not a smell on its own. Legitimate uses: sealed-class cases across files (Dart 3
-requires same library for sealed subtypes, see `lib/src/status/outcomes/`),
-code-generation outputs (`*.g.dart` from freezed, json_serializable, drift, etc.).
-Avoid for general code organisation. Imports and exports are explicit, parts hide
-dependencies and leak `_private` symbols across files within the library.
+### `dart:async` `wait` extensions over static `Future.wait(...)`
+
+The extensions (`Iterable<Future<T>>.wait` and the record forms `FutureRecord2`…
+`FutureRecord9`) live in `dart:async`'s `future_extensions.dart` and supersede the
+static call for everyday use.
+
+- **Fixed number of differently-typed futures → record form.** `(f1, f2).wait`
+  returns `Future<(T1, T2)>` and destructures directly. Never await a list literal and
+  index into the result by `.first` / `[1]` / etc., which collapses element types to
+  the common supertype and isn't type-checked against slot order, so a swap reads as
+  valid until runtime.
+- **Dynamic number of same-typed futures → iterable form.** `iterable.wait` returns
+  `Future<List<T>>` just like `Future.wait(iterable)`, but errors surface as
+  `ParallelWaitError` carrying both per-slot values and per-slot errors, which lets
+  callers dispose successful results when a sibling future fails.
+
+```dart
+// Prefer (fixed-size, mixed types):
+final (anyStatus, allStatus) = await (any.checkOnce(), all.checkOnce()).wait;
+
+// Over:
+final results = await Future.wait([any.checkOnce(), all.checkOnce()]);
+final anyStatus = results.first;
+final allStatus = results[1];
+
+// Prefer (dynamic-size):
+final results = await targets.map(probe.probe).wait;
+
+// Over:
+final results = await Future.wait(targets.map(probe.probe));
+```
 
 ---
 

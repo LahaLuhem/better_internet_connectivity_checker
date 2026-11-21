@@ -19,6 +19,9 @@ final class _EventSink() {
     return (_controller ??= StreamController<ConnectivityEvent>.broadcast()).stream;
   }
 
+  /// Whether anything is listening. Lets a caller skip building an event [emit] would only drop.
+  bool get hasListener => _controller?.hasListener ?? false;
+
   /// Queues [event] for the next microtask. Dropped outright when nobody is listening yet or the
   /// controller has closed, which is fine: late subscribers never see past events anyway.
   void emit(ConnectivityEvent event) {

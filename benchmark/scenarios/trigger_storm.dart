@@ -78,7 +78,7 @@ Future<void> _runIteration(
     iteration: iteration,
     samples: {
       'rss_bytes': memorySampler.samples,
-      'stall_microseconds': stallMeter.stalls.map((d) => d.inMicroseconds).toList(growable: false),
+      'stall_microseconds': stallMeter.stallMicroseconds,
     },
     summary: {
       'trigger_fire_count': triggerCount,
