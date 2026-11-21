@@ -4,6 +4,8 @@ part of '../connectivity_event.dart';
 final class const DisposedEvent() extends ConnectivityEvent {
   /// Creates a [DisposedEvent].
   this;
+
+  // No fields to render, so a test could only pin the class name.
   // coverage:ignore-start
   @override
   String toString() => 'DisposedEvent()';

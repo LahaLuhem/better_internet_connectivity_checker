@@ -11,8 +11,7 @@ final class const ExternalTriggerErrorEvent(
 ) extends ConnectivityEvent {
   /// Creates an [ExternalTriggerErrorEvent].
   this;
-  // coverage:ignore-start
+
   @override
   String toString() => 'ExternalTriggerErrorEvent(error: $error)';
-  // coverage:ignore-end
 }

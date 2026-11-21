@@ -11,8 +11,7 @@ final class const CheckIntervalChangedEvent({
 }) extends ConnectivityEvent {
   /// Creates a [CheckIntervalChangedEvent].
   this;
-  // coverage:ignore-start
+
   @override
   String toString() => 'CheckIntervalChangedEvent(previous: $previous, next: $next)';
-  // coverage:ignore-end
 }

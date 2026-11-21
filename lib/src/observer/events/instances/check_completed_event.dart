@@ -8,8 +8,7 @@ final class const CheckCompletedEvent(
 ) extends ConnectivityEvent {
   /// Creates a [CheckCompletedEvent].
   this;
-  // coverage:ignore-start
+
   @override
   String toString() => 'CheckCompletedEvent(result: $result)';
-  // coverage:ignore-end
 }

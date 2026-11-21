@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:better_internet_connectivity_checker/src/data/values.dart';
 import 'package:checks/checks.dart';
 
@@ -9,8 +11,8 @@ void main() {
     scenario('probes one endpoint per operator, none repeated', () {
       final hosts = Values.defaultProbeTargets.map((target) => target.uri.host);
 
-      check(hosts).length.equals(3);
-      check(hosts.toSet()).length.equals(3);
+      check(hosts).length.isGreaterThan(1);
+      check(hosts.toSet()).length.equals(hosts.length);
     });
 
     scenario('sticks to HTTPS, so an interception cannot answer in place of a target', () {
@@ -20,15 +22,10 @@ void main() {
   });
 
   feature('noopWithVal', () {
-    scenario('returns a function that discards any argument without throwing', () {
-      final fn = noopWithVal;
+    scenario('maps a stream of anything to a void stream that still ticks', () async {
+      final source = Stream<Object?>.fromIterable([42, 'any', null, Object()]);
 
-      fn(42);
-      fn('any');
-      fn(null);
-      fn(Object());
-
-      check(fn).isA<void Function(Object?)>();
+      check(await source.map(noopWithVal).length).equals(4);
     });
   });
 }

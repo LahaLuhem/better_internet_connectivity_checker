@@ -342,6 +342,21 @@ void main() {
       });
     });
 
+    scenario('emits DisposedEvent once however many times dispose is called', () async {
+      final probe = StubProbe(
+        (target) async =>
+            ProbeResult.success(target: target, responseTime: const Duration(milliseconds: 50)),
+      );
+      final connection = InternetConnection(targets: [target], probe: probe);
+      final events = <ConnectivityEvent>[];
+      connection.events.listen(events.add);
+
+      await connection.dispose();
+      await connection.dispose();
+
+      check(events.whereType<DisposedEvent>()).length.equals(1);
+    });
+
     scenario('emission is microtask-deferred, subscriber sees event after the caller frame', () {
       final probe = StubProbe(
         (target) async =>

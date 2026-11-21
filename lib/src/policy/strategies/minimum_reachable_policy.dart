@@ -41,10 +41,6 @@ final class const MinimumReachablePolicy({
     final failedProbes = <ProbeResult>[];
     var successCount = 0;
 
-    void releasePendingProbes() {
-      if (!cancelCompleter.isCompleted) cancelCompleter.complete();
-    }
-
     for (final target in targets) {
       unawaited(
         probe.probe(target, cancelSignal: cancelCompleter.future).then((result) {
@@ -58,18 +54,22 @@ final class const MinimumReachablePolicy({
               Reachable.fromResponseTime(result.responseTime, slowThreshold: slowThreshold),
             );
 
-            return releasePendingProbes();
+            return _releasePendingProbes(cancelCompleter);
           }
 
           failedProbes.add(result);
           if (targets.length - failedProbes.length >= _minimum) return;
 
           statusCompleter.complete(Unreachable(failedProbes: failedProbes));
-          releasePendingProbes();
+          _releasePendingProbes(cancelCompleter);
         }),
       );
     }
 
     return statusCompleter.future;
+  }
+
+  static void _releasePendingProbes(Completer<void> cancelCompleter) {
+    if (!cancelCompleter.isCompleted) cancelCompleter.complete();
   }
 }

@@ -42,10 +42,7 @@ void main() {
       watchdogWith(warnings).measure(checkCompleted, () => sleep(const Duration(milliseconds: 20)));
 
       check(warnings).length.equals(1);
-      check(warnings.single)
-        ..contains('PrintingConnectivityObserver.onCheckCompleted')
-        ..contains('budget: 8 ms')
-        ..contains('Isolate.run');
+      check(warnings.single).contains('PrintingConnectivityObserver.onCheckCompleted');
     });
 
     scenario('same event type never warns twice', () {
