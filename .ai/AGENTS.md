@@ -1,50 +1,49 @@
 # AGENTS.md: `better_internet_connectivity_checker`
 
-Tool-agnostic brief for any coding agent (Copilot, Cursor, Codex, Claude Code, …) working in
-this package. Claude-Code-specific guidance lives in [CLAUDE.md](./CLAUDE.md).
+Tool-agnostic brief for any coding agent (Copilot, Cursor, Codex, Claude Code, …) working in this
+package. Claude-Code-specific guidance lives in [CLAUDE.md](./CLAUDE.md).
 
 ## Project goal
 
-A Dart package for **internet-connectivity checking** that tells "a network
-interface is up" (cheap, often wrong) from "I can actually reach the public internet right
-now" (the question users typically care about). Pure Dart so it works equally well in CLI,
-server, web, and Flutter contexts.
+A Dart package for **internet-connectivity checking** that tells "a network interface is up" (cheap,
+often wrong) from "I can actually reach the public internet right now" (the question users typically
+care about). Pure Dart so it works equally well in CLI, server, web, and Flutter contexts.
 
-The public API is stable: `InternetConnection` scheduler + sealed `InternetStatus`
-outcomes, backed by pluggable `ConnectivityProbe` and `ReachabilityPolicy` layers. See
-README for usage, APPENDIX for design rationale.
+The public API is stable: `InternetConnection` scheduler + sealed `InternetStatus` outcomes, backed
+by pluggable `ConnectivityProbe` and `ReachabilityPolicy` layers. See README for usage,
+[`doc/how-it-works.md`](../doc/how-it-works.md) for the seams and what each one promises, and
+APPENDIX for design rationale.
 
 ## Stack
 
-- **Dart SDK floor: the `environment: sdk:` constraint in
-  [`pubspec.yaml`](../pubspec.yaml).** It sits where it does because the code uses
-  header-form primary constructors, so raise it only when a new language feature is
-  actually consumed. [`.fvmrc`](../.fvmrc) names the local channel, not a version.
-  Whatever toolchain serves it is fine, the host toolchain manager being a local
+- **Dart SDK floor: the `environment: sdk:` constraint in [`pubspec.yaml`](../pubspec.yaml).** It
+  sits where it does because the code uses header-form primary constructors, so raise it only when a
+  new language feature is actually consumed. [`.fvmrc`](../.fvmrc) names the local channel, not a
+  version. Whatever toolchain serves it is fine, the host toolchain manager being a local
   implementation detail.
 - **`dart test`** for tests, **`dart --no-version-check analyze --fatal-infos --fatal-warnings .`**
   for pedantic static analysis, as CI runs it (pedantic mode is intentional, not negotiable). No
   Flutter dep, no platform channels.
 - **`actionlint`** (GitHub workflows) runs from the
   [`linterpol`](https://github.com/LahaLuhem/linterpol) Docker image
-  (`ghcr.io/lahaluhem/linterpol`), not a local install, so only Docker is needed. CI runs it
-  too, with rumdl and ryl for Markdown and YAML, from
+  (`ghcr.io/lahaluhem/linterpol`), not a local install, so only Docker is needed. CI runs it too,
+  with rumdl and ryl for Markdown and YAML, from
   [`.github/lint-checks.json`](../.github/lint-checks.json), which dartender's `setup.sh` writes.
   Per-tool config tuned to this repo lives in [`.rumdl.toml`](../.rumdl.toml) and
   [`.yamllint.yaml`](../.yamllint.yaml).
-- **`CHANGELOG.md`, `version:` and `example/pubspec.lock` aren't edited by hand.**
-  `changelog.yml` writes each merged PR's line. The release run, which the user starts from the
-  Actions tab ([dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing)), adds
-  Dependabot's lines, bumps `version:`, dates the section and re-resolves `example/pubspec.lock`,
-  which pins this package's version through `path: ../`. Dependabot bumps that lockfile too. So
-  never run `cider`. The one time to run `flutter pub get` in `example/` yourself is after
-  changing `example/pubspec.yaml`. The `cider:` block in `pubspec.yaml` is cider's static
-  configuration (URLs, link templates) and may be hand-edited freely.
+- **`CHANGELOG.md`, `version:` and `example/pubspec.lock` aren't edited by hand.** `changelog.yml`
+  writes each merged PR's line. The release run, which the user starts from the Actions tab
+  ([dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing)), adds Dependabot's
+  lines, bumps `version:`, dates the section and re-resolves `example/pubspec.lock`, which pins this
+  package's version through `path: ../`. Dependabot bumps that lockfile too. So never run `cider`.
+  The one time to run `flutter pub get` in `example/` yourself is after changing
+  `example/pubspec.yaml`. The `cider:` block in `pubspec.yaml` is cider's static configuration
+  (URLs, link templates) and may be hand-edited freely.
 - **Published to pub.dev.** `.pubignore` controls what ships in the tarball.
-- **`.editorconfig`** is the source of truth for text-file conventions: line width 100,
-  LF endings, UTF-8, per-language indent rules. The Dart formatter's `page_width: 100`, from
-  [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
-  matches it.
+- **`.editorconfig`** is the source of truth for text-file conventions: line width 100, LF endings,
+  UTF-8, per-language indent rules. The Dart formatter's `page_width: 100`, from [dartender's shared
+  lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml), matches
+  it.
 
 ## Repo layout
 
@@ -101,73 +100,68 @@ better_internet_connectivity_checker/
 **Feature-directory conventions** (apply within `lib/src/<feature>/`):
 
 - `<feature>.dart` at the root holds the abstract interface or the sealed parent.
-- `strategies/` / `transports/` / `sinks/`: concrete implementations of the interface.
-  Named for what they *are* (Strategy-pattern impls, transport impls, event-sink impls),
-  not a generic `impl/`. Public impls (e.g. `PrintingConnectivityObserver` under
-  `observer/sinks/`) are regular libraries. Private ones can use `part of` to scope themselves
-  to the library that owns them, as `internal/` does with `internet_connection.dart`.
+- `strategies/` / `transports/` / `sinks/`: concrete implementations of the interface. Named for
+  what they *are* (Strategy-pattern impls, transport impls, event-sink impls), not a generic
+  `impl/`. Public impls (e.g. `PrintingConnectivityObserver` under `observer/sinks/`) are regular
+  libraries. Private ones can use `part of` to scope themselves to the library that owns them, as
+  `internal/` does with `internet_connection.dart`.
 - `models/`: value types serving the feature (request/result/options).
-- `outcomes/`: sealed-class cases. Uses `part of` to share library scope with the
-  parent (required by Dart's sealed-class rules, see
-  [`CODESTYLE.md#idioms-parts`](../CODESTYLE.md#idioms-parts)).
+- `outcomes/`: sealed-class cases. Uses `part of` to share library scope with the parent (required
+  by Dart's sealed-class rules, see [`CODESTYLE.md#idioms-parts`](../CODESTYLE.md#idioms-parts)).
 
 ## Hard rules
 
-1. **The public API lives only in `lib/<package>.dart`.** That file re-exports from
-   `lib/src/`. Don't make users import from `package:…/src/…`, since the `src/` subtree is
-   private by convention. Anything callers need goes through an explicit `export`.
-   Cross-cutting helpers and tuning knobs live in `lib/src/data/`:
+1. **The public API lives only in `lib/<package>.dart`.** That file re-exports from `lib/src/`.
+   Don't make users import from `package:…/src/…`, since the `src/` subtree is private by
+   convention. Anything callers need goes through an explicit `export`. Cross-cutting helpers and
+   tuning knobs live in `lib/src/data/`:
    - `data/typedefs.dart`: typedefs shared across the project.
-   - `data/values.dart`: internal defaults (timeouts, intervals, header maps, the
-     curated probe-target list) grouped under `abstract final class Values` so call
-     sites read `Values.defaultX` and the origin is obvious. Loose helpers like
-     `noopWithVal` stay top-level alongside the class. Before introducing a new magic
-     number or default in a class, check whether it belongs in `Values`.
-2. **No `print()` in library code.** Diagnostic output is the caller's responsibility
-   (loggers, callbacks, etc.). `avoid_print` is already a warning in the shared lints.
-3. **No `dynamic` escape hatches.** `strict-casts`, `strict-inference`, and
-   `strict-raw-types` are all on in the shared lints. If you reach for `dynamic` or
-   unconstrained `Object?`, stop and reconsider.
-4. **Public symbols carry dartdoc.** `public_member_api_docs` is enabled. Every public
-   class / function / getter / extension needs a `///` comment that explains *why*, not
-   *what*. The type already carries the *what*.
-5. **Semver, strictly.** Breaking changes only on a major bump. Any change to a public
-   signature, deletion, or behavioural change of a documented contract is breaking.
-   Nothing checks the bump against the change: whoever starts the Release run picks it.
-6. **Pure Dart, no Flutter dep in `pubspec.yaml`.** This package targets every Dart
-   platform: server, CLI, web, Flutter. If platform-channel features ever become
-   necessary, a sibling Flutter-plugin package can depend on this one. Don't add Flutter
-   to this `pubspec.yaml`. See
-   [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter). The
-   `example/` directory itself is Flutter, and pub resolves it from the root by default, so
-   working here needs the Flutter SDK, which CI's jobs install too.
-7. **`CHANGELOG.md` is fully bot-owned. Do not edit any section of it, including
-   `## [Unreleased]`.** Release headers and Dependabot's lines are written by the release run,
-   and the running `## [Unreleased]` buffer is appended to by the post-merge automation in
-   [`.github/workflows/changelog.yml`](../.github/workflows/changelog.yml), which calls
-   `cider log` with the merged-PR title. The PR title (governed by its `sem-*` label) is
-   what becomes the changelog line, so when landing a feature do **not** curate,
-   prepend, or hand-write a bullet describing it. Manual entries will be reordered or
-   duplicated by the bot. The bracket-and-link-reference format (`## [Unreleased]`
-   heading, `[Unreleased]: …/compare/<last-tag>...HEAD` reference at the bottom,
-   `### Added` / `### Changed` / `### Fixed` subsections) is what cider's `link_template`
-   expects, and inconsistent headings get rewritten on release. The same prohibition covers
-   the `version:` field in `pubspec.yaml` and `example/pubspec.lock`, with the one exception
-   *Stack* names. Never bump or hand-edit either, nor run `cider` commands. The `cider:` block
-   in `pubspec.yaml` is static configuration (link templates, URLs) and may be hand-edited like
-   any other yaml.
+   - `data/values.dart`: internal defaults (timeouts, intervals, header maps, the curated
+     probe-target list) grouped under `abstract final class Values` so call sites read
+     `Values.defaultX` and the origin is obvious. Loose helpers like `noopWithVal` stay top-level
+     alongside the class. Before introducing a new magic number or default in a class, check whether
+     it belongs in `Values`.
+2. **No `print()` in library code.** Diagnostic output is the caller's responsibility (loggers,
+   callbacks, etc.). `avoid_print` is already a warning in the shared lints.
+3. **No `dynamic` escape hatches.** `strict-casts`, `strict-inference`, and `strict-raw-types` are
+   all on in the shared lints. If you reach for `dynamic` or unconstrained `Object?`, stop and
+   reconsider.
+4. **Public symbols carry dartdoc.** `public_member_api_docs` is enabled. Every public class /
+   function / getter / extension needs a `///` comment that explains *why*, not *what*. The type
+   already carries the *what*.
+5. **Semver, strictly.** Breaking changes only on a major bump. Any change to a public signature,
+   deletion, or behavioural change of a documented contract is breaking. Nothing checks the bump
+   against the change: whoever starts the Release run picks it.
+6. **Pure Dart, no Flutter dep in `pubspec.yaml`.** This package targets every Dart platform:
+   server, CLI, web, Flutter. If platform-channel features ever become necessary, a sibling
+   Flutter-plugin package can depend on this one. Don't add Flutter to this `pubspec.yaml`. See
+   [`APPENDIX.md#pure-dart-not-flutter`](../APPENDIX.md#pure-dart-not-flutter). The `example/`
+   directory itself is Flutter, and pub resolves it from the root by default, so working here needs
+   the Flutter SDK, which CI's jobs install too.
+7. **`CHANGELOG.md` is fully bot-owned. Do not edit any section of it, including `##
+   [Unreleased]`.** Release headers and Dependabot's lines are written by the release run, and the
+   running `## [Unreleased]` buffer is appended to by the post-merge automation in
+   [`.github/workflows/changelog.yml`](../.github/workflows/changelog.yml), which calls `cider log`
+   with the merged-PR title. The PR title (governed by its `sem-*` label) is what becomes the
+   changelog line, so when landing a feature do **not** curate, prepend, or hand-write a bullet
+   describing it. Manual entries will be reordered or duplicated by the bot. The
+   bracket-and-link-reference format (`## [Unreleased]` heading, `[Unreleased]:
+   …/compare/<last-tag>...HEAD` reference at the bottom, `### Added` / `### Changed` / `### Fixed`
+   subsections) is what cider's `link_template` expects, and inconsistent headings get rewritten on
+   release. The same prohibition covers the `version:` field in `pubspec.yaml` and
+   `example/pubspec.lock`, with the one exception *Stack* names. Never bump or hand-edit either, nor
+   run `cider` commands. The `cider:` block in `pubspec.yaml` is static configuration (link
+   templates, URLs) and may be hand-edited like any other yaml.
 
 ## PR conventions
 
 Every check below is enforced by dartender's `conventions.yml`, through
 [`.github/workflows/conventions.yml`](../.github/workflows/conventions.yml).
 
-- **Branch name**: `<type>/#<issue>-<slug>`, where `<type>` is one of
-  `feature`, `bugfix`, `chore`, `refactor`.
-  Example: `chore/#4-tidy-readme`.
-- **Exactly one `sem-*` label per PR.** Selects the changelog category for the
-  post-merge automation in
-  [`.github/workflows/changelog.yml`](../.github/workflows/changelog.yml):
+- **Branch name**: `<type>/#<issue>-<slug>`, where `<type>` is one of `feature`, `bugfix`, `chore`,
+  `refactor`. Example: `chore/#4-tidy-readme`.
+- **Exactly one `sem-*` label per PR.** Selects the changelog category for the post-merge automation
+  in [`.github/workflows/changelog.yml`](../.github/workflows/changelog.yml):
 
   | Label           | Cider type   | When to use                                    |
   |-----------------|--------------|------------------------------------------------|
@@ -179,25 +173,25 @@ Every check below is enforced by dartender's `conventions.yml`, through
   | `sem-security`  | `security`   | Security-relevant fix                          |
   | `sem-skip`      | (skip)       | Internal-only change (CI, docs, tests, …)      |
 
-  The PR title becomes the changelog line verbatim, so phrase it as a release-note
-  bullet, not a working title.
-- **PR body must not be empty**, **no merge commits in the PR range** (rebase to
-  integrate `main`), and **commit subjects ≤ 82 characters**.
+  The PR title becomes the changelog line verbatim, so phrase it as a release-note bullet, not a
+  working title.
+- **PR body must not be empty**, **no merge commits in the PR range** (rebase to integrate `main`),
+  and **commit subjects ≤ 82 characters**.
 
 ## Style
 
-Full guide: [`../CODESTYLE.md`](../CODESTYLE.md). The lint posture is deliberately strict
-(see the shared lints `analysis_options.yaml` includes), and rules are enforced through them
-plus the DCM checks called out in CODESTYLE. Top-level rules to keep in working memory:
+Full guide: [`../CODESTYLE.md`](../CODESTYLE.md). The lint posture is deliberately strict (see the
+shared lints `analysis_options.yaml` includes), and rules are enforced through them plus the DCM
+checks called out in CODESTYLE. Top-level rules to keep in working memory:
 
 - Type-annotate every public symbol, `final` by default for fields and locals.
 - Nullability is explicit (no `as T` on `T?`).
 - 100-column line width, and blank lines separate logical chunks within a method.
-- No magic numbers in `lib/` code, pull them to named `static const`s (cross-cutting defaults
-  belong on `Values`, see *Hard rules* above).
+- No magic numbers in `lib/` code, pull them to named `static const`s (cross-cutting defaults belong
+  on `Values`, see *Hard rules* above).
 - Public symbols carry `///` dartdoc explaining *why*, not *what*.
-- Prose on any surface a person reads follows [Prose & voice](../CODESTYLE.md#prose), which
-  starts by telling you to go read <https://noslopgrenade.com/>. Do that first.
+- Prose on any surface a person reads follows [Prose & voice](../CODESTYLE.md#prose), which starts
+  by telling you to go read <https://noslopgrenade.com/>. Do that first.
 
 For everything else (naming, idioms like `Uri.https`, `.wait`, dot shorthands and
 `List.unmodifiable`, class structure, DCM rules, markdown conventions) go to
@@ -205,40 +199,37 @@ For everything else (naming, idioms like `Uri.https`, `.wait`, dot shorthands an
 
 ## Guidelines for any AI agent
 
-- **Always ask before making technical choices.** When the task admits more than one
-  reasonable approach (which connectivity-check strategy to default to, which test fixture
-  to mock, whether to expose a class vs a function, whether to add a dependency, etc.),
-  stop and ask. Present the options with trade-offs, say which you'd pick and why, then
-  wait. Don't silently pick one and build. This applies even when a choice feels small, because
-  small choices compound.
-- **Mark recommendations with `★`.** Prefix your preferred option in every set with `★`, in
-  tables, bullet lists, headings or inline, so the user can scan and reply by echoing or
-  overriding (e.g. "★ for 1-4, change 5 to B"). Exactly 1 star per option set in most cases, though
-  occasionally a combined choice warrants more.
-- **Document new user-facing features in the README.** Any new public class, function,
-  configuration option, or example must be added to the README in the same change.
-  Rationale and design trade-offs still belong in `APPENDIX.md`. The README is the
-  user-facing entry point and must reflect what the package actually does.
-- **Read <https://noslopgrenade.com/> before writing any prose.** Docs, comments, commit
-  messages, PR bodies. Fetch the page, don't cite it from memory: it is the intent behind
-  [Prose & voice](../CODESTYLE.md#prose), and skipping it is how the wall of text gets
-  written.
-- **Read the shared lints before writing code.** The lint posture is far stricter
-  than the Dart default, and code that fails lint won't pass review.
+- **Always ask before making technical choices.** When the task admits more than one reasonable
+  approach (which connectivity-check strategy to default to, which test fixture to mock, whether to
+  expose a class vs a function, whether to add a dependency, etc.), stop and ask. Present the
+  options with trade-offs, say which you'd pick and why, then wait. Don't silently pick one and
+  build. This applies even when a choice feels small, because small choices compound.
+- **Mark recommendations with `★`.** Prefix your preferred option in every set with `★`, in tables,
+  bullet lists, headings or inline, so the user can scan and reply by echoing or overriding (e.g. "★
+  for 1-4, change 5 to B"). Exactly 1 star per option set in most cases, though occasionally a
+  combined choice warrants more.
+- **Document new user-facing features in the README.** Any new public class, function, configuration
+  option, or example must be added to the README in the same change. Rationale and design trade-offs
+  still belong in `APPENDIX.md`. The README is the user-facing entry point and must reflect what the
+  package actually does.
+- **Read <https://noslopgrenade.com/> before writing any prose.** Docs, comments, commit messages,
+  PR bodies. Fetch the page, don't cite it from memory: it is the intent behind [Prose &
+  voice](../CODESTYLE.md#prose), and skipping it is how the wall of text gets written.
+- **Read the shared lints before writing code.** The lint posture is far stricter than the Dart
+  default, and code that fails lint won't pass review.
 - **Surface semver implications loudly.** If a change touches anything re-exported from
   `lib/<package>.dart`, call out whether it's patch / minor / major before the diff lands.
 - **Refactor first when a change needs a better shape.** If a feature would sit better on a
   different structure, do the enabling refactor as its own behaviour-preserving step (separate
-  commit/PR, no behaviour delta) before building the feature on top. A wrong shape is
-  especially costly to undo here: public-API breakage is semver-significant and slow to walk
-  back once published. This doesn't bypass ask-first or plan-first, so surface the refactor and
-  get sign-off before anything that touches the public API, adds a dependency, or has wide
-  blast radius.
-- **Before proposing a performance or memory optimisation, read the existing rationale.**
-  README's *Performance & memory*, *Caveats*, and *Roadmap* sections enumerate what's
-  already in place and what's deliberately deferred. APPENDIX anchors
+  commit/PR, no behaviour delta) before building the feature on top. A wrong shape is especially
+  costly to undo here: public-API breakage is semver-significant and slow to walk back once
+  published. This doesn't bypass ask-first or plan-first, so surface the refactor and get sign-off
+  before anything that touches the public API, adds a dependency, or has wide blast radius.
+- **Before proposing a performance or memory optimisation, read the existing rationale.** README's
+  *Performance & memory*, *Caveats*, and *Roadmap* sections enumerate what's already in place and
+  what's deliberately deferred. APPENDIX anchors
   [`#why-http-head-default-probe`](../APPENDIX.md#why-http-head-default-probe),
   [`#why-no-perf-preset`](../APPENDIX.md#why-no-perf-preset), and
-  [`#why-no-checkonce-coalescing`](../APPENDIX.md#why-no-checkonce-coalescing) cover the
-  trade-offs behind the non-features. Don't re-propose a cheaper default probe, a
-  perf-preset enum, or a single-flight wrapper without engaging with what's already there.
+  [`#why-no-checkonce-coalescing`](../APPENDIX.md#why-no-checkonce-coalescing) cover the trade-offs
+  behind the non-features. Don't re-propose a cheaper default probe, a perf-preset enum, or a
+  single-flight wrapper without engaging with what's already there.

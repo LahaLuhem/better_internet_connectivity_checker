@@ -1,23 +1,22 @@
 # CLAUDE.md: `better_internet_connectivity_checker`
 
-Claude-Code-specific guidance. Project facts, stack, hard rules, and AI-agent
-guidelines live in [AGENTS.md](./AGENTS.md), the full code-style guide lives in
-[`../CODESTYLE.md`](../CODESTYLE.md), and design rationale lives in
-[`../APPENDIX.md`](../APPENDIX.md). Read AGENTS.md and CODESTYLE.md first.
+Claude-Code-specific guidance. Project facts, stack, hard rules, and AI-agent guidelines live in
+[AGENTS.md](./AGENTS.md), the full code-style guide lives in [`../CODESTYLE.md`](../CODESTYLE.md),
+and design rationale lives in [`../APPENDIX.md`](../APPENDIX.md). Read AGENTS.md and CODESTYLE.md
+first.
 
 ## Role & context
 
 You're assisting with **better_internet_connectivity_checker**: a pure Dart package that
-distinguishes "a network interface is up" from "I can actually reach the public internet
-right now". Treat the user as technical and direct. The package ships to pub.dev, so changes are
-visible to every downstream user and breakage is expensive and slow to walk back (pub.dev never
-unpublishes a version, it only lets you retract one within 7 days of publishing).
+distinguishes "a network interface is up" from "I can actually reach the public internet right now".
+Treat the user as technical and direct. The package ships to pub.dev, so changes are visible to
+every downstream user and breakage is expensive and slow to walk back (pub.dev never unpublishes a
+version, it only lets you retract one within 7 days of publishing).
 
 ## Communication
 
-- **Read <https://noslopgrenade.com/> first**, then write to
-  [Prose & voice](../CODESTYLE.md#prose). It governs chat replies here as much as it governs
-  committed prose.
+- **Read <https://noslopgrenade.com/> first**, then write to [Prose & voice](../CODESTYLE.md#prose).
+  It governs chat replies here as much as it governs committed prose.
 - **Concise.** No "here's what I just did" recap, the diff speaks.
 - **Explain the *why*** when recommending. The *what* is in the diff.
 - Reference code as `file.dart:42` (markdown links if you can).
@@ -25,77 +24,73 @@ unpublishes a version, it only lets you retract one within 7 days of publishing)
 
 ## Technical choices: always ask first
 
-- **Do not silently pick between reasonable alternatives.** Whenever a task admits more
-  than one defensible approach (connectivity-check strategy, dependency choice, whether a
-  symbol belongs in `lib/<pkg>.dart`'s public exports or stays under `lib/src/`, function
-  vs class API shape, sync vs Future vs Stream return, etc.), **stop and ask**.
-  Recommendations in the question are expected. List the options with trade-offs, say which you'd
-  pick and why, then wait.
+- **Do not silently pick between reasonable alternatives.** Whenever a task admits more than one
+  defensible approach (connectivity-check strategy, dependency choice, whether a symbol belongs in
+  `lib/<pkg>.dart`'s public exports or stays under `lib/src/`, function vs class API shape, sync vs
+  Future vs Stream return, etc.), **stop and ask**. Recommendations in the question are expected.
+  List the options with trade-offs, say which you'd pick and why, then wait.
 - **"Small" choices count.** The bar isn't "is this architecturally significant", it's "could a
   reasonable maintainer disagree with my pick". If yes, ask.
-- **Mark your recommendation with `★`.** When presenting options, prefix your preferred
-  pick(s) with `★` so the user can scan and reply by echoing or overriding (e.g. "go with
-  ★ for 1-4, change 5 to B").
-- **Exception:** obvious single-answer fixes (typo, clear bug with one correct patch, lint
-  error). Just do them.
+- **Mark your recommendation with `★`.** When presenting options, prefix your preferred pick(s) with
+  `★` so the user can scan and reply by echoing or overriding (e.g. "go with ★ for 1-4, change 5 to
+  B").
+- **Exception:** obvious single-answer fixes (typo, clear bug with one correct patch, lint error).
+  Just do them.
 
 ## Tool preferences
 
 - **Read / Edit / Grep / Glob** over `cat` / `sed` / `grep` / `find`. Always.
-- **Bash** only for things without a dedicated tool: `dart`, `git`. (The user's shell
-  aliases `dart` to whatever toolchain manager serves the `.fvmrc` channel's SDK, so invoke
-  plain `dart`, not the manager directly.)
-- **Lint with `dart --no-version-check analyze --fatal-infos --fatal-warnings .`**, like CI,
-  because the project runs pedantic mode on purpose (mirroring `flutter --no-version-check
-  analyze .` in Flutter-app projects). Don't substitute `dart analyze` and wave off what it
-  surfaces. Those lints are the contract.
-- **Agent tool** for wide / open-ended searches or to keep large outputs out of main
-  context. Not for trivial lookups.
+- **Bash** only for things without a dedicated tool: `dart`, `git`. (The user's shell aliases `dart`
+  to whatever toolchain manager serves the `.fvmrc` channel's SDK, so invoke plain `dart`, not the
+  manager directly.)
+- **Lint with `dart --no-version-check analyze --fatal-infos --fatal-warnings .`**, like CI, because
+  the project runs pedantic mode on purpose (mirroring `flutter --no-version-check analyze .` in
+  Flutter-app projects). Don't substitute `dart analyze` and wave off what it surfaces. Those lints
+  are the contract.
+- **Agent tool** for wide / open-ended searches or to keep large outputs out of main context. Not
+  for trivial lookups.
 
 ## Scope awareness
 
-- **Public-API edits** (anything in `lib/<package>.dart`, or anything re-exported from it)
-  are pub.dev-visible. Treat them with care, and flag whether the change is patch, minor or major
-  under semver before landing.
-- **`lib/src/` edits** are private. Refactor freely as long as the public re-exports stay
-  stable.
+- **Public-API edits** (anything in `lib/<package>.dart`, or anything re-exported from it) are
+  pub.dev-visible. Treat them with care, and flag whether the change is patch, minor or major under
+  semver before landing.
+- **`lib/src/` edits** are private. Refactor freely as long as the public re-exports stay stable.
 - **`test/` edits** are local, no publish impact.
 - **`analysis_options.yaml` edits** override dartender's shared lints, which every repo gets.
   Surface them loudly and add a written reason in `APPENDIX.md`.
-- **`pubspec.yaml` edits** that touch `dependencies` add to every downstream user's
-  transitive closure, so treat them as public-API-class.
+- **`pubspec.yaml` edits** that touch `dependencies` add to every downstream user's transitive
+  closure, so treat them as public-API-class.
 
 ## Auto-memory conventions for this project
 
-- **`project` memories**: scope and constraints the user states aloud (e.g. "we're shipping
-  v0.1 before the end of the sprint", "minimum SDK bumps to 3.x on date Y"). Convert
-  relative dates to absolute.
-- **`feedback` memories**: corrections AND validated non-obvious choices. Include
-  **Why** and **How to apply** lines.
-- **`reference` memories**: external pointers (pub.dev page, GitHub issues, related
-  discussions). Not internal code paths, which live in AGENTS.md or are derivable from
-  the repo.
-- **Do NOT save** Dart file paths, lint-rule lists, or API surface. All derivable from
-  the repo or APPENDIX.md. Re-deriving is safer than acting on a stale memory.
+- **`project` memories**: scope and constraints the user states aloud (e.g. "we're shipping v0.1
+  before the end of the sprint", "minimum SDK bumps to 3.x on date Y"). Convert relative dates to
+  absolute.
+- **`feedback` memories**: corrections AND validated non-obvious choices. Include **Why** and **How
+  to apply** lines.
+- **`reference` memories**: external pointers (pub.dev page, GitHub issues, related discussions).
+  Not internal code paths, which live in AGENTS.md or are derivable from the repo.
+- **Do NOT save** Dart file paths, lint-rule lists, or API surface. All derivable from the repo or
+  APPENDIX.md. Re-deriving is safer than acting on a stale memory.
 - **Before acting on a memory**, verify the named file / symbol still exists.
 
 ## Plan before editing when
 
-- The change touches the public API (anything re-exported from `lib/<package>.dart`). Even
-  adding a new public method affects semver and downstream users.
-- You're adding or removing a dependency in `pubspec.yaml`. Each dep expands the
-  user-facing surface area and constrains downstream resolution.
-- You're overriding a shared lint in `analysis_options.yaml`. Lint posture is project-wide, so
-  any toggle deserves a written reason in APPENDIX.
+- The change touches the public API (anything re-exported from `lib/<package>.dart`). Even adding a
+  new public method affects semver and downstream users.
+- You're adding or removing a dependency in `pubspec.yaml`. Each dep expands the user-facing surface
+  area and constrains downstream resolution.
+- You're overriding a shared lint in `analysis_options.yaml`. Lint posture is project-wide, so any
+  toggle deserves a written reason in APPENDIX.
 
 For single-file, single-concern fixes inside `lib/src/`: just do it.
 
 The release flow (`CHANGELOG.md`, `version:` in `pubspec.yaml`, and `example/pubspec.lock`) is
-**not** in this list. All 3 are pipeline-owned, see
-*Forbidden / confirm-first actions* below. Don't plan a CHANGELOG edit or a version bump, and
-don't make one. Refresh the `example/` lockfile only after changing `example/pubspec.yaml`, with
-`flutter pub get` in `example/`. The `cider:` block itself is static
-configuration (URLs, link templates) and may be hand-edited like any other yaml.
+**not** in this list. All 3 are pipeline-owned, see *Forbidden / confirm-first actions* below. Don't
+plan a CHANGELOG edit or a version bump, and don't make one. Refresh the `example/` lockfile only
+after changing `example/pubspec.yaml`, with `flutter pub get` in `example/`. The `cider:` block
+itself is static configuration (URLs, link templates) and may be hand-edited like any other yaml.
 
 ## Commit / PR etiquette
 
@@ -103,46 +98,42 @@ configuration (URLs, link templates) and may be hand-edited like any other yaml.
 - **Never push without being asked.** Especially not to `main`.
 - **Never `--amend`** unless the user asked. Create a new commit instead.
 - **Never `--no-verify`**, **never `git add -A`**. Stage named paths.
-- Match existing commit style (short imperative subject, no Claude-authored footer unless
-  asked).
-- When asked for a commit: show `git status` + `git diff`, draft the message, wait for
-  approval.
+- Match existing commit style (short imperative subject, no Claude-authored footer unless asked).
+- When asked for a commit: show `git status` + `git diff`, draft the message, wait for approval.
 
 ## Forbidden / confirm-first actions
 
-- **Never** `dart pub publish`. Publishing is one-way, since pub.dev never unpublishes a version
-  and only lets you retract one within 7 days. Releases go through the **Release** workflow, which
-  the user starts from the Actions tab.
-- **Never** run `cider` commands (`cider bump`, `cider release`, …) or manually edit
-  `CHANGELOG.md`, the `version:` field in `pubspec.yaml`, or `example/pubspec.lock`.
-  Version bumps, Dependabot's CHANGELOG lines and the example-lockfile resync are the release
-  run's, each PR's line is `changelog.yml`'s, and manual edits get reordered or overwritten.
-  Dependabot also bumps `example/pubspec.lock`. If the user asks for a release, point
-  them at the **Release** workflow, but don't start it for them (it pushes to `main` and
-  triggers pub.dev publish). **The `## [Unreleased]` section is also bot-owned.**
-  The post-merge CI automation in `.github/workflows/changelog.yml` runs `cider log`
-  to append the merged-PR title under Unreleased on its own. Do not curate, prepend,
-  or hand-write Unreleased bullets when landing a feature. The PR title (governed by
-  its `sem-*` label) *is* the changelog entry. The `cider:` block in `pubspec.yaml`
-  is static configuration (link templates, URLs), so hand-edit it freely.
-- **Never** edit `pubspec.lock` directly (root or `example/`). The root file is
-  `dart pub get`'s output, and the `example/` file is pipeline-owned, see the rule above.
-- **Never** delete files under `.fvm/`, `.dart_tool/`, or `pubspec.lock` without approval.
-  These are tooling state, and deleting them forces a re-resolve.
-- **Destructive git** (`reset --hard`, `push --force`, `branch -D`, `clean -fd`) → ask
-  first.
+- **Never** `dart pub publish`. Publishing is one-way, since pub.dev never unpublishes a version and
+  only lets you retract one within 7 days. Releases go through the **Release** workflow, which the
+  user starts from the Actions tab.
+- **Never** run `cider` commands (`cider bump`, `cider release`, …) or manually edit `CHANGELOG.md`,
+  the `version:` field in `pubspec.yaml`, or `example/pubspec.lock`. Version bumps, Dependabot's
+  CHANGELOG lines and the example-lockfile resync are the release run's, each PR's line is
+  `changelog.yml`'s, and manual edits get reordered or overwritten. Dependabot also bumps
+  `example/pubspec.lock`. If the user asks for a release, point them at the **Release** workflow,
+  but don't start it for them (it pushes to `main` and triggers pub.dev publish). **The `##
+  [Unreleased]` section is also bot-owned.** The post-merge CI automation in
+  `.github/workflows/changelog.yml` runs `cider log` to append the merged-PR title under Unreleased
+  on its own. Do not curate, prepend, or hand-write Unreleased bullets when landing a feature. The
+  PR title (governed by its `sem-*` label) *is* the changelog entry. The `cider:` block in
+  `pubspec.yaml` is static configuration (link templates, URLs), so hand-edit it freely.
+- **Never** edit `pubspec.lock` directly (root or `example/`). The root file is `dart pub get`'s
+  output, and the `example/` file is pipeline-owned, see the rule above.
+- **Never** delete files under `.fvm/`, `.dart_tool/`, or `pubspec.lock` without approval. These are
+  tooling state, and deleting them forces a re-resolve.
+- **Destructive git** (`reset --hard`, `push --force`, `branch -D`, `clean -fd`) → ask first.
 
 ## Definition of done
 
-- Every check `ci / ok` waits on passes on your tree: the `needs:` of the `ok` job in
-  [dartender's `ci.yml`](https://github.com/LahaLuhem/dartender/blob/main/.github/workflows/ci.yml),
-  run with this repo's inputs from [`ci.yml`](../.github/workflows/ci.yml).
-- DCM rules from the shared lints applied by hand (`dart analyze` does not run
-  them): `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`,
-  plus the project-wide rule that blank lines segment logical chunks inside methods.
-- `dart pub publish --dry-run` clean if the change is publish-relevant, apart from its warning
-  about uncommitted files, which fails it until you commit. Do **not** bump the version or add a
-  CHANGELOG entry to make the dry-run happy. The release run owns those.
+- Every check `ci / ok` waits on passes on your tree: the `needs:` of the `ok` job in [dartender's
+  `ci.yml`](https://github.com/LahaLuhem/dartender/blob/main/.github/workflows/ci.yml), run with
+  this repo's inputs from [`ci.yml`](../.github/workflows/ci.yml).
+- DCM rules from the shared lints applied by hand (`dart analyze` does not run them):
+  `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`, plus the
+  project-wide rule that blank lines segment logical chunks inside methods.
+- `dart pub publish --dry-run` clean if the change is publish-relevant, apart from its warning about
+  uncommitted files, which fails it until you commit. Do **not** bump the version or add a CHANGELOG
+  entry to make the dry-run happy. The release run owns those.
 - Public API additions documented with `///` dartdoc and reflected in README.
-- Explicitly call out what you did NOT verify (e.g. "didn't exercise on a real network, only
-  mocked HTTP responses").
+- Explicitly call out what you did NOT verify (e.g. "didn't exercise on a real network, only mocked
+  HTTP responses").
