@@ -1,9 +1,21 @@
-`better_internet_connectivity_checker` is a pure-Dart package for **internet reachability**
-detection. It answers "can I actually reach the public internet right now?", which is a different
-question from "is a network interface up?". That second one is what most OS-reported connectivity
-signals, and most existing Dart and Flutter checkers, rely on. This covers the gap where DNS
-resolves and the OS reports connected but HTTP traffic is silently dropped: captive portals,
-transparent proxies, broken middleboxes, LAN-only networks.
+[![CI](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/LahaLuhem/better_internet_connectivity_checker/badge.svg?branch=main)](https://coveralls.io/github/LahaLuhem/better_internet_connectivity_checker?branch=main)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls)
+[![Pub Package](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)
+[![Pub Version](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)
+[![Pub Points](https://img.shields.io/pub/points/better_internet_connectivity_checker?logo=dart)](https://pub.dev/packages/better_internet_connectivity_checker/score)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues)
+[![GitHub closed issues](https://img.shields.io/github/issues-closed/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues?q=is%3Aissue+is%3Aclosed)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls)
+[![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls?q=is%3Apr+is%3Aclosed)
+
+A pure-Dart package for **internet reachability** detection. It answers "can I actually reach the
+public internet right now?", which is a different question from "is a network interface up?". That
+second one is what most OS-reported connectivity signals, and most existing Dart and Flutter
+checkers, rely on. This covers the gap where DNS resolves and the OS reports connected but HTTP
+traffic is silently dropped: captive portals, transparent proxies, broken middleboxes, LAN-only
+networks.
 
 <p align="center">
   <img src="doc/screenshots/1-status-stream.webp" alt="Live status stream cycling Reachable(good) → Reachable(slow) → Unreachable, de-duped to fire only on real transitions" width="320">
@@ -31,18 +43,6 @@ transparent proxies, broken middleboxes, LAN-only networks.
 8. **Pure Dart.** CLI, server, web and Flutter, no platform channels. Where the OS has a
    network-change signal, feed it in through `externalRecheckTrigger`, which is how
    `connectivity_plus` wires up on Flutter.
-
-[![CI](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/better_internet_connectivity_checker/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/LahaLuhem/better_internet_connectivity_checker/badge.svg?branch=main)](https://coveralls.io/github/LahaLuhem/better_internet_connectivity_checker?branch=main)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls)
-[![Pub Package](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)
-[![Pub Version](https://img.shields.io/pub/v/better_internet_connectivity_checker.svg)](https://pub.dev/packages/better_internet_connectivity_checker)
-[![Pub Points](https://img.shields.io/pub/points/better_internet_connectivity_checker?logo=dart)](https://pub.dev/packages/better_internet_connectivity_checker/score)
-[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues)
-[![GitHub closed issues](https://img.shields.io/github/issues-closed/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/issues?q=is%3Aissue+is%3Aclosed)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls)
-[![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/LahaLuhem/better_internet_connectivity_checker.svg)](https://github.com/LahaLuhem/better_internet_connectivity_checker/pulls?q=is%3Apr+is%3Aclosed)
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
@@ -152,16 +152,16 @@ is enough to answer "why am I offline" without probing again:
 
 ```dart
 switch (await checker.checkOnce()) {
-  case Reachable(:final responseTime, :final quality):
-    print('online: $quality, ${responseTime.inMilliseconds} ms');
-  case Unreachable(:final failedProbes):
-    for (final probeResult in failedProbes) {
-      print(
-        '${probeResult.target.uri.host} failed after '
-        '${probeResult.responseTime.inMilliseconds} ms: '
-        '${probeResult.error ?? 'response rejected'}',
-      );
-    }
+case Reachable(:final responseTime, :final quality):
+print('online: $quality, ${responseTime.inMilliseconds} ms');
+case Unreachable(:final failedProbes):
+for (final probeResult in failedProbes) {
+print(
+'${probeResult.target.uri.host} failed after '
+'${probeResult.responseTime.inMilliseconds} ms: '
+'${probeResult.error ?? 'response rejected'}',
+);
+}
 }
 ```
 
@@ -240,8 +240,8 @@ the gap while checks keep failing, and snaps back the moment one succeeds:
 
 ```dart
 final checker = InternetConnection(
-  checkInterval: const Duration(seconds: 10),
-  schedule: const ExponentialBackoffSchedule(maxDelay: Duration(minutes: 5)),
+    checkInterval: const Duration(seconds: 10),
+    schedule: const ExponentialBackoffSchedule(maxDelay: Duration(minutes: 5)),
 );
 ```
 
@@ -281,9 +281,9 @@ import 'dart:io';
 import 'package:http/io_client.dart';
 
 final checker = InternetConnection(
-  probe: HttpProbe.head(
-    client: IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 3)),
-  ),
+    probe: HttpProbe.head(
+        client: IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 3)),
+    ),
 );
 ```
 
@@ -349,25 +349,25 @@ when an app already expresses its backoff policy as a `RetryOptions` and wants o
 import 'package:retry/retry.dart';
 
 final class RetryOptionsSchedule implements CheckSchedule {
-  final Duration maxDelay;
+    final Duration maxDelay;
 
-  const RetryOptionsSchedule({required this.maxDelay});
+    const RetryOptionsSchedule({required this.maxDelay});
 
-  @override
-  Duration nextDelay(ScheduleContext scheduleContext) {
-    // `delay(0)` is `Duration.zero`, which would spin the scheduler.
-    if (scheduleContext.consecutiveFailures == 0) return scheduleContext.baseInterval;
+    @override
+    Duration nextDelay(ScheduleContext scheduleContext) {
+        // `delay(0)` is `Duration.zero`, which would spin the scheduler.
+        if (scheduleContext.consecutiveFailures == 0) return scheduleContext.baseInterval;
 
-    // Rebuilt per call: `delayFactor` is fixed at construction, so a `RetryOptions` held as a
-    // field would ignore a `checkInterval` reassigned at runtime. Half the base makes
-    // `delay(streak)` match this package's ladder.
-    final options = RetryOptions(
-      delayFactor: scheduleContext.baseInterval ~/ 2,
-      maxDelay: maxDelay,
-    );
+        // Rebuilt per call: `delayFactor` is fixed at construction, so a `RetryOptions` held as a
+        // field would ignore a `checkInterval` reassigned at runtime. Half the base makes
+        // `delay(streak)` match this package's ladder.
+        final options = RetryOptions(
+            delayFactor: scheduleContext.baseInterval ~/ 2,
+            maxDelay: maxDelay,
+        );
 
-    return options.delay(scheduleContext.consecutiveFailures);
-  }
+        return options.delay(scheduleContext.consecutiveFailures);
+    }
 }
 ```
 
@@ -389,8 +389,8 @@ it surfaces via stdout:
 ```dart
 final checker = InternetConnection();
 final subscription = attachObserver(
-  checker.events,
-  const PrintingConnectivityObserver(),
+    checker.events,
+    const PrintingConnectivityObserver(),
 );
 // ... later, when shutting down:
 await subscription.cancel();          // explicit cleanup, OR
@@ -402,7 +402,7 @@ pattern-match:
 
 ```dart
 checker.events.listen((event) {
-  if (event case CheckCompletedEvent(:final result)) log('check completed: $result');
+if (event case CheckCompletedEvent(:final result)) log('check completed: $result');
 });
 ```
 
@@ -411,16 +411,16 @@ override only the events that matter, then wire it with `attachObserver`:
 
 ```dart
 final class _AppConnectivityObserver extends ConnectivityObserver {
-  const _AppConnectivityObserver(this._logger);
-  final AppLogger _logger;
+    const _AppConnectivityObserver(this._logger);
+    final AppLogger _logger;
 
-  @override
-  void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) =>
-      _logger.info('connectivity: ${previous ?? '<none>'} -> $next');
+    @override
+    void onStatusChangeEmitted(InternetStatus? previous, InternetStatus next) =>
+            _logger.info('connectivity: ${previous ?? '<none>'} -> $next');
 
-  @override
-  void onExternalTriggerError(Object error, StackTrace stackTrace) =>
-      _logger.error('connectivity trigger failed', error, stackTrace);
+    @override
+    void onExternalTriggerError(Object error, StackTrace stackTrace) =>
+            _logger.error('connectivity trigger failed', error, stackTrace);
 }
 
 attachObserver(checker.events, _AppConnectivityObserver(appLogger));
