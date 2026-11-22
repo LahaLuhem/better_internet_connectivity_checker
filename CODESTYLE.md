@@ -2,13 +2,13 @@ Library-package code style. Project facts (goal, stack, repo layout, hard rules)
 [`.ai/AGENTS.md`](./.ai/AGENTS.md), design rationale lives in [`APPENDIX.md`](./APPENDIX.md), and
 example-app code style lives in [`example/CODESTYLE.md`](./example/CODESTYLE.md).
 
-The lint posture is deliberately strict (see
-[dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
-which [`analysis_options.yaml`](./analysis_options.yaml) includes). The house style values
-explicit types, no ambient mutability, and small focused classes.
+The lint posture is deliberately strict (see [dartender's shared
+lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml), which
+[`analysis_options.yaml`](./analysis_options.yaml) includes). The house style values explicit types,
+no ambient mutability, and small focused classes.
 
-Each heading below carries an explicit `<a id="…">` anchor. Link by anchor, not by
-heading text, so renames don't break callers.
+Each heading below carries an explicit `<a id="…">` anchor. Link by anchor, not by heading text, so
+renames don't break callers.
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
@@ -23,9 +23,11 @@ heading text, so renames don't break callers.
   - [`Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)`](#urihttps-urihttp-over-uriparse)
   - [`part` / `part of` only when structurally needed](#part-part-of-only-when-structurally-needed)
 - [Collections](#collections)
-  - [Library pipeline methods over hand-rolled loops](#library-pipeline-methods-over-hand-rolled-loops)
+  - [Library pipeline methods over hand-rolled
+    loops](#library-pipeline-methods-over-hand-rolled-loops)
   - [The tightest list its use allows](#the-tightest-list-its-use-allows)
-  - [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
+  - [`dart:async` `wait` extensions over static
+    `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
 - [Prose & voice](#prose-voice)
 - [Comments & dartdoc](#comments-dartdoc)
 - [Testing](#testing)
@@ -40,23 +42,20 @@ heading text, so renames don't break callers.
 
 ## Type safety & nullability
 
-- **Type-annotate every public symbol.** Inference is fine on locals
-  (`omit_local_variable_types` is on). Public surfaces are not the place to rely on
-  inference.
-- **`final` by default for fields and locals.** `prefer_final_fields`,
-  `prefer_final_locals`, `prefer_final_in_for_each` are all on. Parameters are *not*
-  required to be `final`, consistent with `avoid_final_parameters` and
-  `parameter_assignments` (which forbids the actual bad behaviour, mutating a parameter
-  inside the body).
+- **Type-annotate every public symbol.** Inference is fine on locals (`omit_local_variable_types` is
+  on). Public surfaces are not the place to rely on inference.
+- **`final` by default for fields and locals.** `prefer_final_fields`, `prefer_final_locals`,
+  `prefer_final_in_for_each` are all on. Parameters are *not* required to be `final`, consistent
+  with `avoid_final_parameters` and `parameter_assignments` (which forbids the actual bad behaviour,
+  mutating a parameter inside the body).
 - **Nullability is explicit.** Use `T?` everywhere a value can be missing.
   `cast_nullable_to_non_nullable` is on, so `as T` on a `T?` will fail lint.
-- **No Java ceremony.** No getter-only abstract base classes, no `AbstractFooFactory`,
-  no interface-per-class. Use mixins / sealed classes / records / extension types
-  where they add clarity, not weight.
+- **No Java ceremony.** No getter-only abstract base classes, no `AbstractFooFactory`, no
+  interface-per-class. Use mixins / sealed classes / records / extension types where they add
+  clarity, not weight.
 
-The `dynamic`-escape-hatch ban and the `print()`-in-library ban are listed under
-[*Hard rules* in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules). They're contracts, not
-style.
+The `dynamic`-escape-hatch ban and the `print()`-in-library ban are listed under [*Hard rules* in
+`.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules). They're contracts, not style.
 
 ---
 
@@ -65,22 +64,20 @@ style.
 
 ## Naming
 
-- **Prefer abbreviations over initialisms for domain terms.** In code, comments,
-  docstrings, and log messages alike, expand. Widely-known protocol initialisms (HTTP,
-  DNS, TCP, TLS, …) stay as-is, and novel project terms get spelt out.
-- **Local-variable names carry a concise type-suffix.** Dart is strongly typed, but a
-  reader without IDE inlay-hints can't see the inferred type, so the *name* has to do
-  that work. Suffix a local with what it *is* so the next reader doesn't have to
-  scroll back to the assignment (or install a plugin) to recover the type.
-  **Callback parameters** are exempt and stay single-word (`result`, `probe`,
-  `target`), because the enclosing call site already pins the type. Single-letter callback
-  params are out, *except* symmetric pair-wise params in comparators / reducers where
-  `(a, b)` is the genre convention. Regular method parameters follow the
-  local-variable rule, not the callback exemption. **When a domain type exists, the
-  suffix is the type name**: `suggestedProbeMethod` (not `suggestedMethod`),
-  `probeMethodNames` (not `methodNames`), `probeResults` (not `results`). Generic
-  suffixes (`Names`, `Method`, `Results`) lose the disambiguation the rule is meant
-  to provide.
+- **Prefer abbreviations over initialisms for domain terms.** In code, comments, docstrings, and log
+  messages alike, expand. Widely-known protocol initialisms (HTTP, DNS, TCP, TLS, …) stay as-is, and
+  novel project terms get spelt out.
+- **Local-variable names carry a concise type-suffix.** Dart is strongly typed, but a reader without
+  IDE inlay-hints can't see the inferred type, so the *name* has to do that work. Suffix a local
+  with what it *is* so the next reader doesn't have to scroll back to the assignment (or install a
+  plugin) to recover the type. **Callback parameters** are exempt and stay single-word (`result`,
+  `probe`, `target`), because the enclosing call site already pins the type. Single-letter callback
+  params are out, *except* symmetric pair-wise params in comparators / reducers where `(a, b)` is
+  the genre convention. Regular method parameters follow the local-variable rule, not the callback
+  exemption. **When a domain type exists, the suffix is the type name**: `suggestedProbeMethod` (not
+  `suggestedMethod`), `probeMethodNames` (not `methodNames`), `probeResults` (not `results`).
+  Generic suffixes (`Names`, `Method`, `Results`) lose the disambiguation the rule is meant to
+  provide.
 
   ```dart
   // Prefer:
@@ -92,8 +89,8 @@ style.
   final failed = results.where((r) => !r.isSuccess).toList(growable: false);
   ```
 
-  Strong format-string conventions (`hh`/`mm`/`ss` in a timestamp formatter, etc.)
-  override this. The rule targets *type ambiguity*, not all short names.
+  Strong format-string conventions (`hh`/`mm`/`ss` in a timestamp formatter, etc.) override this.
+  The rule targets *type ambiguity*, not all short names.
 
 ---
 
@@ -102,13 +99,13 @@ style.
 
 ## Formatting
 
-- **Wrap text-file content at 100 columns.** [`.editorconfig`](./.editorconfig) is
-  authoritative, and Markdown, Dart and YAML all share the same cap.
-- **Blank lines separate logical chunks within a method.** Group guard checks, setup,
-  the main action, and finalisation with one blank line between groups. Lets readers
-  scan past chunks they don't need without re-parsing them line-by-line.
-- **Prefer expression bodies** (`prefer_expression_function_bodies`) and **single
-  quotes** (`prefer_single_quotes`).
+- **Wrap text-file content at 100 columns.** [`.editorconfig`](./.editorconfig) is authoritative,
+  and Markdown, Dart and YAML all share the same cap.
+- **Blank lines separate logical chunks within a method.** Group guard checks, setup, the main
+  action, and finalisation with one blank line between groups. Lets readers scan past chunks they
+  don't need without re-parsing them line-by-line.
+- **Prefer expression bodies** (`prefer_expression_function_bodies`) and **single quotes**
+  (`prefer_single_quotes`).
 
 ---
 
@@ -117,12 +114,11 @@ style.
 
 ## Constants & magic numbers
 
-- **No magic numbers in `lib/` code.** Pull constants to named `static const`s with a
-  descriptive identifier.
-- Cross-cutting defaults (timeouts, intervals, header maps, the curated probe-target
-  list) belong on `abstract final class Values` in
-  [`lib/src/data/values.dart`](./lib/src/data/values.dart). Before introducing a new
-  constant in a feature class, check whether it belongs on `Values` instead, see
+- **No magic numbers in `lib/` code.** Pull constants to named `static const`s with a descriptive
+  identifier.
+- Cross-cutting defaults (timeouts, intervals, header maps, the curated probe-target list) belong on
+  `abstract final class Values` in [`lib/src/data/values.dart`](./lib/src/data/values.dart). Before
+  introducing a new constant in a feature class, check whether it belongs on `Values` instead, see
   [hard rule 1 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules).
 
 ---
@@ -132,39 +128,33 @@ style.
 
 ## Class structure
 
-- **New value / config types declare their fields in the class header.** See
-  [Header-form primary constructors](#header-form-primary-constructors-dart-313). The rules below
-  apply unchanged to everything else.
-- **Any class with fields and constructors: fields → constructors → other members.**
-  Lets a reader scan the state shape first, then how to construct it, then how to use
-  it. Within constructors, unnamed first, then factories (matches
-  `sort_unnamed_constructors_first`). Static helpers go after the methods. Applies to
-  value types (`ProbeTarget`, `Reachable`, …), service classes (`InternetConnection`,
-  `HttpProbe`) and test helpers (`StubProbe`), wherever a class has both state and a
-  constructor. Pure-static namespace classes (`Values`) and field-less interface
-  classes (`ConnectivityProbe`, `ReachabilityPolicy`) have nothing to order, so the rule
-  applies vacuously.
-- **`assert` for dev-time errors, `throw` for runtime ones.** Constraints a caller can
-  see violated during development (negative number where non-negative is required,
-  empty list where non-empty is expected, etc.) belong in `assert`, stripped in
-  release mode, zero runtime cost. Reserve `throw` and `Exception` for genuine runtime
-  conditions the caller cannot guarantee at compile/dev time (network failure, parsing
-  untrusted input, missing file, third-party API contract violations). Prefer
-  init-list asserts, because `prefer_asserts_in_initializer_lists` and
+- **New value / config types declare their fields in the class header.** See [Header-form primary
+  constructors](#header-form-primary-constructors-dart-313). The rules below apply unchanged to
+  everything else.
+- **Any class with fields and constructors: fields → constructors → other members.** Lets a reader
+  scan the state shape first, then how to construct it, then how to use it. Within constructors,
+  unnamed first, then factories (matches `sort_unnamed_constructors_first`). Static helpers go after
+  the methods. Applies to value types (`ProbeTarget`, `Reachable`, …), service classes
+  (`InternetConnection`, `HttpProbe`) and test helpers (`StubProbe`), wherever a class has both
+  state and a constructor. Pure-static namespace classes (`Values`) and field-less interface classes
+  (`ConnectivityProbe`, `ReachabilityPolicy`) have nothing to order, so the rule applies vacuously.
+- **`assert` for dev-time errors, `throw` for runtime ones.** Constraints a caller can see violated
+  during development (negative number where non-negative is required, empty list where non-empty is
+  expected, etc.) belong in `assert`, stripped in release mode, zero runtime cost. Reserve `throw`
+  and `Exception` for genuine runtime conditions the caller cannot guarantee at compile/dev time
+  (network failure, parsing untrusted input, missing file, third-party API contract violations).
+  Prefer init-list asserts, because `prefer_asserts_in_initializer_lists` and
   `prefer_asserts_with_message` are both on.
-- **Value types override `toString`.** Immutable data classes (`ProbeTarget`,
-  `ProbeResult`, `Reachable`, `Unreachable`, …) implement `toString()` returning
-  `'ClassName(field1: value1, field2: value2)'`. The default
-  `Instance of 'ClassName'` is hostile in logs, exception traces, and `print`
-  debugging. Readers should not have to attach a debugger to recover field values.
-  Include every field with a meaningful string representation. Expression-bodied
-  one-liner placed after the constructors, before any static helpers. Opaque fields
-  (function/callback typedefs, controllers, subscriptions, anything whose
-  `.toString()` is just `Closure: …` or `Instance of …`) are omitted: they add noise
-  without informing the reader, and bare interpolation of a callable trips DCM's
-  `avoid-missed-calls`. Service classes (`InternetConnection`, `HttpProbe`) and
-  field-less interfaces (`ConnectivityProbe`) are exempt, having no
-  caller-meaningful state to print.
+- **Value types override `toString`.** Immutable data classes (`ProbeTarget`, `ProbeResult`,
+  `Reachable`, `Unreachable`, …) implement `toString()` returning `'ClassName(field1: value1,
+  field2: value2)'`. The default `Instance of 'ClassName'` is hostile in logs, exception traces, and
+  `print` debugging. Readers should not have to attach a debugger to recover field values. Include
+  every field with a meaningful string representation. Expression-bodied one-liner placed after the
+  constructors, before any static helpers. Opaque fields (function/callback typedefs, controllers,
+  subscriptions, anything whose `.toString()` is just `Closure: …` or `Instance of …`) are omitted:
+  they add noise without informing the reader, and bare interpolation of a callable trips DCM's
+  `avoid-missed-calls`. Service classes (`InternetConnection`, `HttpProbe`) and field-less
+  interfaces (`ConnectivityProbe`) are exempt, having no caller-meaningful state to print.
 
 ---
 
@@ -178,27 +168,26 @@ style.
 
 ### Static dot shorthands (Dart 3.10+)
 
-Use static dot shorthands wherever the context type is known. They resolve from the
-parameter / return / variable type, not from inference of arbitrary expressions. Drop
-the leading type name in *all* of these positions, not just the obvious enum case:
+Use static dot shorthands wherever the context type is known. They resolve from the parameter /
+return / variable type, not from inference of arbitrary expressions. Drop the leading type name in
+*all* of these positions, not just the obvious enum case:
 
-- Enum values in patterns and arg slots:
-  `Reachable(quality: cond ? .slow : .good)`, `case .head =>`.
-- Named constructors when the return / context type pins it:
-  inside `Future<ProbeResult> probe(…)`, write `return .success(target: …, …)` rather
-  than `return ProbeResult.success(…)`.
-- Const factories on widget parameter types: `padding: const .all(12)`,
-  `margin: .zero`, `padding: const .symmetric(horizontal: 12, vertical: 4)`. Works on
-  `EdgeInsetsGeometry`-typed params because the static factory delegates through.
+- Enum values in patterns and arg slots: `Reachable(quality: cond ? .slow : .good)`, `case .head
+  =>`.
+- Named constructors when the return / context type pins it: inside `Future<ProbeResult> probe(…)`,
+  write `return .success(target: …, …)` rather than `return ProbeResult.success(…)`.
+- Const factories on widget parameter types: `padding: const .all(12)`, `margin: .zero`, `padding:
+  const .symmetric(horizontal: 12, vertical: 4)`. Works on `EdgeInsetsGeometry`-typed params because
+  the static factory delegates through.
 - Flex alignment / sizing slots: `crossAxisAlignment: .start`, `mainAxisSize: .min`,
   `mainAxisAlignment: .center`.
 
-Skip when it hurts readability. `.new(…)` for unnamed constructors typically does,
-cases where the surrounding context type isn't obvious without re-reading.
+Skip when it hurts readability. `.new(…)` for unnamed constructors typically does, cases where the
+surrounding context type isn't obvious without re-reading.
 
-After dropping a fully-qualified prefix, the type name often disappears from the file
-entirely, remove it from any `show` clauses too. Re-running analyze surfaces
-`unused_shown_name` warnings for orphaned ones.
+After dropping a fully-qualified prefix, the type name often disappears from the file entirely,
+remove it from any `show` clauses too. Re-running analyze surfaces `unused_shown_name` warnings for
+orphaned ones.
 
 <a id="idioms-primary-constructors"></a>
 <!-- TOC --><a name="header-form-primary-constructors-dart-313"></a>
@@ -206,8 +195,8 @@ entirely, remove it from any `show` clauses too. Re-running analyze surfaces
 ### Header-form primary constructors (Dart 3.13+)
 
 Declare a new value or config type's fields in the class header. A field-less type gets an empty
-one, `final class const AnyReachablePolicy()`. A class nothing constructs, a namespace like
-`Values` or an interface, gets a private `._()`, which leaves no public constructor to document.
+one, `final class const AnyReachablePolicy()`. A class nothing constructs, a namespace like `Values`
+or an interface, gets a private `._()`, which leaves no public constructor to document.
 
 ```dart
 /// Backs off exponentially while checks keep failing.
@@ -268,12 +257,11 @@ Retrofitting an existing class works throughout this package, `const` types, sea
 
 ### `Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)`
 
-For compile-time-known URLs, use the named constructor and pass path / query
-parameters as separate arguments, not mashed into the authority. The named
-constructor's shape is `(authority, [unencodedPath, queryParameters])`. Component-wise
-construction makes the host, path, and query visible at a glance and short-circuits
-the kinds of typo `Uri.parse` silently accepts (missing `://`, stray slashes,
-unencoded query chars). `Uri.parse` is still the right tool for runtime input
+For compile-time-known URLs, use the named constructor and pass path / query parameters as separate
+arguments, not mashed into the authority. The named constructor's shape is `(authority,
+[unencodedPath, queryParameters])`. Component-wise construction makes the host, path, and query
+visible at a glance and short-circuits the kinds of typo `Uri.parse` silently accepts (missing
+`://`, stray slashes, unencoded query chars). `Uri.parse` is still the right tool for runtime input
 (user-supplied URLs, response payloads).
 
 ```dart
@@ -289,26 +277,25 @@ Uri.parse('https://pokeapi.co/api/v2/ability/?limit=1')
 ```
 
 **Exception (`lib/src/` only):** the internal `ConstUri('https://...')` wrapper
-([`lib/src/data/models/const_uri.dart`](./lib/src/data/models/const_uri.dart)) is
-permitted when it unlocks `const` for an enclosing value type, e.g. the
-`static const Values.defaultProbeTargets` list, where `const` canonicalisation drops
-the `List.unmodifiable` wrapper and shares one parsed `Uri` across identical literals.
-`ConstUri` still pays parse cost (lazily, on first access) and is fundamentally a
-deferred `Uri.parse`. The trade-off only pays off when the enclosing type is
-*already* `const`-constructible. Stay structural in `test/` / `example/` (no `const`
-payoff to justify the indirection) and never in public-API code (anything re-exported
-from `lib/<package>.dart`).
+([`lib/src/data/models/const_uri.dart`](./lib/src/data/models/const_uri.dart)) is permitted when it
+unlocks `const` for an enclosing value type, e.g. the `static const Values.defaultProbeTargets`
+list, where `const` canonicalisation drops the `List.unmodifiable` wrapper and shares one parsed
+`Uri` across identical literals. `ConstUri` still pays parse cost (lazily, on first access) and is
+fundamentally a deferred `Uri.parse`. The trade-off only pays off when the enclosing type is
+*already* `const`-constructible. Stay structural in `test/` / `example/` (no `const` payoff to
+justify the indirection) and never in public-API code (anything re-exported from
+`lib/<package>.dart`).
 
 <a id="idioms-parts"></a>
 <!-- TOC --><a name="part-part-of-only-when-structurally-needed"></a>
 
 ### `part` / `part of` only when structurally needed
 
-Not a smell on its own. Legitimate uses: sealed-class cases across files (Dart 3
-requires same library for sealed subtypes, see `lib/src/status/outcomes/`),
-code-generation outputs (`*.g.dart` from freezed, json_serializable, drift, etc.).
-Avoid for general code organisation. Imports and exports are explicit, parts hide
-dependencies and leak `_private` symbols across files within the library.
+Not a smell on its own. Legitimate uses: sealed-class cases across files (Dart 3 requires same
+library for sealed subtypes, see `lib/src/status/outcomes/`), code-generation outputs (`*.g.dart`
+from freezed, json_serializable, drift, etc.). Avoid for general code organisation. Imports and
+exports are explicit, parts hide dependencies and leak `_private` symbols across files within the
+library.
 
 ---
 
@@ -318,28 +305,28 @@ dependencies and leak `_private` symbols across files within the library.
 ## Collections
 
 - **Chain, don't fill an empty collection in a loop.** `map`, `where`, `nonNulls` and `fold` say
-  what the transformation is, see [Library pipeline methods](#collections-pipelines). In the
-  example app's widget trees it goes the other way round, see
-  [Collection-for in widget trees](./example/CODESTYLE.md#widget-collection-literals).
+  what the transformation is, see [Library pipeline methods](#collections-pipelines). In the example
+  app's widget trees it goes the other way round, see [Collection-for in widget
+  trees](./example/CODESTYLE.md#widget-collection-literals).
 - **Take the helper from the first place that has it:** `dart:core`'s own `Iterable` / `List` /
   `Set` / `Map` methods, then `dart:collection`, then
   [`package:collection`](https://pub.dev/packages/collection) (`max`, `min`, `firstWhereOrNull`,
-  `whereNot`, `sortedBy`, `groupListsBy`, `slices`). It is a declared dependency and adds nothing
-  to a downstream closure, see [why](./APPENDIX.md#why-collection-is-declared).
+  `whereNot`, `sortedBy`, `groupListsBy`, `slices`). It is a declared dependency and adds nothing to
+  a downstream closure, see [why](./APPENDIX.md#why-collection-is-declared).
 - **Pick the collection that says what you mean.** A `Set` for no order and no duplicates, a `Map`
   for lookup, a `List` when the order is the data. Give it that type where the data is made and on
   the parameters that take it, so every caller inherits the guarantee and the cheap `contains`.
 - **Test membership against a `Set`, or a `Map`'s keys, built once.** `contains` or `any` on a
   `List` walks it again for every item tested.
 - **A lazy chain reruns its callbacks on every walk.** Materialise once where the data is made and
-  hand that out, never the chain. A caller fusing its own `map` into it saves one intermediate
-  list and nothing else ([what it costs](./APPENDIX.md#what-it-costs)).
-- **Hand out an `Iterable` only where laziness skips real work:** an endless or generated source,
-  or costly work per item that a caller may stop early on. Mapping models isn't costly.
+  hand that out, never the chain. A caller fusing its own `map` into it saves one intermediate list
+  and nothing else ([what it costs](./APPENDIX.md#what-it-costs)).
+- **Hand out an `Iterable` only where laziness skips real work:** an endless or generated source, or
+  costly work per item that a caller may stop early on. Mapping models isn't costly.
 - **`length` and `elementAt` stay cheap through `map`, `cast`, `indexed`, `skip` and `take`.** A
   `where`, `whereType`, `nonNulls`, `expand`, `skipWhile` or `takeWhile` makes both walk, and so
-  does everything chained after it, so materialise first
-  ([what runs, and when](./APPENDIX.md#what-runs-and-when)).
+  does everything chained after it, so materialise first ([what runs, and
+  when](./APPENDIX.md#what-runs-and-when)).
 
 > Swapping a literal for a chain can change the meaning. A map literal keyed by X keeps the last
 > match, where `package:collection`'s `distinctBy` keeps the first.
@@ -381,8 +368,8 @@ for (final result in probeResults) {
 
 ### The tightest list its use allows
 
-All 3 kinds are a `List<E>` to the type system, and breaking one throws at runtime, so the line
-that builds it is the only place that says which ([why](./APPENDIX.md#three-kinds-of-list)).
+All 3 kinds are a `List<E>` to the type system, and breaking one throws at runtime, so the line that
+builds it is the only place that says which ([why](./APPENDIX.md#three-kinds-of-list)).
 
 | Once built, the list…               | Build it with                               |
 |-------------------------------------|---------------------------------------------|
@@ -392,15 +379,15 @@ that builds it is the only place that says which ([why](./APPENDIX.md#three-kind
 
 Sets and maps lock the same way, with `Set.unmodifiable(…)` and `Map.unmodifiableOf(…)`. Never
 `List.unmodifiable(…)` or `Map.unmodifiable(…)`, which take an untyped `Iterable` / `Map`: the SDK
-has their deprecation in favour of the `…Of` ones written already, commented out in `list.dart`
-and `map.dart`. `Set.unmodifiable` was typed from the start, so it has no `…Of` twin. Cost never
-picks the kind.
+has their deprecation in favour of the `…Of` ones written already, commented out in `list.dart` and
+`map.dart`. `Set.unmodifiable` was typed from the start, so it has no `…Of` twin. Cost never picks
+the kind.
 
 **The `…Of` constructors copy, `UnmodifiableListView` wraps.** `List.unmodifiableOf(…)` is a
 snapshot, decoupled from whatever the caller passed in. The `…View` counterparts in
 `dart:collection` only wrap, so anyone still holding the underlying collection can mutate what the
-view shows. That is the point when you want read-through visibility into private mutable state,
-and a footgun everywhere else.
+view shows. That is the point when you want read-through visibility into private mutable state, and
+a footgun everywhere else.
 
 ```dart
 // Prefer: defensive snapshot, caller-supplied list cannot mutate our state:
@@ -417,28 +404,26 @@ class EventLog {
 }
 ```
 
-A view over data that never changes once built only saves the copy, and the call site has to say
-why it cannot change. Never one over a `where`, which the view walks again on every read
-([what runs, and when](./APPENDIX.md#what-runs-and-when)).
+A view over data that never changes once built only saves the copy, and the call site has to say why
+it cannot change. Never one over a `where`, which the view walks again on every read ([what runs,
+and when](./APPENDIX.md#what-runs-and-when)).
 
 <a id="idioms-wait-extensions"></a>
 <!-- TOC --><a name="dartasync-wait-extensions-over-static-futurewait"></a>
 
 ### `dart:async` `wait` extensions over static `Future.wait(...)`
 
-The extensions (`Iterable<Future<T>>.wait` and the record forms `FutureRecord2`…
-`FutureRecord9`) live in `dart:async`'s `future_extensions.dart` and supersede the
-static call for everyday use.
+The extensions (`Iterable<Future<T>>.wait` and the record forms `FutureRecord2`… `FutureRecord9`)
+live in `dart:async`'s `future_extensions.dart` and supersede the static call for everyday use.
 
-- **Fixed number of differently-typed futures → record form.** `(f1, f2).wait`
-  returns `Future<(T1, T2)>` and destructures directly. Never await a list literal and
-  index into the result by `.first` / `[1]` / etc., which collapses element types to
-  the common supertype and isn't type-checked against slot order, so a swap reads as
-  valid until runtime.
+- **Fixed number of differently-typed futures → record form.** `(f1, f2).wait` returns `Future<(T1,
+  T2)>` and destructures directly. Never await a list literal and index into the result by `.first`
+  / `[1]` / etc., which collapses element types to the common supertype and isn't type-checked
+  against slot order, so a swap reads as valid until runtime.
 - **Dynamic number of same-typed futures → iterable form.** `iterable.wait` returns
-  `Future<List<T>>` just like `Future.wait(iterable)`, but errors surface as
-  `ParallelWaitError` carrying both per-slot values and per-slot errors, which lets
-  callers dispose successful results when a sibling future fails.
+  `Future<List<T>>` just like `Future.wait(iterable)`, but errors surface as `ParallelWaitError`
+  carrying both per-slot values and per-slot errors, which lets callers dispose successful results
+  when a sibling future fails.
 
 ```dart
 // Prefer (fixed-size, mixed types):
@@ -478,8 +463,8 @@ PR and issue bodies.
   exact though (`AbortableRequest`, broadcast stream, microtask). The ban is on filler, not
   precision.
 - No AI-tell-tale signs like em-dashes, `;` and others.
-- Numbers as numerals, not words: `1`, `2`, `1st`, `2nd`. "one" stays where it means single or
-  sole, and "first" where it means earliest rather than a position.
+- Numbers as numerals, not words: `1`, `2`, `1st`, `2nd`. "one" stays where it means single or sole,
+  and "first" where it means earliest rather than a position.
 - Keep the tone informal and light. Give it a natural flow.
 
 <a id="point-dont-restate"></a>
@@ -502,8 +487,8 @@ document.
 
 - Link the file, name the field: "the Dart constraint in [`pubspec.yaml`](./pubspec.yaml)" beats
   "Dart 3.13+".
-- Prefer the shape to the value. "one endpoint per operator" survives a target-list change,
-  "3 endpoints" does not.
+- Prefer the shape to the value. "one endpoint per operator" survives a target-list change, "3
+  endpoints" does not.
 - Keep the number in **exactly one** place, the place where it is the point, and have the rest point
   there. The README's own requirement line is that place for the SDK floor.
 - Quoting another doc's prose is the same mistake. Link the anchor instead.
@@ -522,8 +507,8 @@ Everything in [Prose & voice](#prose) applies here first. What follows is only w
 `///` and `//`.
 
 Public symbols carry `///` dartdoc that explains *why*, not *what*. The type already carries the
-*what*. `public_member_api_docs` is on, see
-[hard rule 4 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules) for the contract.
+*what*. `public_member_api_docs` is on, see [hard rule 4 in
+`.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules) for the contract.
 
 **Aim for one or 2 lines.** A guideline, not a cap: an explanation that earns its length keeps it,
 and a gotcha a caller would otherwise hit is worth the sentence. What doesn't earn it is restating
@@ -533,16 +518,16 @@ so trim the neighbours whenever you edit a file.
 
 ### Soft-wrap comments and dartdoc near 100 columns
 
-The 100-col cap ([`.editorconfig`](./.editorconfig)) is a hard wrap for code but a *soft*
-target for comment / dartdoc prose. Fill the line toward 100 rather than wrapping early at
-~72. Overrunning slightly is fine when it avoids waste: finishing the current word, a
-single short trailing word, or an ongoing bracketed / linked reference. Don't break a line
-just to stay a few chars under.
+The 100-col cap ([`.editorconfig`](./.editorconfig)) is a hard wrap for code but a *soft* target for
+comment / dartdoc prose. Fill the line toward 100 rather than wrapping early at ~72. Overrunning
+slightly is fine when it avoids waste: finishing the current word, a single short trailing word, or
+an ongoing bracketed / linked reference. Don't break a line just to stay a few chars under.
 
 ### Link APPENDIX from dartdoc with the absolute GitHub URL
 
-When a doc comment hands off to APPENDIX, keep a one-line headline in the comment and link the
-rest as `See [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#anchor)`.
+When a doc comment hands off to APPENDIX, keep a one-line headline in the comment and link the rest
+as
+`See [Appendix](https://github.com/LahaLuhem/better_internet_connectivity_checker/blob/main/APPENDIX.md#anchor)`.
 
 **Why.** The comment is what people actually read, and most of them read it on pub.dev, where a
 relative `../../APPENDIX.md` link 404s. Relative depth also differs per file, which is how one
@@ -554,9 +539,9 @@ not generated from the headings.
 
 ### `@docImport` for dartdoc-only references
 
-When a file needs a symbol *only* for `[Name]` references in dartdoc (not in code), do
-**not** add a regular `import`, which pulls the dependency into the runtime import graph
-and hides intent. Use Dart's dartdoc-only directive instead:
+When a file needs a symbol *only* for `[Name]` references in dartdoc (not in code), do **not** add a
+regular `import`, which pulls the dependency into the runtime import graph and hides intent. Use
+Dart's dartdoc-only directive instead:
 
 ```dart
 /// @docImport '../internet_connection.dart';
@@ -566,14 +551,14 @@ import '../status/internet_status.dart'; // Real code import, InternetStatus is 
 ```
 
 **Why.** A regular `import` declares a runtime dependency. If the only reason is
-`comment_references` resolution, the runtime graph lies. Readers and tooling can't tell
-the import is documentation-only, and dead-code elimination has nothing to lean on.
-`@docImport` keeps `comment_references` satisfied without polluting the real import set.
+`comment_references` resolution, the runtime graph lies. Readers and tooling can't tell the import
+is documentation-only, and dead-code elimination has nothing to lean on. `@docImport` keeps
+`comment_references` satisfied without polluting the real import set.
 
-**How to apply.** Put the `@docImport` directive(s) as `///` comments directly above the
-file's `library;` directive. Code imports stay where they are (regular `import` lines).
-The `library;` directive is required for `@docImport` to attach to anything, but
-`unnecessary_library_directive` does not fire when a docImport is present.
+**How to apply.** Put the `@docImport` directive(s) as `///` comments directly above the file's
+`library;` directive. Code imports stay where they are (regular `import` lines). The `library;`
+directive is required for `@docImport` to attach to anything, but `unnecessary_library_directive`
+does not fire when a docImport is present.
 
 ---
 
@@ -586,17 +571,18 @@ Tests read as a specification via the Gherkin vocabulary in
 [`test/support/bdd.dart`](./test/support/bdd.dart), a thin, zero-dependency wrapper over
 `package:test`. Use `feature` / `scenario` / `scenarioOutline`, never bare `group` / `test`.
 
-- **One `feature` per unit under test.** A small cohesive type gets a single feature. A large
-  class with distinct capability clusters gets one feature per capability
-  (`feature('InternetConnection.onStatusChange')`, `feature('InternetConnection.checkInterval setter')`),
-  the way the sibling `hive_box_manager` splits `KeyedBox` into reads / writes / watch / lifecycle.
+- **One `feature` per unit under test.** A small cohesive type gets a single feature. A large class
+  with distinct capability clusters gets one feature per capability
+  (`feature('InternetConnection.onStatusChange')`, `feature('InternetConnection.checkInterval
+  setter')`), the way the sibling `hive_box_manager` splits `KeyedBox` into reads / writes / watch /
+  lifecycle.
 - **`scenarioOutline` for table-driven cases.** When several cases vary only in input and expected
   output, group them as a named-row `examples` map so the table reads as data, not scattered
   literals. See [`test/status/internet_status_test.dart`](./test/status/internet_status_test.dart).
 - **Assert with `package:checks`** (`check(...)`), never the `package:matcher` `expect`. Import
   `package:test/scaffolding.dart` (not `package:test/test.dart`, which pulls the matcher API) *only*
-  when a test needs `setUp` / `addTearDown`. `feature` and `scenario` come from `bdd.dart`.
-  A test with no lifecycle hooks imports just `checks`, `bdd.dart`, and the code under test.
+  when a test needs `setUp` / `addTearDown`. `feature` and `scenario` come from `bdd.dart`. A test
+  with no lifecycle hooks imports just `checks`, `bdd.dart`, and the code under test.
 - **Test support lives under [`test/support/`](./test/support/)**: the `bdd.dart` helper plus
   doubles (`StubProbe`, `RecordingObserver`). Keep production code free of test scaffolding.
 
@@ -633,19 +619,16 @@ Tests read as a specification via the Gherkin vocabulary in
 
 `dart analyze` does not run them, but the project treats them as non-negotiable:
 
-- **`no-empty-block`**: every block (function literal, `if`, `for`, `try`…) must
-  contain code or a flutter-style `// TODO(handle): …` comment explaining the gap.
-  Empty catch clauses are excused. `onError: (_, _) {}` and `(_) {}` listeners are
-  violations. Either give them work to do (e.g. a tear-off like `events.add`) or add a
-  TODO comment.
-- **`newline-before-return`**: separate a block-final `return` from preceding
-  statements with one blank line. Inline guards like `if (cond) return;` do not need
-  the blank line. The rule is about returns whose preceding sibling is a non-return
-  statement in the same block.
-- **`prefer-commenting-analyzer-ignores`**: every `// ignore:` line needs a `//`
-  explanation adjacent to it (immediately above, immediately below, or appended after
-  the directive). Dartdoc (`///`) above the line does not count, the rule looks for a
-  regular `//` comment.
+- **`no-empty-block`**: every block (function literal, `if`, `for`, `try`…) must contain code or a
+  flutter-style `// TODO(handle): …` comment explaining the gap. Empty catch clauses are excused.
+  `onError: (_, _) {}` and `(_) {}` listeners are violations. Either give them work to do (e.g. a
+  tear-off like `events.add`) or add a TODO comment.
+- **`newline-before-return`**: separate a block-final `return` from preceding statements with one
+  blank line. Inline guards like `if (cond) return;` do not need the blank line. The rule is about
+  returns whose preceding sibling is a non-return statement in the same block.
+- **`prefer-commenting-analyzer-ignores`**: every `// ignore:` line needs a `//` explanation
+  adjacent to it (immediately above, immediately below, or appended after the directive). Dartdoc
+  (`///`) above the line does not count, the rule looks for a regular `//` comment.
 
 ---
 
@@ -654,16 +637,14 @@ Tests read as a specification via the Gherkin vocabulary in
 
 ## Documentation conventions (Markdown)
 
-- **APPENDIX.md is the source of truth for rationale.** Hard rules, pitfalls, and
-  workflow stay in `.ai/AGENTS.md` and `.ai/CLAUDE.md`. The "why we do it this way"
-  essays live in [`APPENDIX.md`](./APPENDIX.md).
-- **Explicit `<a id="…">` anchors** sit above every APPENDIX (and CODESTYLE) heading.
-  Link to sections via the anchor, not the heading text.
-- **Anchor stability is load-bearing.** When renaming a heading, keep the existing
-  anchor. If you must change it, `rg '#<old-anchor>'` across the repo and update every
-  caller in the same change.
-- **Bare `dart` / `flutter` in command examples, never `fvm dart` / `fvm flutter`.** FVM
-  is a local implementation detail, and `.fvmrc` only names the channel. Docs (this file,
-  README.md, AGENTS.md, CLAUDE.md, APPENDIX.md) stay tool-agnostic so external
-  contributors aren't forced into FVM. The maintainer's shell aliases `dart` to the
-  pinned toolchain for interactive use.
+- **APPENDIX.md is the source of truth for rationale.** Hard rules, pitfalls, and workflow stay in
+  `.ai/AGENTS.md` and `.ai/CLAUDE.md`. The "why we do it this way" essays live in
+  [`APPENDIX.md`](./APPENDIX.md).
+- **Explicit `<a id="…">` anchors** sit above every APPENDIX (and CODESTYLE) heading. Link to
+  sections via the anchor, not the heading text.
+- **Anchor stability is load-bearing.** When renaming a heading, keep the existing anchor. If you
+  must change it, `rg '#<old-anchor>'` across the repo and update every caller in the same change.
+- **Bare `dart` / `flutter` in command examples, never `fvm dart` / `fvm flutter`.** FVM is a local
+  implementation detail, and `.fvmrc` only names the channel. Docs (this file, README.md, AGENTS.md,
+  CLAUDE.md, APPENDIX.md) stay tool-agnostic so external contributors aren't forced into FVM. The
+  maintainer's shell aliases `dart` to the pinned toolchain for interactive use.

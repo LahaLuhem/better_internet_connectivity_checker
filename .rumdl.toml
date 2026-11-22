@@ -20,3 +20,4 @@ disable = ["MD033", "MD041"]
 line-length = 100
 code_blocks = false
 tables = false
+reflow = true

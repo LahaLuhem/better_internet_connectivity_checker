@@ -19,9 +19,8 @@
 
 <!-- TOC end -->
 
-Reproducible benchmarks for `better_internet_connectivity_checker`. Used to
-empirically verify perf/memory claims before they ship in a release, with no
-"trust me, it's faster".
+Reproducible benchmarks for `better_internet_connectivity_checker`. Used to empirically verify
+perf/memory claims before they ship in a release, with no "trust me, it's faster".
 
 ## Layout
 
@@ -39,9 +38,9 @@ benchmark/
 ```
 
 The `benchmark/` directory is excluded from the published pub.dev tarball via
-[`.pubignore`](../.pubignore), so none of the source ships to downstream users.
-The committed PNGs under `reports/` are referenced from the package README
-via GitHub raw URLs (see [Reports](#reports) below).
+[`.pubignore`](../.pubignore), so none of the source ships to downstream users. The committed PNGs
+under `reports/` are referenced from the package README via GitHub raw URLs (see [Reports](#reports)
+below).
 
 ## 2 layers
 
@@ -52,8 +51,8 @@ via GitHub raw URLs (see [Reports](#reports) below).
 
 ## Prerequisites
 
-- The Dart SDK from the channel [`.fvmrc`](../.fvmrc) names. A different SDK means the baseline
-  JSON must be re-captured, and every record carries the `sdk_version` it ran on.
+- The Dart SDK from the channel [`.fvmrc`](../.fvmrc) names. A different SDK means the baseline JSON
+  must be re-captured, and every record carries the `sdk_version` it ran on.
 - [`uv`](https://docs.astral.sh/uv/) for the Python orchestrator (`brew install uv` on macOS, or see
   upstream install docs). Pins Python via `python/.python-version` (3.12), creates `.venv`, manages
   deps from `python/pyproject.toml`, locks them in `python/uv.lock` (checked in for
@@ -96,10 +95,9 @@ uv run python run.py compare ../results-local/baseline/aggregated.json \
 | `run` (measurement) | **No** | CPU contention destroys the signal. Iterations stay serial within a scenario, and scenarios stay serial across each other. |
 | `compare` / `report` | N/A | I/O-bound, fast already. |
 
-Iteration *batching* (one subprocess per scenario instead of per iteration)
-is a different optimisation, preserving measurement isolation because
-each iteration still runs alone in the process, with a 100 ms settle
-between iterations.
+Iteration *batching* (one subprocess per scenario instead of per iteration) is a different
+optimisation, preserving measurement isolation because each iteration still runs alone in the
+process, with a 100 ms settle between iterations.
 
 ### Linting the Python side
 
@@ -115,83 +113,70 @@ Config lives in [`python/pyproject.toml`](python/pyproject.toml) under `[tool.ru
 
 ## Methodology: non-negotiable
 
-These rules make results reproducible. Violating any of them means the numbers
-can't be defended.
+These rules make results reproducible. Violating any of them means the numbers can't be defended.
 
-- **AOT compile**, not JIT. `dart compile exe` produces deterministic warmup
-  characteristics, where `dart run` does not.
+- **AOT compile**, not JIT. `dart compile exe` produces deterministic warmup characteristics, where
+  `dart run` does not.
 - **SDK recorded, not pinned.** [`.fvmrc`](../.fvmrc) names a channel, and a channel moves on its
   own, so compare the `sdk_version` in the records rather than assuming 2 runs shared an SDK. Any
   change invalidates the baseline.
-- **N ≥ 10 iterations** per scenario for routine sanity checks. **Bump to
-  N=30 minimum** before claiming a regression or improvement on
-  `many_subscribers` stall metrics, which swing wildly at N=10. Real example
-  (captured with the pre-redesign `TickDriftMeter`, whose integral
-  semantics amplified jitter): the `many_subscribers` drift delta across
-  4 N=10 captures of the in-progress event-bus refactor read +95 %,
-  +72 %, +143 %, +334 %. The same comparison at N=30 collapsed to
-  **−40.6 %** (an improvement, not a regression) with p < 0.0001. The
-  size of the N=10 swing is itself the noise signal. When sign and
-  magnitude both flip between runs of the same code, don't trust the
-  headline, widen the sample. The gap-based `EventLoopStallMeter` should
-  be less duration-sensitive, but re-verify the noise floor before
-  relaxing the N=30 rule. Report **median and IQR**, never mean, because GC
-  outliers skew means heavily on a single-threaded VM.
-- **Memory is a per-iteration climb, not an absolute.** `peak_rss_delta_bytes`
-  is how far RSS rose above where the iteration found it. Zero is the normal
-  reading, not a sign the iteration was free. The absolute it replaced read
-  `ProcessInfo.currentRss` straight, which is process-wide, so it pinned after
-  an iteration or 2 and every later record just repeated it. Old files keep the
-  old `peak_rss_bytes` key and will not pair with new ones.
-- **Re-run the old binary before calling an RSS delta a regression.** Build it
-  from the old SHA and run it now, next to the new one. A reproducible
-  after-value is not a control: 2 post-change runs once agreed to 0.1 MB and
-  the old binary then matched them.
-- **Mann-Whitney U** (`scipy.stats.mannwhitneyu`) for significance claims.
-  Nonparametric, robust to GC outliers, doesn't assume normality. p < 0.05
-  for "significant difference" claims.
-- **A quiet `summary` row proves nothing.** `compare`'s table has a `Source`
-  column. `samples` rows pool every tick, so thousands of values. `summary`
-  rows hold one value per iteration, so N is your iteration count and
-  nothing more. That is enough to catch something as loud as a doubled
-  stall, and nowhere near enough to call a 5 % move absent. Read a
-  non-significant `summary` row as "this run can't tell", not as "nothing
-  changed", and raise N before you report either way.
+- **N ≥ 10 iterations** per scenario for routine sanity checks. **Bump to N=30 minimum** before
+  claiming a regression or improvement on `many_subscribers` stall metrics, which swing wildly at
+  N=10. Real example (captured with the pre-redesign `TickDriftMeter`, whose integral semantics
+  amplified jitter): the `many_subscribers` drift delta across 4 N=10 captures of the in-progress
+  event-bus refactor read +95 %, +72 %, +143 %, +334 %. The same comparison at N=30 collapsed to
+  **−40.6 %** (an improvement, not a regression) with p < 0.0001. The size of the N=10 swing is
+  itself the noise signal. When sign and magnitude both flip between runs of the same code, don't
+  trust the headline, widen the sample. The gap-based `EventLoopStallMeter` should be less
+  duration-sensitive, but re-verify the noise floor before relaxing the N=30 rule. Report **median
+  and IQR**, never mean, because GC outliers skew means heavily on a single-threaded VM.
+- **Memory is a per-iteration climb, not an absolute.** `peak_rss_delta_bytes` is how far RSS rose
+  above where the iteration found it. Zero is the normal reading, not a sign the iteration was free.
+  The absolute it replaced read `ProcessInfo.currentRss` straight, which is process-wide, so it
+  pinned after an iteration or 2 and every later record just repeated it. Old files keep the old
+  `peak_rss_bytes` key and will not pair with new ones.
+- **Re-run the old binary before calling an RSS delta a regression.** Build it from the old SHA and
+  run it now, next to the new one. A reproducible after-value is not a control: 2 post-change runs
+  once agreed to 0.1 MB and the old binary then matched them.
+- **Mann-Whitney U** (`scipy.stats.mannwhitneyu`) for significance claims. Nonparametric, robust to
+  GC outliers, doesn't assume normality. p < 0.05 for "significant difference" claims.
+- **A quiet `summary` row proves nothing.** `compare`'s table has a `Source` column. `samples` rows
+  pool every tick, so thousands of values. `summary` rows hold one value per iteration, so N is your
+  iteration count and nothing more. That is enough to catch something as loud as a doubled stall,
+  and nowhere near enough to call a 5 % move absent. Read a non-significant `summary` row as "this
+  run can't tell", not as "nothing changed", and raise N before you report either way.
 - **Warmup iterations discarded**, the first 2 of every 10.
-- **No forced GC.** An isolate can't trigger one. The pressure-allocation
-  trick that used to stand in for it allocated 8 MB inside the window it was
-  meant to clean, and dropping it took `many_subscribers` from a 67.6 MB
-  plateau to 14.6 MB. Iterations settle for 100 ms between runs instead.
-- **AC power, no competing apps.** The Dart VM is single-threaded, so CPU
-  contention shows up directly as wall-clock drift.
-- **Localhost only**, no DNS and no real network. All HTTP probes hit a
-  configurable local `HttpServer` on the loopback address
-  (`harness/local_http_server.dart`).
+- **No forced GC.** An isolate can't trigger one. The pressure-allocation trick that used to stand
+  in for it allocated 8 MB inside the window it was meant to clean, and dropping it took
+  `many_subscribers` from a 67.6 MB plateau to 14.6 MB. Iterations settle for 100 ms between runs
+  instead.
+- **AC power, no competing apps.** The Dart VM is single-threaded, so CPU contention shows up
+  directly as wall-clock drift.
+- **Localhost only**, no DNS and no real network. All HTTP probes hit a configurable local
+  `HttpServer` on the loopback address (`harness/local_http_server.dart`).
 
 ## Metrics tracked
 
-- **Memory**: static footprint, active footprint, allocation rate per tick, RSS delta over long runs.
+- **Memory**: static footprint, active footprint, allocation rate per tick, RSS delta over long
+  runs.
 - **Time**: coordinator overhead per tick, tier-1/tier-2 emission latency, per-event cost vs
   subscribers, dispose latency.
 - **Concurrency**: throughput ceiling, trigger storm response, subscriber-count scaling.
 - **Event-loop blocking**: worst continuous stall + blocked-time share via
-  `harness/event_loop_stall_meter.dart`. A 1 ms heartbeat timer records the
-  gap between consecutive fires, and `max_stall_microseconds` is the largest
-  single gap beyond the heartbeat interval (worst continuous stall) and
-  `blocked_duty_ratio` is total stalled time over the measured window.
-  Both are duration-independent, unlike the retired `TickDriftMeter`'s
-  `max_drift_microseconds`, which accumulated every stall into a
-  run-length-scaled integral (see the meter's dartdoc for the full
+  `harness/event_loop_stall_meter.dart`. A 1 ms heartbeat timer records the gap between consecutive
+  fires, and `max_stall_microseconds` is the largest single gap beyond the heartbeat interval (worst
+  continuous stall) and `blocked_duty_ratio` is total stalled time over the measured window. Both
+  are duration-independent, unlike the retired `TickDriftMeter`'s `max_drift_microseconds`, which
+  accumulated every stall into a run-length-scaled integral (see the meter's dartdoc for the full
   post-mortem).
 
-The **headline metric** is `max_stall_microseconds` on the `slow_observer`
-scenario, the package's worst case under a deliberately-blocking synchronous
-observer. Expect about twice the observer's per-callback delay: a Dart isolate is
-single-threaded, so no dispatch strategy can shrink a sleep, and the opening check
-fires a status change and a check-completed callback in one turn. Every later
-window holds one. What the package *does* control is its check cadence under
-that load (`observer_call_count` ÷ run duration, which should hold ~10/s at the
-100 ms interval) and the noise floor on every other scenario.
+The **headline metric** is `max_stall_microseconds` on the `slow_observer` scenario, the package's
+worst case under a deliberately-blocking synchronous observer. Expect about twice the observer's
+per-callback delay: a Dart isolate is single-threaded, so no dispatch strategy can shrink a sleep,
+and the opening check fires a status change and a check-completed callback in one turn. Every later
+window holds one. What the package *does* control is its check cadence under that load
+(`observer_call_count` ÷ run duration, which should hold ~10/s at the 100 ms interval) and the noise
+floor on every other scenario.
 
 ## Result JSON schema
 
@@ -218,29 +203,29 @@ See `harness/result_writer.dart` for the canonical writer.
 
 ## When to re-baseline
 
-Your own `aggregated.json`, from whatever `run --out …` capture you made, is the anchor
-for any "this PR makes things X% better" claim. There is no shared baseline, see
+Your own `aggregated.json`, from whatever `run --out …` capture you made, is the anchor for any
+"this PR makes things X% better" claim. There is no shared baseline, see
 [Baselines](#baselines-per-machine-never-committed). Re-capture yours when:
 
 - The Dart SDK changes, which the channel does on its own without any `.fvmrc` edit.
-- A non-perf-related change to `lib/src/internet_connection.dart` lands that
-  could affect the numbers (e.g. a logic fix that adds a code path).
-- Hardware changes (running on a different machine, though baselines are
-  machine-specific anyway, so check the machine identifier in the JSON header).
+- A non-perf-related change to `lib/src/internet_connection.dart` lands that could affect the
+  numbers (e.g. a logic fix that adds a code path).
+- Hardware changes (running on a different machine, though baselines are machine-specific anyway, so
+  check the machine identifier in the JSON header).
 
-The reference run below is the maintainer's, and it records date, machine, SDK version and
-git SHA. Yours stays local, and every record already carries that metadata itself.
+The reference run below is the maintainer's, and it records date, machine, SDK version and git SHA.
+Yours stays local, and every record already carries that metadata itself.
 
 ## Baselines: per-machine, never committed
 
-There is no canonical baseline JSON in this repo. Perf numbers are sensitive
-to CPU, GC tuning, OS scheduler, thermal state, and other apps competing for
-the core, so comparing across machines is misleading. Every contributor
-captures their own baseline locally before measuring the delta from a change.
+There is no canonical baseline JSON in this repo. Perf numbers are sensitive to CPU, GC tuning, OS
+scheduler, thermal state, and other apps competing for the core, so comparing across machines is
+misleading. Every contributor captures their own baseline locally before measuring the delta from a
+change.
 
-`benchmark/results/` and `benchmark/results-local/` are both gitignored.
-Capture metadata (SDK version, git SHA, capture date) is embedded in every
-record so each file is self-describing on its own machine.
+`benchmark/results/` and `benchmark/results-local/` are both gitignored. Capture metadata (SDK
+version, git SHA, capture date) is embedded in every record so each file is self-describing on its
+own machine.
 
 ### Per-contributor workflow
 
@@ -261,15 +246,15 @@ uv run python run.py compare \
   ../results-local/after/aggregated.json
 ```
 
-Same SDK is not free here. `.fvmrc` names a channel, so anything that upgrades Flutter between
-steps 1 and 3 silently changes the compiler under you and the delta stops meaning anything.
-`COMPARE.md` prints both runs' SDK versions in its header, so check they match before quoting a
-number. If they don't, re-run step 1.
+Same SDK is not free here. `.fvmrc` names a channel, so anything that upgrades Flutter between steps
+1 and 3 silently changes the compiler under you and the delta stops meaning anything. `COMPARE.md`
+prints both runs' SDK versions in its header, so check they match before quoting a number. If they
+don't, re-run step 1.
 
 ### Long-running captures (N=30 full sweep, ~45 min)
 
-A full N=30 sweep on this hardware (Apple Silicon macOS) takes ~45-50
-minutes. 2 operational notes for long runs:
+A full N=30 sweep on this hardware (Apple Silicon macOS) takes ~45-50 minutes. 2 operational notes
+for long runs:
 
 ```bash
 # macOS will sleep the system mid-run and kill the python process.
@@ -283,69 +268,61 @@ caffeinate -dimsu uv run python -u run.py run \
   --iterations 30 --out ../results-local/main-n30/
 ```
 
-If a long run dies before writing `aggregated.json` (the final step),
-the per-scenario `*.json` files under the output directory are still
-valid but the aggregated record is missing. Start over rather than
-patching in.
+If a long run dies before writing `aggregated.json` (the final step), the per-scenario `*.json`
+files under the output directory are still valid but the aggregated record is missing. Start over
+rather than patching in.
 
-The terminal output flags every (scenario, metric) where the after-run
-differs significantly (p < 0.05, Mann-Whitney U). The same data plus paired
-charts and a forest plot land in `benchmark/reports/COMPARE.md`. Paste the
-relevant sections + the forest PNG into the PR description as evidence.
+The terminal output flags every (scenario, metric) where the after-run differs significantly (p <
+0.05, Mann-Whitney U). The same data plus paired charts and a forest plot land in
+`benchmark/reports/COMPARE.md`. Paste the relevant sections + the forest PNG into the PR description
+as evidence.
 
 ## Reports
 
-`benchmark/reports/` is the **committed** output directory for both
-`report` and `compare`. The PNGs are linked from the package README so
-pub.dev viewers can see the package's perf shape without cloning. Pass
-`--out` for ad-hoc local snapshots that shouldn't overwrite the committed
-set.
+`benchmark/reports/` is the **committed** output directory for both `report` and `compare`. The PNGs
+are linked from the package README so pub.dev viewers can see the package's perf shape without
+cloning. Pass `--out` for ad-hoc local snapshots that shouldn't overwrite the committed set.
 
 ### `report` outputs (single dataset)
 
-- `headline_max_stall.png`: box plot of `max_stall_microseconds` per
-  scenario on a log y-axis. `slow_observer` sits at about twice its observer's
-  per-callback delay, and the rest is the package's noise floor.
+- `headline_max_stall.png`: box plot of `max_stall_microseconds` per scenario on a log y-axis.
+  `slow_observer` sits at about twice its observer's per-callback delay, and the rest is the
+  package's noise floor.
 - `memory_peak_rss.png`: peak RSS per scenario in MB.
-- `scenario_stability.png`: `max_stall_microseconds` per scenario with
-  `slow_observer` excluded so the noise floor is readable. Narrow boxes =
-  reproducible.
-- `subscriber_scaling.png`: broadcast cost per emission vs subscriber
-  count, from the `status_emission` micro.
-- `SUMMARY.md`: summary table above each chart, formatted so the
-  maintainer can drop the relevant sections into the package README.
+- `scenario_stability.png`: `max_stall_microseconds` per scenario with `slow_observer` excluded so
+  the noise floor is readable. Narrow boxes = reproducible.
+- `subscriber_scaling.png`: broadcast cost per emission vs subscriber count, from the
+  `status_emission` micro.
+- `SUMMARY.md`: summary table above each chart, formatted so the maintainer can drop the relevant
+  sections into the package README.
 
 ### `compare` outputs (2 datasets)
 
-- `compare_headline_max_stall.png`: same shape as the headline chart
-  but with 2 boxes per scenario (baseline vs current). `slow_observer`
-  is pinned by its observer's delay and should NOT move. A shift there
-  means the harness changed, not the package.
+- `compare_headline_max_stall.png`: same shape as the headline chart but with 2 boxes per scenario
+  (baseline vs current). `slow_observer` is pinned by its observer's delay and should NOT move. A
+  shift there means the harness changed, not the package.
 - `compare_memory_peak_rss.png`: paired memory boxes per scenario.
-- `compare_scenario_stability.png`: paired noise floor, `slow_observer`
-  excluded so the y-axis stays readable.
-- `compare_subscriber_scaling.png`: 2 lines (baseline and current) of
-  per-listener delivery cost.
-- `compare_forest.png`: horizontal bar chart of % delta per
-  `(scenario, metric)`. Color encodes direction + significance: red =
-  significant regression, green = significant improvement, gray = no
+- `compare_scenario_stability.png`: paired noise floor, `slow_observer` excluded so the y-axis stays
+  readable.
+- `compare_subscriber_scaling.png`: 2 lines (baseline and current) of per-listener delivery cost.
+- `compare_forest.png`: horizontal bar chart of % delta per `(scenario, metric)`. Color encodes
+  direction + significance: red = significant regression, green = significant improvement, gray = no
   significant difference detected.
-- `COMPARE.md`: paired-chart sections plus the Mann-Whitney significance
-  table. Same drop-into-README shape as `SUMMARY.md`.
+- `COMPARE.md`: paired-chart sections plus the Mann-Whitney significance table. Same
+  drop-into-README shape as `SUMMARY.md`.
 
 ### When to regenerate the committed set
 
-Treat `benchmark/reports/` as a deliberate refresh. Only the maintainer
-should commit changes to it, only after capturing a clean baseline /
-post-change pair on a quiet machine. Contributor runs should pass `--out`
-to a local path (e.g. `../results-local/my-run/charts/`) and leave the
-committed set alone.
+Treat `benchmark/reports/` as a deliberate refresh. Only the maintainer should commit changes to it,
+only after capturing a clean baseline / post-change pair on a quiet machine. Contributor runs should
+pass `--out` to a local path (e.g. `../results-local/my-run/charts/`) and leave the committed set
+alone.
 
 <details>
 <summary><strong>Reference run: 2026-08-20, Apple Silicon macOS, Dart 3.13.0, N=30</strong> (maintainer's machine, so your numbers WILL differ)</summary>
 
-These figures are a sanity check, not a target. "Am I in the right ballpark?"
-not "did I beat the baseline?". Treat them as approximate.
+These figures are a sanity check, not a target. "Am I in the right ballpark?" not "did I beat the
+baseline?". Treat them as approximate.
 
 | Scenario / N | Metric | Median |
 |---|---|---|
@@ -370,12 +347,11 @@ not "did I beat the baseline?". Treat them as approximate.
 | `backoff_recovery` | `fixed_recovery_latency_microseconds` | 315,016 µs (~0.3 s) |
 | `backoff_recovery` | `backoff_recovery_latency_microseconds` | 1,306,740 µs (~1.3 s) |
 
-The `slow_observer` figures capture the package's worst case under a
-deliberately-blocking synchronous observer (50 ms `sleep` per callback,
-100 ms interval): ~110 ms worst continuous stall (2 callbacks in one
-microtask drain) and ~55 % of the run blocked. Both are properties of the
-*observer*, not something the package can dispatch its way out of. A Dart
-isolate is single-threaded. Every other scenario sits at a sub-1 %
-blocked-duty noise floor. Your machine will differ in absolute terms.
+The `slow_observer` figures capture the package's worst case under a deliberately-blocking
+synchronous observer (50 ms `sleep` per callback, 100 ms interval): ~110 ms worst continuous stall
+(2 callbacks in one microtask drain) and ~55 % of the run blocked. Both are properties of the
+*observer*, not something the package can dispatch its way out of. A Dart isolate is
+single-threaded. Every other scenario sits at a sub-1 % blocked-duty noise floor. Your machine will
+differ in absolute terms.
 
 </details>

@@ -1,3 +1,9 @@
+/// "Connection closed before full header was received" here is not this file. Coverage runs load
+/// every suite over a loopback socket, and the handshake drops on a random one:
+/// https://github.com/dart-lang/native/issues/3738. Re-run it. Lowering CI's `dart test`
+/// concurrency reduces the load that triggers it, if it ever turns regular.
+library;
+
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';

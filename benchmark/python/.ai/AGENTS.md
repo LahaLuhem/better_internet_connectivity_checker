@@ -1,47 +1,45 @@
 # `benchmark/python/`: agent brief
 
-Tool-agnostic brief for any coding agent (Copilot, Cursor, Codex, Claude Code,
-…) working in the Python orchestrator. The parent project is a pure Dart package, so this is the
-only Python surface, and it's maintainer-only tooling (excluded from `dart pub publish`).
+Tool-agnostic brief for any coding agent (Copilot, Cursor, Codex, Claude Code, …) working in the
+Python orchestrator. The parent project is a pure Dart package, so this is the only Python surface,
+and it's maintainer-only tooling (excluded from `dart pub publish`).
 
 ## Style: Python as strongly typed
 
 House rules. Python written closer to typed Dart than to dynamic-Python idiom:
 
-- **Annotate every function signature and every module-level constant.**
-  No bare `def foo(x)`. No bare `FOO = 10`.
-- **Use `Final` for module-level constants** and anything that shouldn't be
-  reassigned: `DEFAULT_ITERATIONS: Final[int] = 10`.
-- **Make nullability explicit** via `T | None` (preferred, modern) or
-  `Optional[T]`. Never rely on "missing = None" implicitly.
+- **Annotate every function signature and every module-level constant.** No bare `def foo(x)`. No
+  bare `FOO = 10`.
+- **Use `Final` for module-level constants** and anything that shouldn't be reassigned:
+  `DEFAULT_ITERATIONS: Final[int] = 10`.
+- **Make nullability explicit** via `T | None` (preferred, modern) or `Optional[T]`. Never rely on
+  "missing = None" implicitly.
 - **`from __future__ import annotations`** at the top of every module.
-- **Prefer `@dataclass(frozen=True)`** for value objects. Mutable models
-  are the exception, not the default.
-- **Return concrete types, not `Any`.** If you reach for `Any`, justify it
-  in a comment immediately above the annotation. (Example here: `ResultRecord
-  = dict[str, Any]` in [`bicc_bench/data/dtos/result_record.py`](../bicc_bench/data/dtos/result_record.py),
-  because JSON decoding is inherently dynamic and we validate at boundaries rather than doing
-  ceremony with TypedDict.)
-- **No Java patterns.** No getters/setters, no interface-per-class, no
-  "Abstract…Factory". Use protocols / dataclasses / TypedDicts only when
-  they add clarity, never as ceremony.
+- **Prefer `@dataclass(frozen=True)`** for value objects. Mutable models are the exception, not the
+  default.
+- **Return concrete types, not `Any`.** If you reach for `Any`, justify it in a comment immediately
+  above the annotation. (Example here: `ResultRecord = dict[str, Any]` in
+  [`bicc_bench/data/dtos/result_record.py`](../bicc_bench/data/dtos/result_record.py), because JSON
+  decoding is inherently dynamic and we validate at boundaries rather than doing ceremony with
+  TypedDict.)
+- **No Java patterns.** No getters/setters, no interface-per-class, no "Abstract…Factory". Use
+  protocols / dataclasses / TypedDicts only when they add clarity, never as ceremony.
 - **Docstrings: short, "why" over "what".** The type system carries "what".
-- **Abbreviations, not initialisms, for domain terms.** Write
-  `parser_compare` not `p_cmp`, `iteration_count` not `iter_cnt`. Universal
-  CS / OS / stats abbreviations (`json`, `gc`, `rss`, `aot`, `iqr`,
-  `Mann-Whitney U`) are fine. The rule targets *project-invented* shorthand, not established
-  terminology.
+- **Abbreviations, not initialisms, for domain terms.** Write `parser_compare` not `p_cmp`,
+  `iteration_count` not `iter_cnt`. Universal CS / OS / stats abbreviations (`json`, `gc`, `rss`,
+  `aot`, `iqr`, `Mann-Whitney U`) are fine. The rule targets *project-invented* shorthand, not
+  established terminology.
 
 ## Tooling
 
-- **`uv`** (<https://docs.astral.sh/uv/>) manages env + deps. `uv.lock` is
-  checked into the repo for reproducibility.
-- **`ruff`** for both lint and format (replaces black + flake8 + isort).
-  Config in [`pyproject.toml`](../pyproject.toml) under `[tool.ruff]`.
+- **`uv`** (<https://docs.astral.sh/uv/>) manages env + deps. `uv.lock` is checked into the repo for
+  reproducibility.
+- **`ruff`** for both lint and format (replaces black + flake8 + isort). Config in
+  [`pyproject.toml`](../pyproject.toml) under `[tool.ruff]`.
 - **`pytest`** for the test suite under [`tests/`](../tests/). Config in
   [`pyproject.toml`](../pyproject.toml) under `[tool.pytest.ini_options]`.
-- **Python pinned to 3.12** via [`.python-version`](../.python-version). Match
-  via `uv sync` (uv reads `.python-version` automatically).
+- **Python pinned to 3.12** via [`.python-version`](../.python-version). Match via `uv sync` (uv
+  reads `.python-version` automatically).
 
 ## Package layout
 
@@ -72,39 +70,38 @@ benchmark/python/
 
 ### Conventions
 
-- **Drop the underscore prefix on names exported to other modules** in the
-  package. Functions stay underscore-prefixed only when they're purely
-  module-local (e.g. `_print_compare_table` in `subcommands/compare.py`,
-  `_compile_one` in `subcommands/build.py`, `_forest_colour` in `charts.py`).
+- **Drop the underscore prefix on names exported to other modules** in the package. Functions stay
+  underscore-prefixed only when they're purely module-local (e.g. `_print_compare_table` in
+  `subcommands/compare.py`, `_compile_one` in `subcommands/build.py`, `_forest_colour` in
+  `charts.py`).
 - **One value class per file under `data/dtos/`**, which keeps the data-class hierarchy flat and
   obvious to navigate.
-- **Subcommands import helpers from `data/utils/`**, and helpers never import from
-  `subcommands/`. Acyclic.
+- **Subcommands import helpers from `data/utils/`**, and helpers never import from `subcommands/`.
+  Acyclic.
 - **`config.py` imports nothing from `bicc_bench`**, being the leaf module everything else can
   depend on.
 
 ## Tests
 
 - `uv run pytest` runs the whole suite. `uv run pytest -q` for quiet mode.
-- One test file per source module, mirroring the package layout (e.g.
-  `tests/test_stats.py` ↔ `bicc_bench/data/utils/stats.py`).
-- Shared fixtures live in [`tests/conftest.py`](../tests/conftest.py) -
-  synthetic `ResultRecord` lists, not on-disk fixture JSON files.
-- **Test the deterministic surface**: math, formatting, table rendering,
-  CLI arg parsing. Chart *pixels* stay untested, which is the brittle part. Chart *bytes* don't:
+- One test file per source module, mirroring the package layout (e.g. `tests/test_stats.py` ↔
+  `bicc_bench/data/utils/stats.py`).
+- Shared fixtures live in [`tests/conftest.py`](../tests/conftest.py) - synthetic `ResultRecord`
+  lists, not on-disk fixture JSON files.
+- **Test the deterministic surface**: math, formatting, table rendering, CLI arg parsing. Chart
+  *pixels* stay untested, which is the brittle part. Chart *bytes* don't:
   [`tests/test_charts.py`](../tests/test_charts.py) re-renders each committed report PNG and
   compares, because `benchmark/reports/*.png` is in git and an unseeded renderer rewrites it on
   every run. The end-to-end smoke covers the rest.
-- **Coverage scope** is configured in [`pyproject.toml`](../pyproject.toml)
-  under `[tool.coverage.run]`. `charts.py` and `subcommands/*` are
-  `omit`-ed because they're smoke-only by design, so they appear in neither the numerator nor the
-  denominator. `tests/test_charts.py` doesn't change that, since it gates byte-reproducibility
-  rather than branch coverage. Everything else (config,
-  data/dtos, data/utils minus charts) sits inside the scope and is
-  expected to be unit-tested. **CI gate is 95%** (`python-min-coverage: 95`
-  in [`.github/workflows/ci.yml`](../../../.github/workflows/ci.yml)).
-  If you add a new module that is ALSO smoke-only, append it to the
-  `omit` list with a one-line rationale. Do not lower the gate to accommodate untested code.
+- **Coverage scope** is configured in [`pyproject.toml`](../pyproject.toml) under
+  `[tool.coverage.run]`. `charts.py` and `subcommands/*` are `omit`-ed because they're smoke-only by
+  design, so they appear in neither the numerator nor the denominator. `tests/test_charts.py`
+  doesn't change that, since it gates byte-reproducibility rather than branch coverage. Everything
+  else (config, data/dtos, data/utils minus charts) sits inside the scope and is expected to be
+  unit-tested. **CI gate is 95%** (`python-min-coverage: 95` in
+  [`.github/workflows/ci.yml`](../../../.github/workflows/ci.yml)). If you add a new module that is
+  ALSO smoke-only, append it to the `omit` list with a one-line rationale. Do not lower the gate to
+  accommodate untested code.
 
 ## Before claiming done
 
@@ -113,25 +110,22 @@ Definition-of-done for any Python change in this directory:
 - [ ] `uv run pytest`, all tests passing.
 - [ ] `uv run ruff check .`, clean.
 - [ ] `uv run ruff format --check .`, clean.
-- [ ] Type annotations on every function signature + module constant you
-  added or changed. Mypy isn't wired in, and ruff doesn't type-check yet (RUF rules cover
-  style only). If the type stack grows, add `pyright` or `mypy` here.
-- [ ] If you added or changed a runtime dep: `uv sync` was re-run and
-  `uv.lock` is staged.
+- [ ] Type annotations on every function signature + module constant you added or changed. Mypy
+  isn't wired in, and ruff doesn't type-check yet (RUF rules cover style only). If the type stack
+  grows, add `pyright` or `mypy` here.
+- [ ] If you added or changed a runtime dep: `uv sync` was re-run and `uv.lock` is staged.
 - [ ] **Tests for new logic** in `data/utils/` or `data/dtos/`. Subcommand modules are
   integration-tested via the end-to-end smoke, and unit tests target the pure helpers.
-- [ ] **Coverage ≥ 95%** on the in-scope surface. `uv run pytest` prints
-  the table locally, and the CI gate enforces it. Don't add new code to
-  `data/utils/` or `data/dtos/` without a matching `tests/test_<module>.py`.
+- [ ] **Coverage ≥ 95%** on the in-scope surface. `uv run pytest` prints the table locally, and the
+  CI gate enforces it. Don't add new code to `data/utils/` or `data/dtos/` without a matching
+  `tests/test_<module>.py`.
 
 ## Hard rules
 
-- **Never edit `uv.lock` by hand.** Run `uv sync` / `uv add` / `uv lock` to
-  regenerate.
+- **Never edit `uv.lock` by hand.** Run `uv sync` / `uv add` / `uv lock` to regenerate.
 - **Never commit `.venv/` or `__pycache__/`.** [`benchmark/python/.gitignore`](../.gitignore)
   already excludes both.
-- **Never use `pip install` directly.** Always go through `uv`. Mixed
-  `pip`/`uv` envs are subtly broken.
-- **Bash only for `uv`, `ruff`, `python`, `git`.** Use Read/Edit/Grep/Glob for
-  source-file work (matches the parent project's
-  [`.ai/CLAUDE.md`](../../../.ai/CLAUDE.md) tool-preference rule).
+- **Never use `pip install` directly.** Always go through `uv`. Mixed `pip`/`uv` envs are subtly
+  broken.
+- **Bash only for `uv`, `ruff`, `python`, `git`.** Use Read/Edit/Grep/Glob for source-file work
+  (matches the parent project's [`.ai/CLAUDE.md`](../../../.ai/CLAUDE.md) tool-preference rule).
